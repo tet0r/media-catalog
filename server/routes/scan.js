@@ -6,7 +6,24 @@ const { walk, guessTitleYear } = require('../lib/scanner');
 
 const router = express.Router();
 
-const MOVIES_DIR = process.env.MOVIES_DIR || '/movies';
+// MOVIES_DIR can be a single path or a comma-separated list, so a library
+// split across multiple network shares/mounts can each be their own volume
+// (e.g. /movies, /movies2, /movies3) instead of forcing everything under
+// one mount point.
+const MOVIES_DIRS = (process.env.MOVIES_DIR || '/movies')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean);
+
+function walkAllRoots(dirs) {
+  const entries = [];
+  for (const root of dirs) {
+    for (const file of walk(root)) {
+      entries.push({ file, root });
+    }
+  }
+  return entries;
+}
 
 function setStatus(fields) {
   const cur = db.prepare('SELECT * FROM scan_status WHERE id = 1').get();
@@ -27,8 +44,8 @@ function toCandidateList(results) {
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0 });
   try {
-    const files = walk(MOVIES_DIR);
-    setStatus({ files_found: files.length, message: `Found ${files.length} video files. Matching against TMDB...` });
+    const entries = walkAllRoots(MOVIES_DIRS);
+    setStatus({ files_found: entries.length, message: `Found ${entries.length} video files. Matching against TMDB...` });
 
     const existingPaths = new Set(
       db.prepare('SELECT file_path FROM movies WHERE file_path IS NOT NULL').all().map((r) => r.file_path)
@@ -39,14 +56,14 @@ async function runScan() {
 
     let matched = 0, pending = 0, skipped = 0;
 
-    for (const file of files) {
+    for (const { file, root } of entries) {
       if (existingPaths.has(file) || existingPending.has(file)) {
         skipped++;
         setStatus({ matched, pending, skipped });
         continue;
       }
 
-      const { title, year } = guessTitleYear(file, MOVIES_DIR);
+      const { title, year } = guessTitleYear(file, root);
       if (!title) {
         skipped++;
         setStatus({ matched, pending, skipped });

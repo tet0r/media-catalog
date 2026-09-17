@@ -6,11 +6,17 @@ services:
       - "8080:8080"
     environment:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
+      # MOVIES_DIR must list every mount point below (comma-separated, no
+      # spaces) — each volume line only gets scanned if it's named here too.
+      - MOVIES_DIR=/movies,/movies2,/movies3
     volumes:
       # App data: the SQLite database + cached posters. Keep this on a
       # persistent path so your collection survives container rebuilds.
       - ./data:/data
-      # Your movie file library, mounted read-only.
+      # Your movie file library, mounted read-only. Split across multiple
+      # network shares, so each gets its own mount point (/movies, /movies2,
+      # /movies3, ...) — add more pairs (mount + matching MOVIES_DIR entry
+      # above) if you have further shares.
       #
       # Network drive (Docker Desktop on Windows, WSL2 backend): use the UNC
       # path with forward slashes, NOT a mapped drive letter (Z:\...) — mapped
@@ -18,8 +24,7 @@ services:
       # often can't see them. The share must already be reachable/authenticated
       # from Windows itself (browse to it in Explorer first, or run
       # `net use \\SERVER\Movies /persistent:yes` once) or the mount will fail.
-      - "//SERVER/Movies:/movies:ro"
-      # You can add more lines like this one if movies are split across
-      # multiple shares/folders — each shows up under its own subfolder, e.g.
-      # "//SERVER/Movies2:/movies/movies2:ro".
+      - "//yourserver/movies/ShareOne/Movies:/movies:ro"
+      - "//yourserver/movies/ShareTwo/Movies:/movies2:ro"
+      - "//yourserver/movies/Movies:/movies3:ro"
     restart: unless-stopped

@@ -33,17 +33,25 @@ same way.
    [Settings → API](https://www.themoviedb.org/settings/api) and request a
    free "Developer" API key (approved instantly for personal use).
 
-2. **Edit `docker-compose.yml`**: change the line
+2. **Edit `docker-compose.yml`**: change the volume lines under
+   `//yourserver/movies/...` to point at your real movie folders. See
+   **Network drives on Windows** below for the exact syntax if your movies
+   live on a network share — it's not just a drive letter.
+
+   If your library is split across multiple shares/folders, give each one
+   its own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add
+   it to the `MOVIES_DIR` environment variable — the scanner only looks at
+   paths listed there, so a volume mounted but left out of `MOVIES_DIR`
+   will silently never get scanned:
 
    ```yaml
-   - "//SERVER/Movies:/movies:ro"
+   environment:
+     - MOVIES_DIR=/movies,/movies2,/movies3
+   volumes:
+     - "//share-one/Movies:/movies:ro"
+     - "//share-two/Movies:/movies2:ro"
+     - "//share-three/Movies:/movies3:ro"
    ```
-
-   to point at the real folder where your movie files are. See
-   **Network drives on Windows** below for the exact syntax if your movies
-   live on a network share — it's not just a drive letter. You can add more
-   `- "//SERVER/OtherShare:/movies/other:ro"` lines if movies are split
-   across multiple shares/folders.
 
 3. **Set your API key**, either:
    - copy `.env.example` to `.env` and fill in `TMDB_API_KEY=...`, or
