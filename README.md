@@ -62,6 +62,46 @@ same way.
 6. Go to **Scan Library** to import movies from your files, or **Add Movie**
    to search TMDB by title and add manually.
 
+## Deploying via Portainer
+
+This repo can be deployed as a Portainer **stack** built straight from Git,
+so Portainer does the `git clone` + `docker compose build` for you — no
+container registry required.
+
+1. **Push this repo to GitHub** (or any Git host your Docker/Portainer host
+   can reach):
+
+   ```bash
+   git remote add origin https://github.com/<you>/movie-cataloger.git
+   git push -u origin master
+   ```
+
+2. In Portainer: **Stacks → Add stack → Repository**.
+   - **Repository URL**: `https://github.com/<you>/movie-cataloger.git`
+   - **Reference**: `refs/heads/master` (or `main`, whatever you pushed as)
+   - **Compose path**: `docker-compose.yml` (default — already correct)
+   - Leave **Build method** on the default; Portainer builds the image from
+     the `Dockerfile` in the cloned repo automatically.
+
+3. Before/while adding the stack, set the environment variable Portainer
+   asks for:
+   - `TMDB_API_KEY` = your TMDB key (or leave it blank and paste it into the
+     app's Settings page after it's running).
+
+4. Still edit the `volumes:` line in `docker-compose.yml` for your movie
+   share path (see **Network drives on Windows** below) *before* you push —
+   Portainer deploys whatever is committed to the repo, it doesn't prompt you
+   for volume paths in the UI.
+
+5. Click **Deploy the stack**. Portainer clones the repo onto the Docker
+   host and brings the container up, same as running `docker compose up
+   -d --build` yourself.
+
+6. To ship a later change (e.g. a different movie folder path), commit and
+   push it, then in Portainer open the stack and click **Pull and redeploy**
+   — or turn on the stack's **GitOps updates** option if you want it to
+   redeploy automatically whenever you push.
+
 ## Network drives on Windows (Docker Desktop + WSL2)
 
 If your movies live on a NAS or network share rather than a local disk,
