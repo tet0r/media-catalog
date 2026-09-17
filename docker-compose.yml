@@ -1,0 +1,25 @@
+services:
+  movie-cataloger:
+    build: .
+    container_name: movie-cataloger
+    ports:
+      - "8080:8080"
+    environment:
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+    volumes:
+      # App data: the SQLite database + cached posters. Keep this on a
+      # persistent path so your collection survives container rebuilds.
+      - ./data:/data
+      # Your movie file library, mounted read-only.
+      #
+      # Network drive (Docker Desktop on Windows, WSL2 backend): use the UNC
+      # path with forward slashes, NOT a mapped drive letter (Z:\...) — mapped
+      # letters are a per-login-session thing and Docker Desktop's service
+      # often can't see them. The share must already be reachable/authenticated
+      # from Windows itself (browse to it in Explorer first, or run
+      # `net use \\SERVER\Movies /persistent:yes` once) or the mount will fail.
+      - "//SERVER/Movies:/movies:ro"
+      # You can add more lines like this one if movies are split across
+      # multiple shares/folders — each shows up under its own subfolder, e.g.
+      # "//SERVER/Movies2:/movies/movies2:ro".
+    restart: unless-stopped
