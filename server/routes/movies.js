@@ -1,8 +1,11 @@
 const express = require('express');
+const path = require('path');
 const db = require('../db');
 const { addMovieFromTmdbId } = require('../lib/addMovie');
+const { cacheImageFromUrl } = require('../lib/images');
 
 const router = express.Router();
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
 function rowToMovie(row) {
   return {
@@ -84,6 +87,23 @@ router.put('/:id', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Not found' });
   res.json(rowToMovie(row));
 });
+
+async function setImage(req, res, column) {
+  try {
+    const { image_url } = req.body;
+    if (!image_url) return res.status(400).json({ error: 'image_url is required' });
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+    db.prepare(`UPDATE movies SET ${column} = ? WHERE id = ?`).run(filename, req.params.id);
+    const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(rowToMovie(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+router.put('/:id/poster', (req, res) => setImage(req, res, 'poster_file'));
+router.put('/:id/backdrop', (req, res) => setImage(req, res, 'backdrop_file'));
 
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM movies WHERE id = ?').run(req.params.id);

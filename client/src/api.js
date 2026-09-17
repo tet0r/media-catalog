@@ -30,6 +30,21 @@ export const api = {
       body: JSON.stringify(payload),
     }).then(handle),
   deleteMovie: (id) => fetch(`${BASE}/movies/${id}`, { method: 'DELETE' }).then(handle),
+  setMoviePoster: (id, imageUrl) =>
+    fetch(`${BASE}/movies/${id}/poster`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  setMovieBackdrop: (id, imageUrl) =>
+    fetch(`${BASE}/movies/${id}/backdrop`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  searchTpdbPosters: (title, year) =>
+    fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
+  searchTmdbBackdrops: (tmdbId) => fetch(`${BASE}/images/backdrops/${tmdbId}`).then(handle),
   searchTmdb: (q, year) =>
     fetch(`${BASE}/search/tmdb?q=${encodeURIComponent(q)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
   lookupTmdbUrl: (url) => fetch(`${BASE}/search/tmdb-url?url=${encodeURIComponent(url)}`).then(handle),

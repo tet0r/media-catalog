@@ -14,6 +14,7 @@ app.use('/api/movies', require('./routes/movies'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', require('./routes/scan'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/images', require('./routes/images'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

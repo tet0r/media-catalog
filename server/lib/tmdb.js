@@ -31,4 +31,14 @@ async function getMovieDetails(db, tmdbId) {
   return res.json();
 }
 
-module.exports = { searchMovies, getMovieDetails, getApiKey, IMG_BASE };
+async function getMovieImages(db, tmdbId) {
+  const apiKey = getApiKey(db);
+  if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
+  const url = new URL(`${BASE}/movie/${tmdbId}/images`);
+  url.searchParams.set('api_key', apiKey);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TMDB images failed: ${res.status}`);
+  return res.json();
+}
+
+module.exports = { searchMovies, getMovieDetails, getMovieImages, getApiKey, IMG_BASE };

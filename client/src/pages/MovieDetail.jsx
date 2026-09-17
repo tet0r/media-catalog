@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import ImagePicker from '../components/ImagePicker.jsx';
 
 const FORMATS = ['DVD', 'Blu-ray', '4K UHD', 'Digital', 'File'];
 
@@ -11,6 +12,7 @@ export default function MovieDetail() {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [picker, setPicker] = useState(null); // 'poster' | 'backdrop' | null
 
   useEffect(() => {
     api
@@ -60,17 +62,40 @@ export default function MovieDetail() {
     navigate('/');
   }
 
+  async function applyPoster(url) {
+    const updated = await api.setMoviePoster(id, url);
+    setMovie(updated);
+    setForm(updated);
+  }
+
+  async function applyBackdrop(url) {
+    const updated = await api.setMovieBackdrop(id, url);
+    setMovie(updated);
+    setForm(updated);
+  }
+
   return (
     <div className="detail">
       {movie.backdrop_url && (
-        <div className="backdrop" style={{ backgroundImage: `url(${movie.backdrop_url})` }} />
+        <div
+          className="backdrop clickable"
+          title="Click to choose a different banner"
+          style={{ backgroundImage: `url(${movie.backdrop_url})` }}
+          onClick={() => setPicker('backdrop')}
+        />
       )}
       <div className="detail-body">
         <div className="detail-poster">
           {movie.poster_url ? (
-            <img src={movie.poster_url} alt={movie.title} />
+            <img
+              src={movie.poster_url}
+              alt={movie.title}
+              className="clickable"
+              title="Click to choose a different poster"
+              onClick={() => setPicker('poster')}
+            />
           ) : (
-            <div className="no-poster large">{movie.title}</div>
+            <div className="no-poster large clickable" onClick={() => setPicker('poster')}>{movie.title}</div>
           )}
         </div>
         <div className="detail-info">
@@ -151,6 +176,25 @@ export default function MovieDetail() {
           </div>
         </div>
       </div>
+
+      {picker === 'poster' && (
+        <ImagePicker
+          title="Choose a Poster"
+          sourceLabel="Via ThePosterDB — unofficial, may occasionally be unavailable."
+          fetchOptions={() => api.searchTpdbPosters(movie.title, movie.year)}
+          onSelect={applyPoster}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {picker === 'backdrop' && (
+        <ImagePicker
+          title="Choose a Banner"
+          sourceLabel="Via TMDB's image gallery for this movie."
+          fetchOptions={() => api.searchTmdbBackdrops(movie.tmdb_id)}
+          onSelect={applyBackdrop}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </div>
   );
 }
