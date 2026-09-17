@@ -60,4 +60,33 @@ async function getPosterUrls(title, year) {
   return extractPosterImageUrls(html);
 }
 
-module.exports = { getPosterUrls };
+// A search returning zero results is ambiguous on its own: it could mean
+// this specific movie genuinely has no posters there, or it could mean
+// ThePosterDB changed its page markup and the regexes above no longer match
+// anything at all. To tell those apart, re-run the same pipeline against a
+// title known to reliably have dozens of posters — if THAT also comes back
+// empty, the scraper itself is broken, not just this one search.
+const CANARY_TITLE = 'The Matrix';
+const CANARY_YEAR = 1999;
+const CANARY_MIN_RESULTS = 5;
+const HEALTH_CACHE_MS = 5 * 60 * 1000;
+
+let healthCache = { checkedAt: 0, healthy: null };
+
+async function isHealthy() {
+  const now = Date.now();
+  if (healthCache.healthy !== null && now - healthCache.checkedAt < HEALTH_CACHE_MS) {
+    return healthCache.healthy;
+  }
+  let healthy;
+  try {
+    const urls = await getPosterUrls(CANARY_TITLE, CANARY_YEAR);
+    healthy = urls.length >= CANARY_MIN_RESULTS;
+  } catch {
+    healthy = false;
+  }
+  healthCache = { checkedAt: now, healthy };
+  return healthy;
+}
+
+module.exports = { getPosterUrls, isHealthy };

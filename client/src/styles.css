@@ -6,6 +6,7 @@
   --text-muted: #9a9ea6;
   --accent: #e2b33c;
   --danger: #d9534f;
+  --warning: #e08a3c;
   --border: #2c2f38;
 }
 
@@ -52,6 +53,10 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 
 .empty, .muted { color: var(--text-muted); }
 .error { color: var(--danger); }
+.warning {
+  color: var(--warning); background: rgba(224, 138, 60, 0.12);
+  border: 1px solid rgba(224, 138, 60, 0.4); border-radius: 6px; padding: 8px 12px;
+}
 .count { color: var(--text-muted); margin-top: 20px; font-size: 0.85rem; }
 
 .detail-body { display: flex; gap: 28px; flex-wrap: wrap; position: relative; }

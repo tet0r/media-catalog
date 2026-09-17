@@ -4,13 +4,26 @@ export default function ImagePicker({ title, sourceLabel, fetchOptions, onSelect
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
   const [selecting, setSelecting] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     fetchOptions()
-      .then((r) => { if (!cancelled) setOptions(r); })
+      .then((r) => {
+        if (cancelled) return;
+        // Some sources (TMDB) just return a plain array; ThePosterDB returns
+        // { results, warning } so a "the scraper itself looks broken" state
+        // can be told apart from "this movie genuinely has no posters".
+        if (Array.isArray(r)) {
+          setOptions(r);
+          setWarning(null);
+        } else {
+          setOptions(r.results || []);
+          setWarning(r.warning || null);
+        }
+      })
       .catch((err) => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -39,7 +52,8 @@ export default function ImagePicker({ title, sourceLabel, fetchOptions, onSelect
         {sourceLabel && <p className="muted">{sourceLabel}</p>}
         {loading && <p>Loading options...</p>}
         {error && <p className="error">{error}</p>}
-        {!loading && !error && options.length === 0 && <p className="muted">No alternatives found.</p>}
+        {warning && <p className="warning">⚠ {warning}</p>}
+        {!loading && !error && !warning && options.length === 0 && <p className="muted">No alternatives found.</p>}
         <div className="image-picker-grid">
           {options.map((o) => (
             <button

@@ -7,19 +7,34 @@ const router = express.Router();
 
 // Alternate posters via ThePosterDB (unofficial scrape — see lib/theposterdb.js).
 router.get('/tpdb-posters', async (req, res) => {
+  const { title, year } = req.query;
+  if (!title) return res.json({ results: [], warning: null });
+
+  let urls;
   try {
-    const { title, year } = req.query;
-    if (!title) return res.json([]);
-    const urls = await theposterdb.getPosterUrls(title, year);
-    // ThePosterDB's image CDN enforces referer-based hotlink protection, so a
-    // browser loading these directly (which sends our own origin as referer)
-    // gets a 403. Route previews through our own /proxy so the fetch happens
-    // server-side with no foreign referer; `url` (the real source, used only
-    // when actually saving a pick) is unaffected since that fetch is server-side too.
-    res.json(urls.map((url) => ({ url, thumbnail_url: `/api/images/proxy?url=${encodeURIComponent(url)}` })));
+    urls = await theposterdb.getPosterUrls(title, year);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    return res.json({
+      results: [],
+      warning: `ThePosterDB couldn't be reached (${err.message}). It may be down, or its page layout may have changed in a way this app doesn't handle yet.`,
+    });
   }
+
+  if (urls.length === 0 && !(await theposterdb.isHealthy())) {
+    return res.json({
+      results: [],
+      warning:
+        "ThePosterDB search doesn't seem to be working right now — a known-good test title (The Matrix, 1999) also returned no posters, which usually means their site layout changed rather than this movie actually having none.",
+    });
+  }
+
+  // ThePosterDB's image CDN enforces referer-based hotlink protection, so a
+  // browser loading these directly (which sends our own origin as referer)
+  // gets a 403. Route previews through our own /proxy so the fetch happens
+  // server-side with no foreign referer; `url` (the real source, used only
+  // when actually saving a pick) is unaffected since that fetch is server-side too.
+  const results = urls.map((url) => ({ url, thumbnail_url: `/api/images/proxy?url=${encodeURIComponent(url)}` }));
+  res.json({ results, warning: null });
 });
 
 // Restricted to the one CDN host it exists for — never a general-purpose
