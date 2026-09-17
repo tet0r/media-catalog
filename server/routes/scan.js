@@ -3,6 +3,7 @@ const db = require('../db');
 const tmdb = require('../lib/tmdb');
 const { addMovieFromTmdbId } = require('../lib/addMovie');
 const { walk, guessTitleYear } = require('../lib/scanner');
+const { normalizeForMatch } = require('../lib/titleMatch');
 
 const router = express.Router();
 
@@ -80,7 +81,7 @@ async function runScan() {
 
       const exact = candidates.find((c) => {
         const cYear = c.release_date ? parseInt(c.release_date.slice(0, 4), 10) : null;
-        return c.title.toLowerCase() === title.toLowerCase() && (!year || !cYear || Math.abs(cYear - year) <= 1);
+        return normalizeForMatch(c.title) === normalizeForMatch(title) && (!year || !cYear || Math.abs(cYear - year) <= 1);
       });
 
       if (exact && year) {

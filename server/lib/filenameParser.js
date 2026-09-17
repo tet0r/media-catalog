@@ -1,3 +1,5 @@
+const { reorderTrailingArticle } = require('./titleMatch');
+
 const YEAR_RE = /\b(19\d{2}|20\d{2})\b/;
 
 function cleanTitle(str) {
@@ -20,6 +22,7 @@ function parseNameForTitleYear(name) {
     title = name.slice(0, yearMatch.index);
   }
   title = cleanTitle(title);
+  title = reorderTrailingArticle(title);
   return { title, year };
 }
 
