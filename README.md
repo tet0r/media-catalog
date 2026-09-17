@@ -50,11 +50,15 @@ same way.
    - leave it blank and paste the key into the app's Settings page after it's
      running.
 
-4. **Build and run:**
+4. **Pull and run:**
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
+
+   (This pulls the pre-built image from GHCR — see **Image publishing**
+   below. If you want to build from source instead, run
+   `docker build -t ghcr.io/tet0r/movie-cataloger:latest .` first.)
 
 5. Open **http://localhost:8080** (or `http://<your-server-ip>:8080` from
    another device on your network).
@@ -62,45 +66,60 @@ same way.
 6. Go to **Scan Library** to import movies from your files, or **Add Movie**
    to search TMDB by title and add manually.
 
-## Deploying via Portainer
+## Image publishing
 
-This repo can be deployed as a Portainer **stack** built straight from Git,
-so Portainer does the `git clone` + `docker compose build` for you — no
-container registry required.
+A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) builds
+this repo's `Dockerfile` and pushes it to **GitHub Container Registry**
+(`ghcr.io/tet0r/movie-cataloger:latest`) on every push to `main`. This is
+what lets `docker-compose.yml` just say `image: ghcr.io/...` instead of
+`build: .` — no build step needed on the machine that runs the container.
 
-1. **Push this repo to GitHub** (or any Git host your Docker/Portainer host
-   can reach):
+**One-time step after the first push**: GitHub publishes new packages as
+*private* by default, so Portainer (or `docker pull`) won't be able to fetch
+it until you make it public:
 
-   ```bash
-   git remote add origin https://github.com/<you>/movie-cataloger.git
-   git push -u origin master
-   ```
+1. Go to your GitHub profile → **Packages** tab (or
+   `https://github.com/users/tet0r/packages/container/package/movie-cataloger`).
+2. Open **Package settings** → **Change visibility** → **Public**.
 
-2. In Portainer: **Stacks → Add stack → Repository**.
-   - **Repository URL**: `https://github.com/<you>/movie-cataloger.git`
-   - **Reference**: `refs/heads/master` (or `main`, whatever you pushed as)
-   - **Compose path**: `docker-compose.yml` (default — already correct)
-   - Leave **Build method** on the default; Portainer builds the image from
-     the `Dockerfile` in the cloned repo automatically.
+(Alternatively, keep it private and give Portainer a GHCR credential under
+**Registries** — but public is simplest for a hobby project with no secrets
+baked into the image.)
 
-3. Before/while adding the stack, set the environment variable Portainer
-   asks for:
+Check the **Actions** tab on the GitHub repo to confirm the build succeeded
+before deploying — the image won't exist yet until that workflow run
+finishes.
+
+## Deploying via Portainer (Web editor)
+
+Since the image is published to GHCR, you can just paste the compose file
+directly into Portainer — no repo access from the Docker host needed.
+
+1. Make sure you've pushed your real movie-share path in `docker-compose.yml`
+   (see **Network drives on Windows** below) and that the GHCR image is
+   public (see **Image publishing** above).
+
+2. In Portainer: **Stacks → Add stack**.
+   - Name it (e.g. `movie-cataloger`).
+   - Build method: **Web editor**.
+   - Paste the full contents of this repo's `docker-compose.yml`.
+
+3. Under **Environment variables**, add:
    - `TMDB_API_KEY` = your TMDB key (or leave it blank and paste it into the
      app's Settings page after it's running).
 
-4. Still edit the `volumes:` line in `docker-compose.yml` for your movie
-   share path (see **Network drives on Windows** below) *before* you push —
-   Portainer deploys whatever is committed to the repo, it doesn't prompt you
-   for volume paths in the UI.
+4. Click **Deploy the stack**. Portainer pulls
+   `ghcr.io/tet0r/movie-cataloger:latest` and starts the container — no
+   source clone or build on the Docker host.
 
-5. Click **Deploy the stack**. Portainer clones the repo onto the Docker
-   host and brings the container up, same as running `docker compose up
-   -d --build` yourself.
+5. To ship a later change, push to `main` (which re-triggers the GitHub
+   Actions build), then in Portainer open the stack and click
+   **Pull and redeploy** so it grabs the new `:latest` image.
 
-6. To ship a later change (e.g. a different movie folder path), commit and
-   push it, then in Portainer open the stack and click **Pull and redeploy**
-   — or turn on the stack's **GitOps updates** option if you want it to
-   redeploy automatically whenever you push.
+   (If you'd rather have Portainer build from source itself instead of
+   pulling a registry image, use **Stacks → Add stack → Repository**
+   pointed at `https://github.com/tet0r/movie-cataloger.git` with a
+   `build: .` compose file instead — either approach works.)
 
 ## Network drives on Windows (Docker Desktop + WSL2)
 

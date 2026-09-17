@@ -1,6 +1,6 @@
 services:
   movie-cataloger:
-    build: .
+    image: ghcr.io/tet0r/movie-cataloger:latest
     container_name: movie-cataloger
     ports:
       - "8080:8080"
