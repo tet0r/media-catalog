@@ -32,6 +32,7 @@ export const api = {
   deleteMovie: (id) => fetch(`${BASE}/movies/${id}`, { method: 'DELETE' }).then(handle),
   searchTmdb: (q, year) =>
     fetch(`${BASE}/search/tmdb?q=${encodeURIComponent(q)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
+  lookupTmdbUrl: (url) => fetch(`${BASE}/search/tmdb-url?url=${encodeURIComponent(url)}`).then(handle),
   startScan: () => fetch(`${BASE}/scan`, { method: 'POST' }).then(handle),
   scanStatus: () => fetch(`${BASE}/scan/status`).then(handle),
   scanPending: () => fetch(`${BASE}/scan/pending`).then(handle),

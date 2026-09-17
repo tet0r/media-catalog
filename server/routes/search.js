@@ -23,4 +23,28 @@ router.get('/tmdb', async (req, res) => {
   }
 });
 
+// Fallback for when title search just doesn't surface the right movie:
+// paste a themoviedb.org movie page URL and fetch that exact one by ID.
+router.get('/tmdb-url', async (req, res) => {
+  try {
+    const { url } = req.query;
+    const match = String(url || '').match(/themoviedb\.org\/movie\/(\d+)/);
+    if (!match) {
+      return res.status(400).json({ error: 'Not a recognizable themoviedb.org movie URL (expected .../movie/<id>-...)' });
+    }
+    const details = await tmdb.getMovieDetails(db, match[1]);
+    res.json({
+      tmdb_id: details.id,
+      title: details.title,
+      original_title: details.original_title,
+      year: details.release_date ? details.release_date.slice(0, 4) : null,
+      overview: details.overview,
+      poster_url: details.poster_path ? `${tmdb.IMG_BASE}/w200${details.poster_path}` : null,
+      tmdb_rating: details.vote_average,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

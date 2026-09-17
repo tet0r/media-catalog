@@ -6,6 +6,7 @@ export default function AddMovie() {
   const [query, setQuery] = useState('');
   const [year, setYear] = useState('');
   const [results, setResults] = useState([]);
+  const [tmdbUrl, setTmdbUrl] = useState('');
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
   const [addingId, setAddingId] = useState(null);
@@ -18,6 +19,21 @@ export default function AddMovie() {
     try {
       const r = await api.searchTmdb(query, year);
       setResults(r);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function lookupUrl(e) {
+    e.preventDefault();
+    setSearching(true);
+    setError(null);
+    try {
+      const result = await api.lookupTmdbUrl(tmdbUrl);
+      setResults((r) => [result, ...r.filter((existing) => existing.tmdb_id !== result.tmdb_id)]);
+      setTmdbUrl('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,6 +61,14 @@ export default function AddMovie() {
         <input placeholder="Movie title" value={query} onChange={(e) => setQuery(e.target.value)} />
         <input placeholder="Year (optional)" value={year} onChange={(e) => setYear(e.target.value)} style={{ width: 120 }} />
         <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
+      </form>
+      <form onSubmit={lookupUrl} className="toolbar">
+        <input
+          placeholder="Not finding it? Paste a themoviedb.org movie URL instead"
+          value={tmdbUrl}
+          onChange={(e) => setTmdbUrl(e.target.value)}
+        />
+        <button type="submit" disabled={searching || !tmdbUrl}>Look up URL</button>
       </form>
       {error && <p className="error">{error}</p>}
       <div className="grid">

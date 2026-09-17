@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
+import PendingItem from '../components/PendingItem.jsx';
 
 export default function ScanLibrary() {
   const [status, setStatus] = useState(null);
@@ -69,27 +70,12 @@ export default function ScanLibrary() {
         <>
           <h2>Needs Review ({pending.length})</h2>
           {pending.map((p) => (
-            <div key={p.id} className="pending-item">
-              <div className="pending-file">{p.file_path}</div>
-              <div className="pending-guess">
-                Guessed: {p.guessed_title} {p.guessed_year ? `(${p.guessed_year})` : ''}
-              </div>
-              <div className="candidates">
-                {p.candidates.length === 0 && <span className="muted">No TMDB matches found.</span>}
-                {p.candidates.map((c) => (
-                  <div key={c.tmdb_id} className="candidate">
-                    {c.poster_url ? <img src={c.poster_url} alt={c.title} /> : null}
-                    <span>{c.title} ({c.year})</span>
-                    <button disabled={busyId === p.id} onClick={() => resolve(p.id, c.tmdb_id, false)}>
-                      Use this
-                    </button>
-                  </div>
-                ))}
-                <button className="muted-btn" disabled={busyId === p.id} onClick={() => resolve(p.id, null, true)}>
-                  Skip this file
-                </button>
-              </div>
-            </div>
+            <PendingItem
+              key={p.id}
+              item={p}
+              busy={busyId === p.id}
+              onResolve={(tmdbId, skip) => resolve(p.id, tmdbId, skip)}
+            />
           ))}
         </>
       )}

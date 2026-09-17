@@ -77,6 +77,8 @@ textarea { font-family: inherit; resize: vertical; }
 .pending-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
 .pending-file { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); word-break: break-all; }
 .pending-guess { margin: 6px 0 10px; }
-.candidates { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.pending-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.pending-search-row input { flex: 1; }
+.candidates { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .candidate { display: flex; align-items: center; gap: 8px; background: var(--bg-alt); padding: 6px 10px; border-radius: 6px; }
 .candidate img { width: 32px; height: 48px; object-fit: cover; border-radius: 3px; }
