@@ -94,14 +94,14 @@ finishes.
 Since the image is published to GHCR, you can just paste the compose file
 directly into Portainer — no repo access from the Docker host needed.
 
-1. Make sure you've pushed your real movie-share `device:` paths in
-   `docker-compose.yml` (see **Network shares** below) and that the GHCR
-   image is public (see **Image publishing** above).
+1. Confirm the GHCR image is public (see **Image publishing** above). The
+   compose file itself needs no editing for this — your share paths aren't
+   in it (see **Network shares** below).
 
 2. In Portainer: **Stacks → Add stack**.
    - Name it (e.g. `movie-cataloger`).
    - Build method: **Web editor**.
-   - Paste the full contents of this repo's `docker-compose.yml`.
+   - Paste the full contents of this repo's `docker-compose.yml` as-is.
 
 3. Under **Environment variables**, add (Portainer's stack env vars, not a
    local `.env` file, are what fill in the `${...}` references when
@@ -110,6 +110,8 @@ directly into Portainer — no repo access from the Docker host needed.
      app's Settings page after it's running)
    - `SMB_HOST` = the IP address of the PC hosting your movie shares
    - `SMB_USER` / `SMB_PASS` = credentials for that share
+   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` = each share's sub-path,
+     e.g. `movies/Movies`
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/movie-cataloger:latest` and starts the container — no
@@ -146,27 +148,32 @@ volumes:
     driver_opts:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
-      device: "//${SMB_HOST}/movies/ShareOne"
+      device: "//${SMB_HOST}/${SMB_SHARE1}"
 ```
+
+Note that none of your actual folder names/paths live in `docker-compose.yml`
+itself — they're all environment variables (`SMB_HOST`, `SMB_SHARE1/2/3`),
+so this file stays generic even if the repo is public. Your real values go
+in `.env`, which is gitignored, or in Portainer's stack environment
+variables (which aren't part of the compose file either).
 
 To use it:
 
 1. In `.env` (copy from `.env.example`), set:
    - `SMB_HOST` — the share PC's **IP address**, not its hostname. The
-     Linux VM doesn't resolve Windows NetBIOS names like `yourserver` the way
-     Windows itself does, so a hostname here is a common silent-failure
-     point. Find the IP with `ipconfig` on that PC, or your router's device
-     list.
+     Linux VM doesn't resolve Windows NetBIOS hostnames the way Windows
+     itself does, so a hostname here is a common silent-failure point. Find
+     the IP with `ipconfig` on that PC, or your router's device list.
    - `SMB_USER` / `SMB_PASS` — credentials for the share. If it allows
      guest/anonymous access instead, set `SMB_USER=guest` and remove the
      `password=${SMB_PASS},` part of the `o:` option for each volume in
      `docker-compose.yml`.
-2. Edit the three `device:` paths in `docker-compose.yml` if your actual
-   share paths differ from `movies/ShareOne`, `movies/ShareTwo`,
-   `movies/Movies`.
-3. `docker compose up -d` (or redeploy the Portainer stack). Docker creates
-   the named volumes by mounting each CIFS share the first time they're
-   used.
+   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` — each share's sub-path
+     relative to `//SMB_HOST/`, e.g. `movies/Movies`.
+2. `docker compose up -d` (or redeploy the Portainer stack, with those same
+   variables set under its Environment variables instead of `.env`). Docker
+   creates the named volumes by mounting each CIFS share the first time
+   they're used.
 
 **If it still doesn't work**, check `docker compose logs movie-cataloger`
 and `docker volume inspect movie-cataloger_movies1` — a CIFS mount failure

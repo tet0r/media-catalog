@@ -31,16 +31,16 @@ volumes:
     driver_opts:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
-      device: "//${SMB_HOST}/movies/ShareOne/Movies"
+      device: "//${SMB_HOST}/${SMB_SHARE1}"
   movies2:
     driver: local
     driver_opts:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
-      device: "//${SMB_HOST}/movies/ShareTwo/Movies"
+      device: "//${SMB_HOST}/${SMB_SHARE2}"
   movies3:
     driver: local
     driver_opts:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
-      device: "//${SMB_HOST}/movies/Movies"
+      device: "//${SMB_HOST}/${SMB_SHARE3}"
