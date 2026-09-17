@@ -7,24 +7,40 @@ services:
     environment:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       # MOVIES_DIR must list every mount point below (comma-separated, no
-      # spaces) — each volume line only gets scanned if it's named here too.
+      # spaces) — each volume only gets scanned if it's named here too.
       - MOVIES_DIR=/movies,/movies2,/movies3
     volumes:
       # App data: the SQLite database + cached posters. Keep this on a
       # persistent path so your collection survives container rebuilds.
       - ./data:/data
-      # Your movie file library, mounted read-only. Split across multiple
-      # network shares, so each gets its own mount point (/movies, /movies2,
-      # /movies3, ...) — add more pairs (mount + matching MOVIES_DIR entry
-      # above) if you have further shares.
-      #
-      # Network drive (Docker Desktop on Windows, WSL2 backend): use the UNC
-      # path with forward slashes, NOT a mapped drive letter (Z:\...) — mapped
-      # letters are a per-login-session thing and Docker Desktop's service
-      # often can't see them. The share must already be reachable/authenticated
-      # from Windows itself (browse to it in Explorer first, or run
-      # `net use \\SERVER\Movies /persistent:yes` once) or the mount will fail.
-      - "//yourserver/movies/ShareOne/Movies:/movies:ro"
-      - "//yourserver/movies/ShareTwo/Movies:/movies2:ro"
-      - "//yourserver/movies/Movies:/movies3:ro"
+      # Your movie library, split across three network shares. These are
+      # named volumes (defined below) backed by the CIFS/SMB driver, NOT
+      # plain bind mounts — see "Network shares" in the README for why:
+      # Docker Desktop's WSL2 backend frequently fails to resolve a plain
+      # "//server/share" bind-mount path (it mounts empty, with no error),
+      # so this mounts the share directly using the Linux VM's own CIFS
+      # client instead, which doesn't go through Windows at all.
+      - movies1:/movies:ro
+      - movies2:/movies2:ro
+      - movies3:/movies3:ro
     restart: unless-stopped
+
+volumes:
+  movies1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/movies/ShareOne/Movies"
+  movies2:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/movies/ShareTwo/Movies"
+  movies3:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/movies/Movies"

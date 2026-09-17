@@ -33,30 +33,21 @@ same way.
    [Settings → API](https://www.themoviedb.org/settings/api) and request a
    free "Developer" API key (approved instantly for personal use).
 
-2. **Edit `docker-compose.yml`**: change the volume lines under
-   `//yourserver/movies/...` to point at your real movie folders. See
-   **Network drives on Windows** below for the exact syntax if your movies
-   live on a network share — it's not just a drive letter.
+2. **Point it at your movie folders.** If they're on local disk, just bind
+   mount them directly (`- /path/to/movies:/movies:ro`) and add `/movies` to
+   the `MOVIES_DIR` env var. **If they're on a network share (NAS, another
+   PC), see Network shares below first** — plain bind-mounting a network
+   path is unreliable on Docker Desktop and needs a different setup.
 
    If your library is split across multiple shares/folders, give each one
    its own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add
    it to the `MOVIES_DIR` environment variable — the scanner only looks at
    paths listed there, so a volume mounted but left out of `MOVIES_DIR`
-   will silently never get scanned:
+   will silently never get scanned.
 
-   ```yaml
-   environment:
-     - MOVIES_DIR=/movies,/movies2,/movies3
-   volumes:
-     - "//share-one/Movies:/movies:ro"
-     - "//share-two/Movies:/movies2:ro"
-     - "//share-three/Movies:/movies3:ro"
-   ```
-
-3. **Set your API key**, either:
-   - copy `.env.example` to `.env` and fill in `TMDB_API_KEY=...`, or
-   - leave it blank and paste the key into the app's Settings page after it's
-     running.
+3. **Set your API key and (if using network shares) SMB details**: copy
+   `.env.example` to `.env` and fill it in — or leave `TMDB_API_KEY` blank
+   and paste it into the app's Settings page after it's running.
 
 4. **Pull and run:**
 
@@ -103,18 +94,22 @@ finishes.
 Since the image is published to GHCR, you can just paste the compose file
 directly into Portainer — no repo access from the Docker host needed.
 
-1. Make sure you've pushed your real movie-share path in `docker-compose.yml`
-   (see **Network drives on Windows** below) and that the GHCR image is
-   public (see **Image publishing** above).
+1. Make sure you've pushed your real movie-share `device:` paths in
+   `docker-compose.yml` (see **Network shares** below) and that the GHCR
+   image is public (see **Image publishing** above).
 
 2. In Portainer: **Stacks → Add stack**.
    - Name it (e.g. `movie-cataloger`).
    - Build method: **Web editor**.
    - Paste the full contents of this repo's `docker-compose.yml`.
 
-3. Under **Environment variables**, add:
+3. Under **Environment variables**, add (Portainer's stack env vars, not a
+   local `.env` file, are what fill in the `${...}` references when
+   deployed this way):
    - `TMDB_API_KEY` = your TMDB key (or leave it blank and paste it into the
-     app's Settings page after it's running).
+     app's Settings page after it's running)
+   - `SMB_HOST` = the IP address of the PC hosting your movie shares
+   - `SMB_USER` / `SMB_PASS` = credentials for that share
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/movie-cataloger:latest` and starts the container — no
@@ -129,45 +124,56 @@ directly into Portainer — no repo access from the Docker host needed.
    pointed at `https://github.com/tet0r/movie-cataloger.git` with a
    `build: .` compose file instead — either approach works.)
 
-## Network drives on Windows (Docker Desktop + WSL2)
+## Network shares (Docker Desktop + WSL2)
 
-If your movies live on a NAS or network share rather than a local disk,
-**don't** use a mapped drive letter (`Z:\Movies`) in `docker-compose.yml` —
-mapped drives are tied to your Windows login session, and Docker Desktop's
-background service frequently can't see them, so the container fails to
-find the folder.
+**Don't bind-mount a `//server/share` path directly** (`- "//SERVER/Movies:/movies:ro"`)
+and don't use a mapped drive letter (`Z:\Movies`) either. Both are known to
+be unreliable on Docker Desktop's WSL2 backend: the container starts with no
+error, but the mount silently resolves to an empty directory, because
+neither the raw UNC path nor a per-login-session drive letter reliably makes
+it through Windows → WSL2 → the container. If your scan finds 0 files despite
+the share clearly existing, this is almost always why.
 
-Instead:
+The fix that actually works reliably: mount the SMB share directly, using
+the Linux kernel's own CIFS client running inside Docker Desktop's WSL2 VM
+— this bypasses Windows' path translation entirely. `docker-compose.yml`
+already does this via CIFS-backed named volumes:
 
-1. **Make sure Windows itself already trusts the share.** Open it once in
-   File Explorer (`\\SERVER\Movies`) and enter credentials if prompted, or run
-   once from PowerShell so it's cached:
+```yaml
+volumes:
+  movies1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/movies/ShareOne"
+```
 
-   ```powershell
-   net use \\SERVER\Movies /persistent:yes
-   ```
+To use it:
 
-2. **Reference the UNC path with forward slashes** in `docker-compose.yml`
-   (Docker Desktop's Windows path translation expects this form, not
-   backslashes):
+1. In `.env` (copy from `.env.example`), set:
+   - `SMB_HOST` — the share PC's **IP address**, not its hostname. The
+     Linux VM doesn't resolve Windows NetBIOS names like `yourserver` the way
+     Windows itself does, so a hostname here is a common silent-failure
+     point. Find the IP with `ipconfig` on that PC, or your router's device
+     list.
+   - `SMB_USER` / `SMB_PASS` — credentials for the share. If it allows
+     guest/anonymous access instead, set `SMB_USER=guest` and remove the
+     `password=${SMB_PASS},` part of the `o:` option for each volume in
+     `docker-compose.yml`.
+2. Edit the three `device:` paths in `docker-compose.yml` if your actual
+   share paths differ from `movies/ShareOne`, `movies/ShareTwo`,
+   `movies/Movies`.
+3. `docker compose up -d` (or redeploy the Portainer stack). Docker creates
+   the named volumes by mounting each CIFS share the first time they're
+   used.
 
-   ```yaml
-   volumes:
-     - ./data:/data
-     - "//SERVER/Movies:/movies:ro"
-   ```
-
-   Replace `SERVER` with the NAS's hostname or IP (an IP is more reliable
-   than a hostname if you don't have local DNS set up), and `Movies` with the
-   actual share name.
-
-3. Run `docker compose up -d --build` from a normal Windows terminal
-   (PowerShell/CMD) — not from inside a WSL Linux shell — so Docker Desktop
-   handles the UNC-to-container translation itself.
-
-If the mount still fails, check `docker compose logs movie-cataloger` and
-`docker inspect movie-cataloger` for a mount error — it's almost always a
-permissions/credentials issue with the share rather than the app.
+**If it still doesn't work**, check `docker compose logs movie-cataloger`
+and `docker volume inspect movie-cataloger_movies1` — a CIFS mount failure
+(bad credentials, unreachable host, wrong share path) shows up there as an
+actual error, unlike the plain-bind-mount case which fails silently. Note
+that `password=` in the `o:` option breaks if your password contains a
+comma (the option string is comma-delimited) — change the password if so.
 
 ## Data & persistence
 
