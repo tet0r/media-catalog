@@ -13,7 +13,13 @@ export default function App() {
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
-    api.getVersionCheck().then(setUpdateInfo).catch(() => {});
+
+    const checkForUpdate = () => api.getVersionCheck().then(setUpdateInfo).catch(() => {});
+    checkForUpdate();
+    // Re-check periodically — a tab left open otherwise never learns about
+    // a push that happened after it was loaded.
+    const interval = setInterval(checkForUpdate, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

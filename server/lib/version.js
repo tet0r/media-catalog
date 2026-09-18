@@ -34,14 +34,18 @@ function compareVersions(a, b) {
 
 const VERSION_CHECK_URL =
   process.env.VERSION_CHECK_URL || 'https://raw.githubusercontent.com/tet0r/movie-cataloger/main/VERSION';
-const CHECK_CACHE_MS = 60 * 60 * 1000;
+// Short cache, not the hour this originally used — for a single-user
+// self-hosted app, fetching one small static file every few minutes is
+// nothing GitHub notices, and a long cache meant a push could go
+// unnoticed for up to an hour even with the tab open and freshly reloaded.
+const CHECK_CACHE_MS = 5 * 60 * 1000;
 
 let latestCache = { checkedAt: 0, value: null };
 
-// Checks the VERSION file on the repo's main branch. Cached for an hour so
-// repeated page loads don't hit GitHub every time; a failed check (offline,
-// GitHub down, repo renamed) just returns null rather than throwing —
-// this is a "nice to know", never something that should break the app.
+// Checks the VERSION file on the repo's main branch. A failed check
+// (offline, GitHub down, repo renamed) just returns null rather than
+// throwing — this is a "nice to know", never something that should break
+// the app.
 async function getLatestVersion() {
   const now = Date.now();
   if (latestCache.value !== null && now - latestCache.checkedAt < CHECK_CACHE_MS) {
