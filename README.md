@@ -5,6 +5,11 @@ A self-hosted, Docker-deployable movie collection cataloger, inspired by
 posters, cast/crew, plot, ratings, plus your own fields (format, shelf
 location, purchase info, personal rating, notes, loan tracking).
 
+The running app's version is shown next to its name in the nav bar (from the
+`VERSION` file) and returned by `GET /api/health` — handy for confirming a
+Portainer redeploy actually picked up a new image. See
+[CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
 ## How it differs from CLZ Movies
 
 CLZ Movies is a paid app with an official (licensed) IMDb data feed and

@@ -19,6 +19,7 @@ FROM node:20-alpine
 WORKDIR /app
 COPY --from=server-build /app ./
 COPY --from=client-build /app/client/dist ./public
+COPY VERSION ./VERSION
 
 ENV NODE_ENV=production
 ENV PORT=8080

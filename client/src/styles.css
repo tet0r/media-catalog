@@ -22,6 +22,7 @@ code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; }
   position: sticky; top: 0; z-index: 5;
 }
 .brand { font-weight: 700; font-size: 1.2rem; }
+.version-tag { font-weight: 400; font-size: 0.75rem; color: var(--text-muted); margin-left: 8px; vertical-align: middle; }
 .topbar nav { display: flex; gap: 18px; }
 .topbar nav a { color: var(--text-muted); padding: 6px 4px; border-bottom: 2px solid transparent; }
 .topbar nav a.active { color: var(--text); border-color: var(--accent); }

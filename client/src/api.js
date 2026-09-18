@@ -10,6 +10,7 @@ async function handle(res) {
 }
 
 export const api = {
+  getHealth: () => fetch(`${BASE}/health`).then(handle),
   listMovies: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
