@@ -10,7 +10,7 @@ export default function MovieCard({ movie }) {
         {movie.personal_rating ? <span className="badge">{'★'.repeat(movie.personal_rating)}</span> : null}
       </div>
       <div className="card-title">{movie.title}</div>
-      <div className="card-meta">{movie.year || ''} · {movie.format}</div>
+      <div className="card-meta">{movie.year || ''}</div>
     </div>
   );
 }

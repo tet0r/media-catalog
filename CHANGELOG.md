@@ -5,6 +5,13 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.2 — Uniform Library card heights
+- Titles were wrapping to different numbers of lines depending on length,
+  making grid rows uneven. Card titles now clamp to a fixed 2-line height
+  regardless of title length, so every card in the grid is exactly the
+  same height. Also dropped the format/media-type text (e.g. "File") from
+  the card, per request.
+
 ## v5.1 — Bulk metadata refresh from Settings
 - "Refresh All Metadata" in Settings runs the same per-movie TMDB refresh
   from v5.0 across the whole collection as a background job, with live
