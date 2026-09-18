@@ -5,6 +5,13 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.1 — Bulk metadata refresh from Settings
+- "Refresh All Metadata" in Settings runs the same per-movie TMDB refresh
+  from v5.0 across the whole collection as a background job, with live
+  progress. Skips movies with no TMDB match, keeps going past a failure on
+  any one movie rather than stopping the whole batch, and leaves posters/
+  backdrops untouched.
+
 ## v5.0 — Replace "My Collection Info" with richer movie details
 - Dropped the entire personal-collection form (format, location, purchase
   date/price/store, my rating, watched, loaned-to, notes) from the movie

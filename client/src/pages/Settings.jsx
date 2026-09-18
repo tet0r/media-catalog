@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 
 const INTERVAL_OPTIONS = [
@@ -19,6 +19,7 @@ export default function Settings() {
   const [autoPruneMissing, setAutoPruneMissing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [bulkStatus, setBulkStatus] = useState(null);
 
   useEffect(() => {
     api
@@ -32,6 +33,26 @@ export default function Settings() {
       })
       .catch((err) => setError(err.message));
   }, []);
+
+  const refreshBulkStatus = useCallback(() => {
+    api.bulkRefreshStatus().then(setBulkStatus).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshBulkStatus();
+    const interval = setInterval(refreshBulkStatus, 2000);
+    return () => clearInterval(interval);
+  }, [refreshBulkStatus]);
+
+  async function startBulkRefresh() {
+    setError(null);
+    try {
+      await api.startBulkRefresh();
+      refreshBulkStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   async function save() {
     setError(null);
@@ -115,6 +136,20 @@ export default function Settings() {
       <button onClick={save}>Save</button>
       {saved && <span className="muted"> Saved!</span>}
       {error && <p className="error">{error}</p>}
+
+      <hr />
+      <h2>Bulk Actions</h2>
+      <p className="muted">
+        Re-fetches every movie's metadata from TMDB in place — the same as clicking "Refresh
+        Metadata" on a movie's page, done for the whole collection at once. Doesn't touch
+        posters/backdrops, so any custom picks are left alone.
+      </p>
+      <button onClick={startBulkRefresh} disabled={bulkStatus?.running}>
+        {bulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
+      </button>
+      {bulkStatus && bulkStatus.message !== 'Idle' && (
+        <p className="muted"> {bulkStatus.message}</p>
+      )}
     </div>
   );
 }

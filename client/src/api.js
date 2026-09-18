@@ -33,6 +33,8 @@ export const api = {
     }).then(handle),
   deleteMovie: (id) => fetch(`${BASE}/movies/${id}`, { method: 'DELETE' }).then(handle),
   refreshMovie: (id) => fetch(`${BASE}/movies/${id}/refresh`, { method: 'POST' }).then(handle),
+  startBulkRefresh: () => fetch(`${BASE}/movies/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshStatus: () => fetch(`${BASE}/movies/refresh-all/status`).then(handle),
   setMoviePoster: (id, imageUrl) =>
     fetch(`${BASE}/movies/${id}/poster`, {
       method: 'PUT',

@@ -3,6 +3,7 @@ const path = require('path');
 const db = require('../db');
 const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
 const { cacheImageFromUrl } = require('../lib/images');
+const bulkRefresh = require('../lib/bulkRefresh');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -48,6 +49,18 @@ router.get('/', (req, res) => {
 
   const rows = db.prepare(sql).all(...params);
   res.json(rows.map(rowToMovie));
+});
+
+// Defined ahead of the /:id routes below so these literal paths are never
+// shadowed by the param route.
+router.post('/refresh-all', (req, res) => {
+  const started = bulkRefresh.startBulkRefresh();
+  if (!started) return res.status(409).json({ error: 'A bulk refresh is already running' });
+  res.status(202).json({ started: true });
+});
+
+router.get('/refresh-all/status', (req, res) => {
+  res.json(bulkRefresh.getStatus());
 });
 
 router.get('/:id', (req, res) => {
