@@ -46,6 +46,23 @@ button:disabled { opacity: 0.6; cursor: default; }
 button.danger { background: var(--danger); color: white; }
 button.muted-btn { background: var(--card); color: var(--text-muted); border: 1px solid var(--border); }
 
+.sort-menu { position: relative; }
+.sort-menu-trigger {
+  background: var(--card); color: var(--text); border: 1px solid var(--border);
+  font-weight: 400; font-size: 0.95rem; white-space: nowrap;
+}
+.sort-menu-list {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 140px;
+  background: var(--bg-alt); border: 1px solid var(--border); border-radius: 6px;
+  overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+.sort-menu-list button {
+  display: block; width: 100%; text-align: left; background: none; color: var(--text);
+  font-weight: 400; border: none; border-radius: 0; padding: 8px 12px;
+}
+.sort-menu-list button:hover { background: var(--card); }
+.sort-menu-list button.active { color: var(--accent); font-weight: 600; }
+
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
 .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.15s; }
 .card:hover { transform: translateY(-3px); }

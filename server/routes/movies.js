@@ -19,7 +19,7 @@ function rowToMovie(row) {
   };
 }
 
-const SORT_COLUMNS = new Set(['title', 'year', 'added_at', 'personal_rating', 'tmdb_rating']);
+const SORT_COLUMNS = new Set(['title', 'year', 'added_at', 'personal_rating', 'tmdb_rating', 'runtime']);
 
 router.get('/', (req, res) => {
   const { q, genre, format, watched, sort = 'title', dir = 'asc' } = req.query;

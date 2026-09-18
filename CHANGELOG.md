@@ -5,6 +5,15 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.6 — Reversible sort menu
+- Replaced the Library sort dropdown (Title/Year/Recently Added/My
+  Rating/TMDB Rating) with a 4-option menu — A-Z, Year, Length, Rating
+  (personal rating) — where clicking the already-active option reverses
+  its direction instead of doing nothing. A native `<select>` can't do
+  this (re-picking the same option fires no change event), so it's a
+  small custom dropdown instead. Backend gained `runtime` as a sortable
+  column.
+
 ## v4.5 — Restore Library scroll position on return
 - Going into a movie's detail page and back no longer resets the Library
   to the top. Scroll position is tracked continuously while the page is

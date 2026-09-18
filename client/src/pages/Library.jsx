@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
+import SortMenu from '../components/SortMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -21,6 +22,7 @@ export default function Library() {
   const [q, setQ] = useState('');
   const [format, setFormat] = useState('');
   const [sort, setSort] = useState('title');
+  const [dir, setDir] = useState('asc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
@@ -41,11 +43,11 @@ export default function Library() {
   useEffect(() => {
     setLoading(true);
     api
-      .listMovies({ q, format, sort })
+      .listMovies({ q, format, sort, dir })
       .then(setMovies)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [q, format, sort]);
+  }, [q, format, sort, dir]);
 
   useEffect(() => {
     if (loading) return;
@@ -71,6 +73,7 @@ export default function Library() {
     if (sort !== 'title') {
       setPendingJump(letter);
       setSort('title');
+      setDir('asc');
       return;
     }
     const el = document.getElementById(`letter-${letter}`);
@@ -92,13 +95,7 @@ export default function Library() {
           <option value="Digital">Digital</option>
           <option value="File">File</option>
         </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="title">Title</option>
-          <option value="year">Year</option>
-          <option value="added_at">Recently Added</option>
-          <option value="personal_rating">My Rating</option>
-          <option value="tmdb_rating">TMDB Rating</option>
-        </select>
+        <SortMenu sort={sort} dir={dir} onChange={(s, d) => { setSort(s); setDir(d); }} />
       </div>
       {error && <p className="error">{error}</p>}
       {loading ? (
