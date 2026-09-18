@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const db = require('../db');
 const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
-const { cacheImageFromUrl } = require('../lib/images');
+const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefresh');
 const { IMG_BASE } = require('../lib/tmdb');
 
@@ -126,6 +126,25 @@ async function setImage(req, res, column) {
 
 router.put('/:id/poster', (req, res) => setImage(req, res, 'poster_file'));
 router.put('/:id/backdrop', (req, res) => setImage(req, res, 'backdrop_file'));
+
+// Raw image bytes in the request body (not JSON), for uploading a poster
+// file directly instead of picking one from ThePosterDB/TMDB. Scoped to
+// this one route rather than mounted globally, since the rest of the API
+// expects JSON bodies.
+router.put('/:id/poster/upload', express.raw({ type: () => true, limit: '15mb' }), async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+    db.prepare('UPDATE movies SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
+    const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(rowToMovie(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 router.post('/:id/refresh', async (req, res) => {
   try {

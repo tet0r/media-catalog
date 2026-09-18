@@ -41,4 +41,17 @@ async function cacheImageFromUrl(dataDir, imageUrl) {
   return filename;
 }
 
-module.exports = { cachePoster, cacheImageFromUrl };
+// For a directly-uploaded file rather than a fetched URL. Named by a hash of
+// the bytes so re-uploading the exact same file is a no-op, same as cacheImageFromUrl.
+async function cacheImageBuffer(dataDir, buffer, contentType) {
+  const postersDir = path.join(dataDir, 'posters');
+  fs.mkdirSync(postersDir, { recursive: true });
+  const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : contentType.includes('gif') ? 'gif' : 'jpg';
+  const hash = crypto.createHash('sha1').update(buffer).digest('hex');
+  const filename = `custom-${hash}.${ext}`;
+  const dest = path.join(postersDir, filename);
+  if (!fs.existsSync(dest)) fs.writeFileSync(dest, buffer);
+  return filename;
+}
+
+module.exports = { cachePoster, cacheImageFromUrl, cacheImageBuffer };

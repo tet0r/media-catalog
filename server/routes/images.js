@@ -63,6 +63,20 @@ router.get('/proxy', async (req, res) => {
   }
 });
 
+// Alternate posters via TMDB's own official images endpoint.
+router.get('/posters/:tmdbId', async (req, res) => {
+  try {
+    const data = await tmdb.getMovieImages(db, req.params.tmdbId);
+    const posters = (data.posters || []).map((p) => ({
+      url: `${tmdb.IMG_BASE}/w500${p.file_path}`,
+      thumbnail_url: `${tmdb.IMG_BASE}/w200${p.file_path}`,
+    }));
+    res.json(posters);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Alternate backdrops via TMDB's own official images endpoint.
 router.get('/backdrops/:tmdbId', async (req, res) => {
   try {

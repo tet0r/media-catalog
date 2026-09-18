@@ -42,6 +42,10 @@ export default function MovieDetail() {
     setMovie(await api.setMoviePoster(id, url));
   }
 
+  async function uploadPoster(file) {
+    setMovie(await api.uploadMoviePoster(id, file));
+  }
+
   async function applyBackdrop(url) {
     setMovie(await api.setMovieBackdrop(id, url));
   }
@@ -181,17 +185,36 @@ export default function MovieDetail() {
       {picker === 'poster' && (
         <ImagePicker
           title="Choose a Poster"
-          sourceLabel="Via ThePosterDB — unofficial, may occasionally be unavailable."
-          fetchOptions={() => api.searchTpdbPosters(movie.title, movie.year)}
+          tabs={[
+            {
+              key: 'tpdb',
+              label: 'ThePosterDB',
+              sourceLabel: 'Via ThePosterDB — unofficial, may occasionally be unavailable.',
+              fetchOptions: () => api.searchTpdbPosters(movie.title, movie.year),
+            },
+            {
+              key: 'tmdb',
+              label: 'TMDB',
+              sourceLabel: "Via TMDB's own poster gallery for this movie.",
+              fetchOptions: () => api.searchTmdbPosters(movie.tmdb_id),
+            },
+          ]}
           onSelect={applyPoster}
+          onUpload={uploadPoster}
           onClose={() => setPicker(null)}
         />
       )}
       {picker === 'backdrop' && (
         <ImagePicker
           title="Choose a Banner"
-          sourceLabel="Via TMDB's image gallery for this movie."
-          fetchOptions={() => api.searchTmdbBackdrops(movie.tmdb_id)}
+          tabs={[
+            {
+              key: 'tmdb',
+              label: 'TMDB',
+              sourceLabel: "Via TMDB's image gallery for this movie.",
+              fetchOptions: () => api.searchTmdbBackdrops(movie.tmdb_id),
+            },
+          ]}
           onSelect={applyBackdrop}
           onClose={() => setPicker(null)}
         />

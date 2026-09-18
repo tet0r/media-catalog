@@ -5,6 +5,17 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.4 — Tabbed poster picker with upload, readable A-Z index
+- The A-Z jump index on the Library page was hard to read (tiny letters
+  with no visual separation from the page). It's now larger, in a
+  pill-shaped panel with a hover highlight, so it's easier to scan and hit.
+- The poster picker now has two tabs — ThePosterDB and TMDB — instead of
+  only searching ThePosterDB, so a TMDB-only or better-covered title isn't
+  stuck with no alternatives.
+- Added an "Upload Image..." button to the poster picker for using a local
+  file instead of anything from either source. Uploads go straight to the
+  server as raw image bytes (no new dependency needed for it).
+
 ## v5.3 — Cast photos, 3-line card titles, drop file path from movie page
 - Cast members on a movie's detail page now show their photo from TMDB (when
   one exists) instead of just a name/character line. Existing movies need a
