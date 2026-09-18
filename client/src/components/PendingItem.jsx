@@ -59,7 +59,7 @@ export default function PendingItem({ item, busy, onResolve }) {
         <input
           value={tmdbUrl}
           onChange={(e) => setTmdbUrl(e.target.value)}
-          placeholder="Or paste a themoviedb.org movie URL"
+          placeholder="Or paste a themoviedb.org or imdb.com movie URL"
         />
         <button type="submit" disabled={working || !tmdbUrl}>Look up URL</button>
       </form>

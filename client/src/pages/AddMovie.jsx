@@ -64,7 +64,7 @@ export default function AddMovie() {
       </form>
       <form onSubmit={lookupUrl} className="toolbar">
         <input
-          placeholder="Not finding it? Paste a themoviedb.org movie URL instead"
+          placeholder="Not finding it? Paste a themoviedb.org or imdb.com movie URL instead"
           value={tmdbUrl}
           onChange={(e) => setTmdbUrl(e.target.value)}
         />
