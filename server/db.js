@@ -60,9 +60,20 @@ CREATE TABLE IF NOT EXISTS scan_status (
   matched INTEGER DEFAULT 0,
   pending INTEGER DEFAULT 0,
   skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
   message TEXT
 );
 `);
+
+// Migrate existing databases created before a column existed (SQLite has
+// no "ADD COLUMN IF NOT EXISTS", so check first).
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('scan_status', 'removed', 'INTEGER DEFAULT 0');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 

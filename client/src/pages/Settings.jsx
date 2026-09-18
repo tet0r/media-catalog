@@ -16,6 +16,7 @@ export default function Settings() {
   const [source, setSource] = useState('none');
   const [autoScanEnabled, setAutoScanEnabled] = useState(false);
   const [autoScanInterval, setAutoScanInterval] = useState(60);
+  const [autoPruneMissing, setAutoPruneMissing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
 
@@ -27,6 +28,7 @@ export default function Settings() {
         setSource(s.tmdb_api_key_source);
         setAutoScanEnabled(!!s.auto_scan_enabled);
         setAutoScanInterval(s.auto_scan_interval_minutes || 60);
+        setAutoPruneMissing(!!s.auto_prune_missing);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -38,6 +40,7 @@ export default function Settings() {
         tmdb_api_key: key,
         auto_scan_enabled: autoScanEnabled,
         auto_scan_interval_minutes: autoScanInterval,
+        auto_prune_missing: autoPruneMissing,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -92,6 +95,22 @@ export default function Settings() {
           ))}
         </select>
       </div>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={autoPruneMissing}
+            onChange={(e) => setAutoPruneMissing(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Remove movies whose file is no longer found</span>
+      </div>
+      <p className="muted">
+        Runs during every scan (manual or automatic). Skipped for any share that returns zero
+        files that scan, so a briefly-disconnected network mount can't wipe out your collection.
+      </p>
 
       <button onClick={save}>Save</button>
       {saved && <span className="muted"> Saved!</span>}

@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const db = require('../db');
 const tmdb = require('../lib/tmdb');
 const { addMovieFromTmdbId } = require('../lib/addMovie');
@@ -30,7 +31,42 @@ function setStatus(fields) {
   const cur = db.prepare('SELECT * FROM scan_status WHERE id = 1').get();
   const merged = { ...cur, ...fields };
   db.prepare(`UPDATE scan_status SET running=@running, last_run=@last_run, files_found=@files_found,
-    matched=@matched, pending=@pending, skipped=@skipped, message=@message WHERE id = 1`).run(merged);
+    matched=@matched, pending=@pending, skipped=@skipped, removed=@removed, message=@message WHERE id = 1`).run(merged);
+}
+
+function getSetting(key) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+// Removes movies (and unresolved pending items) whose backing file no
+// longer exists — but only for a root that actually produced at least one
+// file THIS scan. A root returning zero files usually means its network
+// mount briefly failed rather than every file under it having been
+// deleted, so that root is treated as "unhealthy this scan" and left
+// alone entirely, rather than risk wiping out the whole collection because
+// a share was temporarily unreachable.
+function pruneMissingFiles(entries) {
+  const rootsWithFiles = new Set(entries.map((e) => e.root));
+  const healthyRoots = MOVIES_DIRS.filter((root) => rootsWithFiles.has(root));
+
+  let removed = 0;
+  const movies = db.prepare('SELECT id, file_path FROM movies WHERE file_path IS NOT NULL').all();
+  for (const movie of movies) {
+    const root = healthyRoots.find((r) => movie.file_path.startsWith(r));
+    if (!root || fs.existsSync(movie.file_path)) continue;
+    db.prepare('DELETE FROM movies WHERE id = ?').run(movie.id);
+    removed++;
+  }
+
+  const pendingItems = db.prepare('SELECT id, file_path FROM scan_pending').all();
+  for (const p of pendingItems) {
+    const root = healthyRoots.find((r) => p.file_path.startsWith(r));
+    if (!root || fs.existsSync(p.file_path)) continue;
+    db.prepare('DELETE FROM scan_pending WHERE id = ?').run(p.id);
+  }
+
+  return removed;
 }
 
 function toCandidateList(results) {
@@ -43,7 +79,7 @@ function toCandidateList(results) {
 }
 
 async function runScan() {
-  setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0 });
+  setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0 });
   try {
     const entries = walkAllRoots(MOVIES_DIRS);
     setStatus({ files_found: entries.length, message: `Found ${entries.length} video files. Matching against TMDB...` });
@@ -97,7 +133,13 @@ async function runScan() {
       setStatus({ matched, pending, skipped });
     }
 
-    setStatus({ running: 0, last_run: new Date().toISOString(), message: 'Scan complete.' });
+    let removed = 0;
+    if (getSetting('auto_prune_missing') === 'true') {
+      setStatus({ message: 'Checking for movies whose files are gone...' });
+      removed = pruneMissingFiles(entries);
+    }
+
+    setStatus({ running: 0, last_run: new Date().toISOString(), removed, message: 'Scan complete.' });
   } catch (err) {
     setStatus({ running: 0, message: `Scan failed: ${err.message}` });
   }

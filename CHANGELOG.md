@@ -5,6 +5,12 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.2 — Remove movies whose file is gone
+- New Settings toggle: during any scan (manual or automatic), delete movies
+  whose backing file no longer exists. Guarded against a network mount
+  briefly failing: a share that returns zero files that scan is treated as
+  unhealthy and its movies are left untouched, never removed.
+
 ## v4.1 — Update available notice
 - The nav bar's version tag now shows an "Update available" badge when the
   `VERSION` file on GitHub's `main` branch is ahead of the running instance

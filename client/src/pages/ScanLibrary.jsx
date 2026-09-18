@@ -59,6 +59,7 @@ export default function ScanLibrary() {
             <p>
               {status.files_found} files found · {status.matched} auto-matched · {status.pending} need review ·{' '}
               {status.skipped} skipped
+              {status.removed ? <> · {status.removed} removed (file no longer found)</> : null}
             </p>
           ) : null}
           {status.last_run && <p className="muted">Last run: {new Date(status.last_run).toLocaleString()}</p>}
