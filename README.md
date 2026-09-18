@@ -60,9 +60,9 @@ same way.
    docker compose up -d
    ```
 
-   (This pulls the pre-built image from GHCR — see **Image publishing**
-   below. If you want to build from source instead, run
-   `docker build -t ghcr.io/tet0r/movie-cataloger:latest .` first.)
+   (This pulls the pre-built image from GHCR. If you want to build from
+   source instead, run `docker build -t ghcr.io/tet0r/movie-cataloger:latest .`
+   first.)
 
 5. Open **http://localhost:8080** (or `http://<your-server-ip>:8080` from
    another device on your network).
@@ -70,38 +70,20 @@ same way.
 6. Go to **Scan Library** to import movies from your files, or **Add Movie**
    to search TMDB by title and add manually.
 
-## Image publishing
-
-A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) builds
-this repo's `Dockerfile` and pushes it to **GitHub Container Registry**
-(`ghcr.io/tet0r/movie-cataloger:latest`) on every push to `main`. This is
-what lets `docker-compose.yml` just say `image: ghcr.io/...` instead of
-`build: .` — no build step needed on the machine that runs the container.
-
-**One-time step after the first push**: GitHub publishes new packages as
-*private* by default, so Portainer (or `docker pull`) won't be able to fetch
-it until you make it public:
-
-1. Go to your GitHub profile → **Packages** tab (or
-   `https://github.com/users/tet0r/packages/container/package/movie-cataloger`).
-2. Open **Package settings** → **Change visibility** → **Public**.
-
-(Alternatively, keep it private and give Portainer a GHCR credential under
-**Registries** — but public is simplest for a hobby project with no secrets
-baked into the image.)
-
-Check the **Actions** tab on the GitHub repo to confirm the build succeeded
-before deploying — the image won't exist yet until that workflow run
-finishes.
-
 ## Deploying via Portainer (Web editor)
 
 Since the image is published to GHCR, you can just paste the compose file
 directly into Portainer — no repo access from the Docker host needed.
 
-1. Confirm the GHCR image is public (see **Image publishing** above). The
-   compose file itself needs no editing for this — your share paths aren't
-   in it (see **Network shares** below).
+1. Confirm the GHCR image is public — GitHub publishes new packages as
+   *private* by default, so Portainer (or `docker pull`) won't be able to
+   fetch it until you make it public: go to your GitHub profile →
+   **Packages** tab (or
+   `https://github.com/users/tet0r/packages/container/package/movie-cataloger`),
+   then **Package settings** → **Change visibility** → **Public**.
+   (Alternatively, keep it private and give Portainer a GHCR credential
+   under **Registries**.) The compose file itself needs no editing for
+   this — your share paths aren't in it (see **Network shares** below).
 
 2. In Portainer: **Stacks → Add stack**.
    - Name it (e.g. `movie-cataloger`).
