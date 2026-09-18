@@ -5,6 +5,13 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.5 — Restore Library scroll position on return
+- Going into a movie's detail page and back no longer resets the Library
+  to the top. Scroll position is tracked continuously while the page is
+  open (not captured on unmount, which was too late — the browser had
+  already clamped it to fit the next, usually shorter, page) and restored
+  once when the page remounts.
+
 ## v4.4 — A-Z jump index on the Library page
 - A full-height letter index (# and A-Z) on the right edge of the Library
   page. Letters with no matching titles are disabled. Clicking one scrolls

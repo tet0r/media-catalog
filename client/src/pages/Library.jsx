@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
+
+// Module-level, not state: Library unmounts when you navigate to a movie
+// (it's a separate route), so anything in component state would be lost by
+// the time you come back. This survives that as long as the tab itself
+// isn't reloaded.
+let savedScrollY = 0;
 
 function letterFor(title) {
   const ch = (title || '').trim().charAt(0).toUpperCase();
@@ -18,6 +24,19 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
+  const hasRestoredScroll = useRef(false);
+
+  // Track continuously while mounted, not just on unmount — by the time an
+  // unmount cleanup runs, the browser may have already clamped window.scrollY
+  // down to fit the new (often shorter) page that's replacing this one, so
+  // reading it there gives the wrong number.
+  useEffect(() => {
+    function handleScroll() {
+      savedScrollY = window.scrollY;
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -29,10 +48,23 @@ export default function Library() {
   }, [q, format, sort]);
 
   useEffect(() => {
-    if (!pendingJump || loading || sort !== 'title') return;
-    const el = document.getElementById(`letter-${pendingJump}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setPendingJump(null);
+    if (loading) return;
+
+    // Restore where the user left off, exactly once per mount — this
+    // effect otherwise re-fires whenever a filter change flips `loading`
+    // back to false, which would wrongly re-snap the page to the old
+    // position mid-session.
+    if (!hasRestoredScroll.current) {
+      hasRestoredScroll.current = true;
+      if (savedScrollY > 0) window.scrollTo(0, savedScrollY);
+      return;
+    }
+
+    if (pendingJump && sort === 'title') {
+      const el = document.getElementById(`letter-${pendingJump}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setPendingJump(null);
+    }
   }, [movies, loading, sort, pendingJump]);
 
   function jumpTo(letter) {
