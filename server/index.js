@@ -10,13 +10,17 @@ app.use(express.json());
 
 app.use('/posters', express.static(path.join(DATA_DIR, 'posters')));
 
+const scanRouter = require('./routes/scan');
+
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/search', require('./routes/search'));
-app.use('/api/scan', require('./routes/scan'));
+app.use('/api/scan', scanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+require('./lib/autoScanScheduler').start(scanRouter.runScan);
 
 const publicDir = path.join(__dirname, 'public');
 if (fs.existsSync(publicDir)) {
