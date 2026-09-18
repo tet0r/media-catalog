@@ -71,33 +71,26 @@ export default function Settings() {
 
       <hr />
       <h2>Automatic Library Scanning</h2>
-      <p className="muted">
-        Periodically re-scans your movie folders and adds new matches automatically — the same
-        as clicking "Scan Now" on the Scan Library page, just on a timer. This checks on an
-        interval rather than reacting instantly to file changes: real-time filesystem watching
-        isn't reliable over network shares (SMB/CIFS), which is how libraries are mounted here.
-      </p>
-      <div className="form-grid">
-        <label>
-          Enabled
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
           <input
             type="checkbox"
             checked={autoScanEnabled}
             onChange={(e) => setAutoScanEnabled(e.target.checked)}
           />
+          <span className="toggle-slider" />
         </label>
-        <label>
-          Check every
-          <select
-            value={autoScanInterval}
-            onChange={(e) => setAutoScanInterval(Number(e.target.value))}
-            disabled={!autoScanEnabled}
-          >
-            {INTERVAL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </label>
+        <span className="auto-scan-label">Automatically scan for new movies</span>
+        <select
+          value={autoScanInterval}
+          onChange={(e) => setAutoScanInterval(Number(e.target.value))}
+          disabled={!autoScanEnabled}
+          className="auto-scan-interval"
+        >
+          {INTERVAL_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
       <button onClick={save}>Save</button>
