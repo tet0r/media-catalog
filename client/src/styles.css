@@ -67,6 +67,20 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 }
 .count { color: var(--text-muted); margin-top: 20px; font-size: 0.85rem; }
 
+.library-page { position: relative; padding-right: 22px; }
+.alpha-index {
+  position: fixed; top: 64px; right: 4px; bottom: 8px; z-index: 10;
+  display: flex; flex-direction: column; justify-content: space-evenly;
+  align-items: center;
+}
+.alpha-index button {
+  background: none; border: none; padding: 0 4px; margin: 0; line-height: 1.1;
+  font-size: 0.65rem; font-weight: 700; color: var(--text-muted); cursor: pointer;
+}
+.alpha-index button:hover:not(:disabled),
+.alpha-index button:focus-visible:not(:disabled) { color: var(--accent); }
+.alpha-index button:disabled { color: var(--border); cursor: default; }
+
 .detail-body { display: flex; gap: 28px; flex-wrap: wrap; position: relative; }
 .detail-poster img { width: 260px; border-radius: 8px; }
 .detail-info { flex: 1; min-width: 280px; }

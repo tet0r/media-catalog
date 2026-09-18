@@ -5,6 +5,12 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.4 — A-Z jump index on the Library page
+- A full-height letter index (# and A-Z) on the right edge of the Library
+  page. Letters with no matching titles are disabled. Clicking one scrolls
+  to the first movie starting with it, switching sort to Title first if it
+  wasn't already (then jumping once the re-sorted list has loaded).
+
 ## v4.3 — Fix the update notice missing recent pushes
 - The GitHub version check was cached for a full hour, and the frontend
   only ever checked once on page load — so a push could go unnoticed for

@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
 
+const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
+
+function letterFor(title) {
+  const ch = (title || '').trim().charAt(0).toUpperCase();
+  return /[A-Z]/.test(ch) ? ch : '#';
+}
+
 export default function Library() {
   const [movies, setMovies] = useState([]);
   const [q, setQ] = useState('');
@@ -10,6 +17,7 @@ export default function Library() {
   const [sort, setSort] = useState('title');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingJump, setPendingJump] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -20,8 +28,28 @@ export default function Library() {
       .finally(() => setLoading(false));
   }, [q, format, sort]);
 
+  useEffect(() => {
+    if (!pendingJump || loading || sort !== 'title') return;
+    const el = document.getElementById(`letter-${pendingJump}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setPendingJump(null);
+  }, [movies, loading, sort, pendingJump]);
+
+  function jumpTo(letter) {
+    if (sort !== 'title') {
+      setPendingJump(letter);
+      setSort('title');
+      return;
+    }
+    const el = document.getElementById(`letter-${letter}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const availableLetters = new Set(movies.map((m) => letterFor(m.title)));
+  const seenLetters = new Set();
+
   return (
-    <div>
+    <div className="library-page">
       <div className="toolbar">
         <input placeholder="Search your collection..." value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={format} onChange={(e) => setFormat(e.target.value)}>
@@ -49,14 +77,34 @@ export default function Library() {
         </p>
       ) : (
         <div className="grid">
-          {movies.map((m) => (
-            <Link key={m.id} to={`/movies/${m.id}`}>
-              <MovieCard movie={m} />
-            </Link>
-          ))}
+          {movies.map((m) => {
+            const letter = letterFor(m.title);
+            const isFirst = !seenLetters.has(letter);
+            if (isFirst) seenLetters.add(letter);
+            return (
+              <Link key={m.id} to={`/movies/${m.id}`} id={isFirst ? `letter-${letter}` : undefined}>
+                <MovieCard movie={m} />
+              </Link>
+            );
+          })}
         </div>
       )}
       <p className="count">{movies.length} movie{movies.length === 1 ? '' : 's'}</p>
+
+      {movies.length > 0 && (
+        <nav className="alpha-index" aria-label="Jump to letter">
+          {LETTERS.map((letter) => (
+            <button
+              key={letter}
+              type="button"
+              disabled={!availableLetters.has(letter)}
+              onClick={() => jumpTo(letter)}
+            >
+              {letter}
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
