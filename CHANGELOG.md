@@ -5,6 +5,12 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.7 — Restore sort selection on return, not just scroll position
+- Going into a movie and back now also keeps whatever sort field and
+  direction you had set, using the same module-level persistence as the
+  scroll-position restoration from v4.5 (component state alone doesn't
+  survive Library unmounting when you navigate to a movie route).
+
 ## v4.6 — Reversible sort menu
 - Replaced the Library sort dropdown (Title/Year/Recently Added/My
   Rating/TMDB Rating) with a 4-option menu — A-Z, Year, Length, Rating

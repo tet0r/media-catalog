@@ -11,6 +11,8 @@ const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCod
 // the time you come back. This survives that as long as the tab itself
 // isn't reloaded.
 let savedScrollY = 0;
+let savedSort = 'title';
+let savedDir = 'asc';
 
 function letterFor(title) {
   const ch = (title || '').trim().charAt(0).toUpperCase();
@@ -21,8 +23,8 @@ export default function Library() {
   const [movies, setMovies] = useState([]);
   const [q, setQ] = useState('');
   const [format, setFormat] = useState('');
-  const [sort, setSort] = useState('title');
-  const [dir, setDir] = useState('asc');
+  const [sort, setSort] = useState(savedSort);
+  const [dir, setDir] = useState(savedDir);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
@@ -39,6 +41,11 @@ export default function Library() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    savedSort = sort;
+    savedDir = dir;
+  }, [sort, dir]);
 
   useEffect(() => {
     setLoading(true);
