@@ -17,13 +17,24 @@ CREATE TABLE IF NOT EXISTS movies (
   original_title TEXT,
   year INTEGER,
   overview TEXT,
+  tagline TEXT,
   runtime INTEGER,
   genres TEXT,
   director TEXT,
   cast TEXT,
+  crew TEXT,
   poster_file TEXT,
   backdrop_file TEXT,
   tmdb_rating REAL,
+  vote_count INTEGER,
+  imdb_id TEXT,
+  budget INTEGER,
+  revenue INTEGER,
+  status TEXT,
+  original_language TEXT,
+  homepage TEXT,
+  production_companies TEXT,
+  spoken_languages TEXT,
   file_path TEXT,
   format TEXT DEFAULT 'File',
   location TEXT,
@@ -74,6 +85,17 @@ function ensureColumn(table, column, definition) {
   }
 }
 ensureColumn('scan_status', 'removed', 'INTEGER DEFAULT 0');
+ensureColumn('movies', 'tagline', 'TEXT');
+ensureColumn('movies', 'crew', 'TEXT');
+ensureColumn('movies', 'vote_count', 'INTEGER');
+ensureColumn('movies', 'imdb_id', 'TEXT');
+ensureColumn('movies', 'budget', 'INTEGER');
+ensureColumn('movies', 'revenue', 'INTEGER');
+ensureColumn('movies', 'status', 'TEXT');
+ensureColumn('movies', 'original_language', 'TEXT');
+ensureColumn('movies', 'homepage', 'TEXT');
+ensureColumn('movies', 'production_companies', 'TEXT');
+ensureColumn('movies', 'spoken_languages', 'TEXT');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 

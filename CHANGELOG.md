@@ -5,7 +5,22 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
-## v4.7 — Restore sort selection on return, not just scroll position
+## v5.0 — Replace "My Collection Info" with richer movie details
+- Dropped the entire personal-collection form (format, location, purchase
+  date/price/store, my rating, watched, loaned-to, notes) from the movie
+  detail page — not deleted from the database, just no longer shown or
+  editable there.
+- In its place: tagline, original title, full cast with character names,
+  crew (writer/producer/composer/etc., grouped by job), production
+  companies, spoken languages, budget/revenue, vote count, status (if not
+  "Released"), and IMDb/TMDB/homepage links.
+- New "Refresh Metadata" button re-fetches from TMDB for a movie already in
+  the collection, so existing entries can pick up these new fields without
+  being deleted and re-added. Leaves poster/backdrop alone, in case a
+  custom one was picked via ThePosterDB/TMDB's gallery.
+- `movies` table gained tagline/crew/vote_count/imdb_id/budget/revenue/
+  status/original_language/homepage/production_companies/spoken_languages
+  columns, with a migration for existing databases.
 - Going into a movie and back now also keeps whatever sort field and
   direction you had set, using the same module-level persistence as the
   scroll-position restoration from v4.5 (component state alone doesn't

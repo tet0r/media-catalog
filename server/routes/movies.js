@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('../db');
-const { addMovieFromTmdbId } = require('../lib/addMovie');
+const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
 const { cacheImageFromUrl } = require('../lib/images');
 
 const router = express.Router();
@@ -12,7 +12,10 @@ function rowToMovie(row) {
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
     cast: row.cast ? JSON.parse(row.cast) : [],
+    crew: row.crew ? JSON.parse(row.crew) : [],
     tags: row.tags ? JSON.parse(row.tags) : [],
+    production_companies: row.production_companies ? JSON.parse(row.production_companies) : [],
+    spoken_languages: row.spoken_languages ? JSON.parse(row.spoken_languages) : [],
     watched: !!row.watched,
     poster_url: row.poster_file ? `/posters/${row.poster_file}` : null,
     backdrop_url: row.backdrop_file ? `/posters/${row.backdrop_file}` : null,
@@ -104,6 +107,18 @@ async function setImage(req, res, column) {
 
 router.put('/:id/poster', (req, res) => setImage(req, res, 'poster_file'));
 router.put('/:id/backdrop', (req, res) => setImage(req, res, 'backdrop_file'));
+
+router.post('/:id/refresh', async (req, res) => {
+  try {
+    const existing = db.prepare('SELECT tmdb_id FROM movies WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    if (!existing.tmdb_id) return res.status(400).json({ error: 'This movie has no TMDB match to refresh from' });
+    const row = await refreshMovieMetadata(req.params.id, existing.tmdb_id);
+    res.json(rowToMovie(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM movies WHERE id = ?').run(req.params.id);

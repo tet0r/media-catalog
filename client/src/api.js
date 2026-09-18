@@ -32,6 +32,7 @@ export const api = {
       body: JSON.stringify(payload),
     }).then(handle),
   deleteMovie: (id) => fetch(`${BASE}/movies/${id}`, { method: 'DELETE' }).then(handle),
+  refreshMovie: (id) => fetch(`${BASE}/movies/${id}/refresh`, { method: 'POST' }).then(handle),
   setMoviePoster: (id, imageUrl) =>
     fetch(`${BASE}/movies/${id}/poster`, {
       method: 'PUT',

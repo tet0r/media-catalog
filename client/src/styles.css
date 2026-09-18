@@ -104,10 +104,16 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 .detail-info h1 { margin: 0 0 4px; }
 .detail-info .year { color: var(--text-muted); font-weight: 400; }
 .director { color: var(--text-muted); margin-top: 0; }
+.original-title { margin-top: -4px; }
+.tagline { font-style: italic; color: var(--text-muted); margin: 4px 0; }
 .overview { line-height: 1.5; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
 .tag { background: var(--bg-alt); border: 1px solid var(--border); padding: 3px 9px; border-radius: 20px; font-size: 0.75rem; }
-.stats { display: flex; gap: 16px; color: var(--text-muted); margin-bottom: 10px; }
+.tag.link-tag { color: var(--text); text-decoration: none; }
+.tag.link-tag:hover { border-color: var(--accent); color: var(--accent); }
+.stats { display: flex; gap: 16px; color: var(--text-muted); margin-bottom: 10px; flex-wrap: wrap; }
+.crew-line { margin: 2px 0; color: var(--text-muted); font-size: 0.9rem; }
+.crew-line strong { color: var(--text); }
 .backdrop { height: 220px; background-size: cover; background-position: center; border-radius: 8px; margin-bottom: -80px; opacity: 0.35; filter: blur(1px); }
 .filepath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); word-break: break-all; }
 
