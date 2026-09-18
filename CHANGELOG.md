@@ -5,6 +5,11 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v4.1 — Update available notice
+- The nav bar's version tag now shows an "Update available" badge when the
+  `VERSION` file on GitHub's `main` branch is ahead of the running instance
+  — checks hourly, fails silently if GitHub is unreachable.
+
 ## v4.0 — Automatic library scanning
 - Settings toggle + interval picker for periodically re-scanning movie
   folders and auto-adding new matches, without needing to click "Scan Now"

@@ -9,9 +9,11 @@ import Settings from './pages/Settings.jsx';
 
 export default function App() {
   const [version, setVersion] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState(null);
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
+    api.getVersionCheck().then(setUpdateInfo).catch(() => {});
   }, []);
 
   return (
@@ -20,6 +22,17 @@ export default function App() {
         <div className="brand">
           🎬 Movie Cataloger
           {version && <span className="version-tag">v{version}</span>}
+          {updateInfo?.updateAvailable && (
+            <a
+              className="update-badge"
+              href="https://github.com/tet0r/movie-cataloger/blob/main/CHANGELOG.md"
+              target="_blank"
+              rel="noreferrer"
+              title={`A new version (v${updateInfo.latest}) is available on GitHub`}
+            >
+              Update available
+            </a>
+          )}
         </div>
         <nav>
           <NavLink to="/" end>Library</NavLink>

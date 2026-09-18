@@ -1,24 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { readCurrentVersion } = require('./lib/version');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-
-// The Docker image copies VERSION next to this file; running from source
-// (no Docker) it's one level up, at the repo root.
-function readVersion() {
-  for (const p of [path.join(__dirname, 'VERSION'), path.join(__dirname, '..', 'VERSION')]) {
-    try {
-      return fs.readFileSync(p, 'utf-8').trim();
-    } catch {
-      // try the next candidate
-    }
-  }
-  return 'unknown';
-}
-const VERSION = readVersion();
+const VERSION = readCurrentVersion();
 
 app.use(express.json());
 
@@ -31,6 +19,7 @@ app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
+app.use('/api/version-check', require('./routes/version'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 
