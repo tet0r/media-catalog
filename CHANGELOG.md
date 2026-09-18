@@ -5,6 +5,18 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.3 — Cast photos, 3-line card titles, drop file path from movie page
+- Cast members on a movie's detail page now show their photo from TMDB (when
+  one exists) instead of just a name/character line. Existing movies need a
+  "Refresh Metadata" (or the bulk one in Settings) to pick up photos, since
+  the cast data was fetched before this field existed.
+- Library card titles now clamp to 3 lines instead of 2, so more of a long
+  title is visible before it's cut off (still a fixed height, so cards stay
+  uniform either way).
+- The movie detail page no longer shows the on-disk file path — it was
+  clutter for a folder-scanned collection, not information a user needs day
+  to day.
+
 ## v5.2 — Uniform Library card heights
 - Titles were wrapping to different numbers of lines depending on length,
   making grid rows uneven. Card titles now clamp to a fixed 2-line height

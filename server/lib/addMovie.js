@@ -17,7 +17,7 @@ const NOTABLE_CREW_JOBS = new Set([
 // so the two never drift out of sync with each other.
 function extractMetadata(details) {
   const director = (details.credits?.crew || []).find((c) => c.job === 'Director');
-  const cast = (details.credits?.cast || []).slice(0, 12).map((c) => ({ name: c.name, character: c.character }));
+  const cast = (details.credits?.cast || []).slice(0, 12).map((c) => ({ name: c.name, character: c.character, profile_path: c.profile_path || null }));
   const crew = (details.credits?.crew || [])
     .filter((c) => NOTABLE_CREW_JOBS.has(c.job))
     .slice(0, 8)

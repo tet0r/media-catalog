@@ -114,10 +114,22 @@ export default function MovieDetail() {
           </div>
 
           {movie.cast && movie.cast.length > 0 && (
-            <p className="cast">
-              <strong>Cast:</strong>{' '}
-              {movie.cast.map((c) => (c.character ? `${c.name} (${c.character})` : c.name)).join(', ')}
-            </p>
+            <div className="cast-section">
+              <strong>Cast</strong>
+              <div className="cast-grid">
+                {movie.cast.map((c) => (
+                  <div key={c.name} className="cast-member">
+                    {c.profile_url ? (
+                      <img src={c.profile_url} alt={c.name} />
+                    ) : (
+                      <div className="cast-member-noimg">{c.name}</div>
+                    )}
+                    <div className="cast-name">{c.name}</div>
+                    {c.character && <div className="cast-character muted">{c.character}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {Object.entries(crewByJob).map(([job, names]) => (
@@ -155,8 +167,6 @@ export default function MovieDetail() {
               </a>
             )}
           </div>
-
-          {movie.file_path && <p className="filepath"><strong>File:</strong> {movie.file_path}</p>}
 
           <div className="actions">
             <button onClick={refreshMetadata} disabled={refreshing || !movie.tmdb_id}>

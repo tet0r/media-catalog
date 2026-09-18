@@ -4,6 +4,7 @@ const db = require('../db');
 const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
 const { cacheImageFromUrl } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefresh');
+const { IMG_BASE } = require('../lib/tmdb');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -12,7 +13,12 @@ function rowToMovie(row) {
   return {
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
-    cast: row.cast ? JSON.parse(row.cast) : [],
+    cast: row.cast
+      ? JSON.parse(row.cast).map((c) => ({
+          ...c,
+          profile_url: c.profile_path ? `${IMG_BASE}/w185${c.profile_path}` : null,
+        }))
+      : [],
     crew: row.crew ? JSON.parse(row.crew) : [],
     tags: row.tags ? JSON.parse(row.tags) : [],
     production_companies: row.production_companies ? JSON.parse(row.production_companies) : [],
