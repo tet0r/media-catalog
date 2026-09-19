@@ -1,9 +1,16 @@
-# Media Catalog (self-hosted CLZ Movies alternative)
+# Media Catalog (self-hosted CLZ Movies / CLZ Music alternative)
 
-A self-hosted, Docker-deployable movie collection cataloger, inspired by
-[CLZ Movies](https://clz.com/movies): a personal database of your movies with
-posters, cast/crew, plot, ratings, plus your own fields (format, shelf
-location, purchase info, personal rating, notes, loan tracking).
+A self-hosted, Docker-deployable media collection cataloger, inspired by
+[CLZ Movies](https://clz.com/movies) and its siblings. Currently covers:
+
+- **Movies** — posters, cast/crew, plot, ratings; see "How it differs from
+  CLZ Movies" below.
+- **Audiobooks** — cover, author/narrator, series, description, via Audible/
+  Audnexus; see **Audiobooks** below.
+
+Each media type gets its own tab in the left sidebar, its own library-folder
+scanner, and its own section in Settings — more types can be added the same
+way later.
 
 The running app's version is shown next to its name in the nav bar (from the
 `VERSION` file) and returned by `GET /api/health` — handy for confirming a
@@ -32,23 +39,49 @@ Everything else — manual title search & add, editable personal fields
 loaned-to, watched flag), grid browsing with search/sort/filter — works the
 same way.
 
+## Audiobooks
+
+Metadata comes from Audible's own (unofficial, undocumented but widely
+relied on) catalog search, resolved to full details — cover, author(s),
+narrator(s), series, description, genres, runtime — via
+[Audnexus](https://audnex.us), the same pairing self-hosted audiobook
+tools like Audiobookshelf use under the hood.
+
+**Folder scanning and the m4b/mp3 duplicate problem**: an audiobook can be
+a single `.m4b` file or a folder of `.mp3`/`.m4a` parts, and the scanner
+treats a whole folder as *one* book either way, not one entry per file:
+
+- A folder containing an `.m4b` → that file is the book. Any stray `.mp3`s
+  sitting alongside it (e.g. the files it was originally ripped from) are
+  assumed to be the same book and ignored, so a folder with both never
+  becomes two library entries.
+- A folder with no `.m4b`, just `.mp3`/`.m4a`/`.flac`/`.ogg`/`.aac` files →
+  every one of those files is one part of a single multi-part book, sorted
+  naturally (`Part 2` before `Part 10`) and stored together.
+- Two `.m4b` files in the same folder (e.g. a whole series dumped in one
+  place) are correctly treated as two separate books, not merged.
+
+Point `AUDIOBOOKS_DIR` at the folder(s) where your audiobooks live, same
+comma-separated-multi-path support as `MOVIES_DIR`.
+
 ## Setup
 
 1. **Get a free TMDB API key**: sign up at themoviedb.org, then go to
    [Settings → API](https://www.themoviedb.org/settings/api) and request a
    free "Developer" API key (approved instantly for personal use).
 
-2. **Point it at your movie folders.** If they're on local disk, just bind
-   mount them directly (`- /path/to/movies:/movies:ro`) and add `/movies` to
-   the `MOVIES_DIR` env var. **If they're on a network share (NAS, another
-   PC), see Network shares below first** — plain bind-mounting a network
-   path is unreliable on Docker Desktop and needs a different setup.
+2. **Point it at your movie and/or audiobook folders.** If they're on local
+   disk, just bind mount them directly (`- /path/to/movies:/movies:ro`) and
+   add `/movies` to the `MOVIES_DIR` env var (same idea for audiobooks and
+   `AUDIOBOOKS_DIR`). **If they're on a network share (NAS, another PC),
+   see Network shares below first** — plain bind-mounting a network path is
+   unreliable on Docker Desktop and needs a different setup.
 
-   If your library is split across multiple shares/folders, give each one
-   its own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add
-   it to the `MOVIES_DIR` environment variable — the scanner only looks at
-   paths listed there, so a volume mounted but left out of `MOVIES_DIR`
-   will silently never get scanned.
+   If a library is split across multiple shares/folders, give each one its
+   own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add it
+   to the corresponding environment variable — the scanner only looks at
+   paths listed there, so a volume mounted but left out of `MOVIES_DIR` (or
+   `AUDIOBOOKS_DIR`) will silently never get scanned.
 
 3. **Set your API key and (if using network shares) SMB details**: copy
    `.env.example` to `.env` and fill it in — or leave `TMDB_API_KEY` blank
@@ -95,10 +128,12 @@ directly into Portainer — no repo access from the Docker host needed.
    deployed this way):
    - `TMDB_API_KEY` = your TMDB key (or leave it blank and paste it into the
      app's Settings page after it's running)
-   - `SMB_HOST` = the IP address of the PC hosting your movie shares
+   - `SMB_HOST` = the IP address of the PC hosting your shares
    - `SMB_USER` / `SMB_PASS` = credentials for that share
-   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` = each share's sub-path,
-     e.g. `movies/Movies`
+   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` = each movie share's
+     sub-path, e.g. `movies/Movies`
+   - `SMB_SHARE_AUDIOBOOKS` = the audiobook folder's sub-path (can be on
+     the same share as the movies, just a different sub-path)
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/media-catalog:latest` and starts the container — no
@@ -139,10 +174,11 @@ volumes:
 ```
 
 Note that none of your actual folder names/paths live in `docker-compose.yml`
-itself — they're all environment variables (`SMB_HOST`, `SMB_SHARE1/2/3`),
-so this file stays generic even if the repo is public. Your real values go
-in `.env`, which is gitignored, or in Portainer's stack environment
-variables (which aren't part of the compose file either).
+itself — they're all environment variables (`SMB_HOST`, `SMB_SHARE1/2/3`,
+`SMB_SHARE_AUDIOBOOKS`), so this file stays generic even if the repo is
+public. Your real values go in `.env`, which is gitignored, or in
+Portainer's stack environment variables (which aren't part of the compose
+file either).
 
 To use it:
 
@@ -155,8 +191,11 @@ To use it:
      guest/anonymous access instead, set `SMB_USER=guest` and remove the
      `password=${SMB_PASS},` part of the `o:` option for each volume in
      `docker-compose.yml`.
-   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` — each share's sub-path
-     relative to `//SMB_HOST/`, e.g. `movies/Movies`.
+   - `SMB_SHARE1` / `SMB_SHARE2` / `SMB_SHARE3` — each movie share's
+     sub-path relative to `//SMB_HOST/`, e.g. `movies/Movies`.
+   - `SMB_SHARE_AUDIOBOOKS` — the audiobook folder's sub-path, same idea
+     (can be on the very same share, just a different sub-path — that's
+     the common case, since it's usually all one NAS).
 2. `docker compose up -d` (or redeploy the Portainer stack, with those same
    variables set under its Environment variables instead of `.env`). Docker
    creates the named volumes by mounting each CIFS share the first time
@@ -171,7 +210,7 @@ comma (the option string is comma-delimited) — change the password if so.
 
 ## Data & persistence
 
-Everything (the SQLite database and cached poster images) lives under
+Everything (the SQLite database and cached poster/cover images) lives under
 `./data` next to `docker-compose.yml`, via the `/data` volume. Back that
 folder up if you want to preserve your collection.
 
@@ -181,7 +220,7 @@ folder up if you want to preserve your collection.
 # terminal 1 — API server
 cd server
 npm install
-TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies node index.js
+TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks node index.js
 
 # terminal 2 — frontend dev server (proxies /api to :8080)
 cd client

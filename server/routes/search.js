@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const tmdb = require('../lib/tmdb');
+const audible = require('../lib/audible');
 
 const router = express.Router();
 
@@ -58,6 +59,52 @@ router.get('/tmdb-url', async (req, res) => {
       overview: details.overview,
       poster_url: details.poster_path ? `${tmdb.IMG_BASE}/w200${details.poster_path}` : null,
       tmdb_rating: details.vote_average,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/audible', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const results = await audible.searchAudiobooks(q);
+    res.json(results.map((r) => ({
+      asin: r.asin,
+      title: r.title,
+      subtitle: r.subtitle,
+      authors: r.authors,
+      year: r.release_date ? r.release_date.slice(0, 4) : null,
+      cover_url: r.cover_url,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right book: paste an
+// audible.com product URL and resolve its ASIN directly. Audible product
+// URLs always end in a 10-character ASIN, either as the last path segment
+// or after a trailing slash-prefixed title slug.
+router.get('/audible-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/audible\.[a-z.]+\/pd\/(?:[^/?]*\/)?([A-Z0-9]{10})(?:[/?]|$)/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable audible.com product URL (expected .../pd/.../<ASIN>)',
+      });
+    }
+    const asin = match[1].toUpperCase();
+    const details = await audible.getAudiobookByAsin(asin);
+    res.json({
+      asin: details.asin || asin,
+      title: details.title,
+      subtitle: details.subtitle || null,
+      authors: (details.authors || []).map((a) => a.name),
+      year: details.releaseDate ? details.releaseDate.slice(0, 4) : null,
+      cover_url: details.image || null,
     });
   } catch (err) {
     res.status(400).json({ error: err.message });

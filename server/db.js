@@ -74,6 +74,60 @@ CREATE TABLE IF NOT EXISTS scan_status (
   removed INTEGER DEFAULT 0,
   message TEXT
 );
+
+CREATE TABLE IF NOT EXISTS audiobooks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asin TEXT,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  authors TEXT,
+  narrators TEXT,
+  series TEXT,
+  series_sequence TEXT,
+  description TEXT,
+  genres TEXT,
+  release_date TEXT,
+  year INTEGER,
+  runtime_minutes INTEGER,
+  publisher TEXT,
+  language TEXT,
+  rating REAL,
+  abridged INTEGER DEFAULT 0,
+  cover_file TEXT,
+  -- The m4b file's path, or the containing folder's path for a multi-file
+  -- (mp3/m4a/...) book — see lib/audiobookScanner.js for why a folder is
+  -- the unit of identity in the multi-file case, not any one file in it.
+  file_path TEXT,
+  -- JSON array of every constituent audio file, in playback order. For an
+  -- m4b book this is just [file_path]; kept as its own column rather than
+  -- derived so a multi-part book's file list survives even if file_path
+  -- (the folder) briefly looks unhealthy during a scan.
+  file_parts TEXT,
+  source_format TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS audiobook_scan_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  file_parts TEXT,
+  source_format TEXT,
+  guessed_title TEXT,
+  candidates TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS audiobook_scan_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  files_found INTEGER DEFAULT 0,
+  matched INTEGER DEFAULT 0,
+  pending INTEGER DEFAULT 0,
+  skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  message TEXT
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -99,5 +153,6 @@ ensureColumn('movies', 'spoken_languages', 'TEXT');
 ensureColumn('movies', 'content_rating', 'TEXT');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

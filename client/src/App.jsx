@@ -1,30 +1,49 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import Library from './pages/Library.jsx';
 import MovieDetail from './pages/MovieDetail.jsx';
 import AddMovie from './pages/AddMovie.jsx';
 import ScanLibrary from './pages/ScanLibrary.jsx';
+import AudiobookLibrary from './pages/AudiobookLibrary.jsx';
+import AudiobookDetail from './pages/AudiobookDetail.jsx';
+import AddAudiobook from './pages/AddAudiobook.jsx';
+import ScanAudiobooks from './pages/ScanAudiobooks.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 
 const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
+// Alphabetical, per how the sidebar is meant to order media-type tabs — a
+// future media type just slots in here and the sidebar/order follow.
+const SECTIONS = [
+  { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
+  { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
+];
+
 export default function App() {
   const [version, setVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
   const location = useLocation();
-  const onLibraryPage = location.pathname === '/';
 
-  // Lifted up from the Library page itself: App never unmounts while
+  const activeSection = SECTIONS.find((s) => location.pathname.startsWith(s.path));
+  const onMoviesLibrary = location.pathname === '/movies';
+  const onAudiobooksLibrary = location.pathname === '/audiobooks';
+
+  // Lifted up from the library pages themselves: App never unmounts while
   // navigating between routes, so keeping this state here means it just
-  // survives a trip to a movie's detail page and back for free, no
-  // module-level persistence hack needed (unlike scroll position, which is
-  // a DOM concern Library still has to track on its own).
-  const [q, setQ] = useState('');
-  const [rating, setRating] = useState('');
-  const [sort, setSort] = useState('title');
-  const [dir, setDir] = useState('asc');
+  // survives a trip to a detail page and back for free, no module-level
+  // persistence hack needed (unlike scroll position, which is a DOM
+  // concern each library page still tracks on its own). Movies and
+  // audiobooks each get their own independent copy.
+  const [movieQ, setMovieQ] = useState('');
+  const [movieRating, setMovieRating] = useState('');
+  const [movieSort, setMovieSort] = useState('title');
+  const [movieDir, setMovieDir] = useState('asc');
+
+  const [bookQ, setBookQ] = useState('');
+  const [bookSort, setBookSort] = useState('title');
+  const [bookDir, setBookDir] = useState('asc');
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -57,45 +76,102 @@ export default function App() {
             )}
           </div>
           <nav>
-            <NavLink to="/" end>Library</NavLink>
-            <NavLink to="/add">Add Movie</NavLink>
-            <NavLink to="/scan">Scan Library</NavLink>
+            {activeSection?.key === 'movies' && (
+              <>
+                <NavLink to="/movies" end>Library</NavLink>
+                <NavLink to="/movies/add">Add Movie</NavLink>
+                <NavLink to="/movies/scan">Scan Library</NavLink>
+              </>
+            )}
+            {activeSection?.key === 'audiobooks' && (
+              <>
+                <NavLink to="/audiobooks" end>Library</NavLink>
+                <NavLink to="/audiobooks/add">Add Audiobook</NavLink>
+                <NavLink to="/audiobooks/scan">Scan Library</NavLink>
+              </>
+            )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
         </div>
-        {onLibraryPage && (
+        {onMoviesLibrary && (
           <div className="toolbar">
-            <input placeholder="Search your collection..." value={q} onChange={(e) => setQ(e.target.value)} />
-            <select value={rating} onChange={(e) => setRating(e.target.value)}>
+            <input placeholder="Search your collection..." value={movieQ} onChange={(e) => setMovieQ(e.target.value)} />
+            <select value={movieRating} onChange={(e) => setMovieRating(e.target.value)}>
               <option value="">View: All</option>
               {RATINGS.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
-            <SortMenu sort={sort} dir={dir} onChange={(s, d) => { setSort(s); setDir(d); }} />
+            <SortMenu sort={movieSort} dir={movieDir} onChange={(s, d) => { setMovieSort(s); setMovieDir(d); }} />
+          </div>
+        )}
+        {onAudiobooksLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search title or author..." value={bookQ} onChange={(e) => setBookQ(e.target.value)} />
+            <SortMenu
+              sort={bookSort}
+              dir={bookDir}
+              onChange={(s, d) => { setBookSort(s); setBookDir(d); }}
+              options={AUDIOBOOK_SORT_OPTIONS}
+            />
           </div>
         )}
       </header>
-      <main className="content">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Library
-                q={q}
-                rating={rating}
-                sort={sort}
-                dir={dir}
-                onSortChange={(s, d) => { setSort(s); setDir(d); }}
-              />
-            }
-          />
-          <Route path="/movies/:id" element={<MovieDetail />} />
-          <Route path="/add" element={<AddMovie />} />
-          <Route path="/scan" element={<ScanLibrary />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </main>
+      <div className="app-body">
+        <nav className="sidebar" aria-label="Media type">
+          {SECTIONS.map((s) => (
+            <NavLink key={s.key} to={s.path} className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+              <span className="sidebar-icon">{s.icon}</span>
+              {s.label}
+            </NavLink>
+          ))}
+        </nav>
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Navigate to="/movies" replace />} />
+
+            <Route
+              path="/movies"
+              element={
+                <Library
+                  q={movieQ}
+                  rating={movieRating}
+                  sort={movieSort}
+                  dir={movieDir}
+                  onSortChange={(s, d) => { setMovieSort(s); setMovieDir(d); }}
+                />
+              }
+            />
+            <Route path="/movies/:id" element={<MovieDetail />} />
+            <Route path="/movies/add" element={<AddMovie />} />
+            <Route path="/movies/scan" element={<ScanLibrary />} />
+
+            <Route
+              path="/audiobooks"
+              element={
+                <AudiobookLibrary
+                  q={bookQ}
+                  sort={bookSort}
+                  dir={bookDir}
+                  onSortChange={(s, d) => { setBookSort(s); setBookDir(d); }}
+                />
+              }
+            />
+            <Route path="/audiobooks/:id" element={<AudiobookDetail />} />
+            <Route path="/audiobooks/add" element={<AddAudiobook />} />
+            <Route path="/audiobooks/scan" element={<ScanAudiobooks />} />
+
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }
+
+const AUDIOBOOK_SORT_OPTIONS = [
+  { key: 'title', label: 'A-Z' },
+  { key: 'year', label: 'Year' },
+  { key: 'runtime_minutes', label: 'Length' },
+  { key: 'rating', label: 'Rating' },
+];

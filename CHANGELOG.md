@@ -5,6 +5,34 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.0 — Audiobooks, and a media-type sidebar
+- Added a full Audiobooks section, built the same way as Movies: library
+  grid with search/sort, a detail page, manual add, folder scanning with a
+  Needs Review queue, bulk metadata refresh, and its own Settings section.
+  Metadata (cover, author/narrator, series, description, genres, runtime,
+  rating) comes from Audible's own catalog search resolved through
+  [Audnexus](https://audnex.us) — the same unofficial-but-widely-relied-on
+  pairing self-hosted audiobook tools use.
+- **Folder scanning treats a whole folder as one book**, not one entry per
+  file, specifically to avoid the duplicate problem an audiobook library
+  runs into that a movie library doesn't: a book can be a single `.m4b` or
+  a folder of `.mp3`/`.m4a` parts. A folder with an `.m4b` uses that file
+  and ignores any stray `.mp3`s alongside it (assumed to be the same book);
+  a folder with no `.m4b` treats every audio file in it as one part of a
+  single multi-part book, naturally sorted so "Part 2" comes before
+  "Part 10". Two `.m4b`s in the same folder are still two separate books.
+  New `AUDIOBOOKS_DIR` env var, same comma-separated multi-path support as
+  `MOVIES_DIR`.
+- Added a sticky left sidebar with one tab per media type (alphabetical —
+  Audiobooks, then Movies), so switching between them doesn't need a full
+  page reload. Movies moved from `/` to `/movies` (with `/` now
+  redirecting there) so both sections have a consistent `/type`,
+  `/type/:id`, `/type/add`, `/type/scan` URL shape — a future media type
+  slots into the sidebar and routing the same way.
+- Settings is now split into a Movies section and an Audiobooks section,
+  each with their own auto-scan/prune/bulk-refresh controls, instead of
+  one undifferentiated page.
+
 ## v6.3 — Actually switch the GHCR image to media-catalog
 - The publish workflow's `IMAGE_NAME` was `${{ github.repository }}`,
   which — per v6.1 — doesn't reliably follow a repo rename in practice.

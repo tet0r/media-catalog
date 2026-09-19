@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-const OPTIONS = [
+const DEFAULT_OPTIONS = [
   { key: 'title', label: 'A-Z' },
   { key: 'year', label: 'Year' },
   { key: 'runtime', label: 'Length' },
   { key: 'personal_rating', label: 'Rating' },
 ];
 
-export default function SortMenu({ sort, dir, onChange }) {
+export default function SortMenu({ sort, dir, onChange, options = DEFAULT_OPTIONS }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -19,7 +19,7 @@ export default function SortMenu({ sort, dir, onChange }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const current = OPTIONS.find((o) => o.key === sort) || OPTIONS[0];
+  const current = options.find((o) => o.key === sort) || options[0];
   const arrow = dir === 'asc' ? '↑' : '↓';
 
   function choose(key) {
@@ -37,7 +37,7 @@ export default function SortMenu({ sort, dir, onChange }) {
       </button>
       {open && (
         <div className="sort-menu-list" role="menu">
-          {OPTIONS.map((o) => (
+          {options.map((o) => (
             <button
               key={o.key}
               type="button"

@@ -6,12 +6,14 @@ services:
       - "8080:8080"
     environment:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
-      # MOVIES_DIR must list every mount point below (comma-separated, no
-      # spaces) — each volume only gets scanned if it's named here too.
+      # MOVIES_DIR must list every movie mount point below (comma-separated,
+      # no spaces) — each volume only gets scanned if it's named here too.
       - MOVIES_DIR=/movies,/movies2,/movies3
+      # Same idea for the audiobook library.
+      - AUDIOBOOKS_DIR=/audiobooks
     volumes:
-      # App data: the SQLite database + cached posters. Keep this on a
-      # persistent path so your collection survives container rebuilds.
+      # App data: the SQLite database + cached posters/covers. Keep this on
+      # a persistent path so your collection survives container rebuilds.
       - ./data:/data
       # Your movie library, split across three network shares. These are
       # named volumes (defined below) backed by the CIFS/SMB driver, NOT
@@ -23,6 +25,9 @@ services:
       - movies1:/movies:ro
       - movies2:/movies2:ro
       - movies3:/movies3:ro
+      # Audiobooks, on the same network share as the movies (same SMB_HOST/
+      # USER/PASS), just a different sub-path.
+      - audiobooks1:/audiobooks:ro
     restart: unless-stopped
 
 volumes:
@@ -44,3 +49,9 @@ volumes:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
       device: "//${SMB_HOST}/${SMB_SHARE3}"
+  audiobooks1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_AUDIOBOOKS}"

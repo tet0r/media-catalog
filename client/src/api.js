@@ -76,4 +76,51 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }).then(handle),
+
+  listAudiobooks: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/audiobooks?${qs}`).then(handle);
+  },
+  getAudiobook: (id) => fetch(`${BASE}/audiobooks/${id}`).then(handle),
+  addAudiobook: (payload) =>
+    fetch(`${BASE}/audiobooks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  updateAudiobook: (id, payload) =>
+    fetch(`${BASE}/audiobooks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  deleteAudiobook: (id) => fetch(`${BASE}/audiobooks/${id}`, { method: 'DELETE' }).then(handle),
+  refreshAudiobook: (id) => fetch(`${BASE}/audiobooks/${id}/refresh`, { method: 'POST' }).then(handle),
+  startBulkRefreshAudiobooks: () => fetch(`${BASE}/audiobooks/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshAudiobooksStatus: () => fetch(`${BASE}/audiobooks/refresh-all/status`).then(handle),
+  setAudiobookCover: (id, imageUrl) =>
+    fetch(`${BASE}/audiobooks/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadAudiobookCover: (id, file) =>
+    fetch(`${BASE}/audiobooks/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  searchAudible: (q) => fetch(`${BASE}/search/audible?q=${encodeURIComponent(q)}`).then(handle),
+  lookupAudibleUrl: (url) => fetch(`${BASE}/search/audible-url?url=${encodeURIComponent(url)}`).then(handle),
+  startAudiobookScan: () => fetch(`${BASE}/audiobook-scan`, { method: 'POST' }).then(handle),
+  audiobookScanStatus: () => fetch(`${BASE}/audiobook-scan/status`).then(handle),
+  audiobookScanPending: () => fetch(`${BASE}/audiobook-scan/pending`).then(handle),
+  resolveAudiobookPending: (id, payload) =>
+    fetch(`${BASE}/audiobook-scan/pending/${id}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
 };

@@ -13,17 +13,33 @@ app.use(express.json());
 app.use('/posters', express.static(path.join(DATA_DIR, 'posters')));
 
 const scanRouter = require('./routes/scan');
+const audiobookScanRouter = require('./routes/audiobookScan');
 
 app.use('/api/movies', require('./routes/movies'));
+app.use('/api/audiobooks', require('./routes/audiobooks'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
+app.use('/api/audiobook-scan', audiobookScanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/version-check', require('./routes/version'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 
-require('./lib/autoScanScheduler').start(scanRouter.runScan);
+require('./lib/autoScanScheduler').start([
+  {
+    runScan: scanRouter.runScan,
+    enabledKey: 'auto_scan_enabled',
+    intervalKey: 'auto_scan_interval_minutes',
+    statusTable: 'scan_status',
+  },
+  {
+    runScan: audiobookScanRouter.runScan,
+    enabledKey: 'audiobook_auto_scan_enabled',
+    intervalKey: 'audiobook_auto_scan_interval_minutes',
+    statusTable: 'audiobook_scan_status',
+  },
+]);
 
 const publicDir = path.join(__dirname, 'public');
 if (fs.existsSync(publicDir)) {

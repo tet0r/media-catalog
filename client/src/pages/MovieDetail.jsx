@@ -35,7 +35,7 @@ export default function MovieDetail() {
   async function remove() {
     if (!confirm(`Remove "${movie.title}" from your collection?`)) return;
     await api.deleteMovie(id);
-    navigate('/');
+    navigate('/movies');
   }
 
   async function applyPoster(url) {
