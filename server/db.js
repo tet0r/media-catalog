@@ -122,6 +122,20 @@ CREATE TABLE IF NOT EXISTS audiobook_scan_pending (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Paths a scan should never surface again, even though they're not (and
+-- may never become) an actual audiobooks row — e.g. a bonus/sample file,
+-- or something the scanner's own folder-grouping got wrong for. "Skip
+-- this" on a Needs Review item just dismisses it from *this* review, but
+-- since the pending row is gone and the path was never in audiobooks
+-- either, an unignored path is exactly like new to the next scan and
+-- surfaces right back. This table is the permanent version of that.
+CREATE TABLE IF NOT EXISTS audiobook_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audiobook_scan_status (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   running INTEGER DEFAULT 0,

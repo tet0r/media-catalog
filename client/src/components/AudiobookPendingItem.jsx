@@ -6,7 +6,7 @@ const SOURCES = [
   { key: 'apple', label: 'Apple Books', search: api.searchApple, lookupUrl: api.lookupAppleUrl, urlPlaceholder: 'Paste a books.apple.com audiobook URL' },
 ];
 
-export default function AudiobookPendingItem({ item, busy, onResolve }) {
+export default function AudiobookPendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
   const [activeKey, setActiveKey] = useState(SOURCES[0].key);
   const [query, setQuery] = useState(item.guessed_title || '');
   // The scan's own automatic search only ever tries Audible, so that's the
@@ -54,10 +54,28 @@ export default function AudiobookPendingItem({ item, busy, onResolve }) {
 
   return (
     <div className="pending-item">
-      <div className="pending-file">
-        {item.file_path} {item.source_format === 'MP3' ? `(${item.file_parts.length} files)` : ''}
-      </div>
-      <div className="pending-guess">Guessed: {item.guessed_title}</div>
+      <label className="pending-select-row">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => {}}
+          onClick={(e) => {
+            // Fully controlled by the parent's selection state (see
+            // ScanAudiobooks.jsx) rather than the checkbox's own native
+            // toggle, so a shift-click can select a whole range instead of
+            // just this one box — preventDefault stops the native toggle
+            // from fighting the controlled `checked` value.
+            e.preventDefault();
+            onToggleSelect(e.shiftKey);
+          }}
+        />
+        <div>
+          <div className="pending-file">
+            {item.file_path} {item.source_format === 'MP3' ? `(${item.file_parts.length} files)` : ''}
+          </div>
+          <div className="pending-guess">Guessed: {item.guessed_title}</div>
+        </div>
+      </label>
 
       <div className="picker-tabs" style={{ marginBottom: 10 }}>
         {SOURCES.map((s) => (
@@ -99,8 +117,21 @@ export default function AudiobookPendingItem({ item, busy, onResolve }) {
             </button>
           </div>
         ))}
-        <button className="muted-btn" disabled={busy} onClick={() => onResolve(null, true, activeKey)}>
+        <button
+          className="muted-btn"
+          disabled={busy}
+          title="Dismiss for now — this file will show up again on the next scan"
+          onClick={() => onResolve(null, true, activeKey)}
+        >
           Skip this
+        </button>
+        <button
+          className="muted-btn"
+          disabled={busy}
+          title="Never show this file again in future scans"
+          onClick={onIgnore}
+        >
+          Ignore
         </button>
       </div>
     </div>

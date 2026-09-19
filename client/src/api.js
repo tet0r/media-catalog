@@ -125,4 +125,19 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }).then(handle),
+  ignoreAudiobookPending: (id) => fetch(`${BASE}/audiobook-scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipAudiobookPending: (ids) =>
+    fetch(`${BASE}/audiobook-scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreAudiobookPending: (ids) =>
+    fetch(`${BASE}/audiobook-scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredAudiobooks: () => fetch(`${BASE}/audiobook-scan/ignored`).then(handle),
+  unignoreAudiobook: (id) => fetch(`${BASE}/audiobook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
 };

@@ -5,6 +5,21 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v8.1 — Permanently ignore a Needs Review item, with batch selection
+- "Skip this" on a Needs Review item only ever dismissed it for that one
+  review — the file wasn't recorded anywhere, so the very next scan
+  rediscovered it and put it right back. New **Ignore** button (next to
+  Skip) permanently excludes that path instead, for things that are never
+  going to have a real match (samples, bonus tracks, a folder the scanner
+  got wrong). Ignored paths show up in a new **Ignored** list at the
+  bottom of Scan Library with an **Un-ignore** button, in case one gets
+  ignored by mistake.
+- Each Needs Review item got a checkbox, plus **Select all** / **Skip
+  Selected** / **Ignore Selected** above the list, for clearing out a
+  scan that turned up a lot of junk at once instead of one at a time.
+  Shift-click a checkbox to select the whole range from the last one you
+  clicked, same as a file manager.
+
 ## v8.0 — Search Apple Books as a second audiobook source
 - Most "major audiobook websites" (Libro.fm, Chirp, Storytel, Spotify, Kobo,
   Google Play) simply don't have a public search API to integrate with.
