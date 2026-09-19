@@ -5,6 +5,18 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v6.3 — Actually switch the GHCR image to media-catalog
+- The publish workflow's `IMAGE_NAME` was `${{ github.repository }}`,
+  which — per v6.1 — doesn't reliably follow a repo rename in practice.
+  Hardcoded it to `tet0r/media-catalog` instead, so this doesn't silently
+  regress the next time the repo gets renamed (which is on the table,
+  since the plan is to widen this beyond just movies). `docker-compose.yml`
+  and the README point at `ghcr.io/tet0r/media-catalog` again. **Once this
+  ships**, the new package will need to be made public the same way the
+  original one was (Package settings → Change visibility → Public) before
+  Portainer can pull it — expect one more "denied denied" until that step
+  is done, same cause as v6.1, different package this time.
+
 ## v6.2 — Spelling: Media Catalogue → Media Catalog
 - The brand name from v6.0 used the British spelling ("Catalogue"); changed
   every occurrence (browser tab title, in-app brand text, README heading,

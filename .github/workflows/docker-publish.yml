@@ -6,7 +6,13 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Hardcoded rather than ${{ github.repository }}: that dynamic form is
+  # what silently kept publishing to the pre-rename image path last time
+  # this repo was renamed — GHCR doesn't migrate an existing package just
+  # because its linked repo gets a new name, so a rename alone never
+  # actually moves where this pushes. Bump this by hand if you rename
+  # again and actually want the image path to follow.
+  IMAGE_NAME: tet0r/media-catalog
 
 jobs:
   build-and-push:

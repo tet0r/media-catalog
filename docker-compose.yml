@@ -1,8 +1,6 @@
 services:
   media-catalog:
-    # Still the pre-rename image path — see the note in README's Setup
-    # section for why this doesn't match the repo/package name anymore.
-    image: ghcr.io/tet0r/movie-cataloger:latest
+    image: ghcr.io/tet0r/media-catalog:latest
     container_name: media-catalog
     ports:
       - "8080:8080"
