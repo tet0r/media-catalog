@@ -130,33 +130,53 @@ function cleanTitle(str) {
     .trim();
 }
 
+// Some rippers name things "Author - Year - Title" (dash-separated fields,
+// the same convention Radarr/Jellyfin-style movie naming uses but applied
+// per-field here rather than just trimming a trailing year). A literal
+// year as an Audible search keyword tends to suppress otherwise-good
+// matches rather than narrow them usefully, so it's dropped from the
+// query — but only when it's clearly its own metadata field: at least 3
+// dash-separated segments, with one of them being nothing but a 4-digit
+// 19xx/20xx year. A 2-segment name is left untouched, since "Author -
+// 1984" is genuinely ambiguous between "Author - Year" (incomplete
+// metadata) and "Author - Title" where the title itself is "1984" — not
+// worth risking a real title getting silently deleted to fix the 3-segment
+// case.
+function stripYearSegment(title) {
+  const segments = title.split(/\s*-\s*/);
+  if (segments.length < 3) return title;
+  const filtered = segments.filter((seg) => !/^(19|20)\d{2}$/.test(seg.trim()));
+  if (filtered.length === segments.length) return title;
+  return filtered.join(' - ').trim();
+}
+
 // Unlike movies' filename parsing, audiobook titles don't reliably carry a
 // year, and folder names are generally more trustworthy than track/chapter
 // filenames — so this only ever guesses a title (used as the search query),
 // not a year. "(Unabridged)"/"(Abridged)" is extremely common in audiobook
 // naming and would otherwise pollute the search query, so it's stripped.
 function guessTitle(group) {
+  let guess;
   // A multi-part .m4b group already has its title extracted (the shared
   // base name with the Part/Disc/CD marker stripped) — that's a better
   // guess than the folder name or any one part's own filename.
   if (group.titleHint) {
-    return group.titleHint.replace(/\s*\((?:un)?abridged\)\s*/i, ' ').replace(/\s+/g, ' ').trim();
-  }
-
-  const folderName = cleanTitle(path.basename(group.folder));
-  let guess = folderName;
-
-  if (group.kind === 'm4b') {
-    const fileBase = cleanTitle(path.basename(group.path, path.extname(group.path)));
-    if (fileBase.length > 3 && !GENERIC_M4B_NAMES.has(fileBase.toLowerCase())) {
-      guess = fileBase;
+    guess = group.titleHint;
+  } else {
+    guess = cleanTitle(path.basename(group.folder));
+    if (group.kind === 'm4b') {
+      const fileBase = cleanTitle(path.basename(group.path, path.extname(group.path)));
+      if (fileBase.length > 3 && !GENERIC_M4B_NAMES.has(fileBase.toLowerCase())) {
+        guess = fileBase;
+      }
     }
   }
 
+  guess = stripYearSegment(guess);
   return guess.replace(/\s*\((?:un)?abridged\)\s*/i, ' ').replace(/\s+/g, ' ').trim();
 }
 
 module.exports = {
-  walkGrouped, walkAllRoots, guessTitle, naturalSort, splitPartMarker, groupM4bFiles,
+  walkGrouped, walkAllRoots, guessTitle, naturalSort, splitPartMarker, groupM4bFiles, stripYearSegment,
   M4B_EXTENSIONS, OTHER_AUDIO_EXTENSIONS,
 };

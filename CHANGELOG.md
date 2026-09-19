@@ -5,6 +5,23 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.4 — Strip embedded years from audiobook search queries
+- Files named like "Author - Year - Title" (e.g. "Stephen King - 1996 -
+  Desperation.m4b") were guessing the whole dash-separated string as the
+  search query, and a literal year as an Audible search keyword suppresses
+  otherwise-good matches rather than narrowing them — the exact book would
+  return zero results with the year included, and find it immediately
+  without it. The scanner now drops a year segment from the query when
+  it's clearly its own metadata field (at least 3 dash-separated parts,
+  one of them nothing but a 19xx/20xx year) — "Author - Year - Title"
+  becomes "Author - Title". A 2-segment name like "Author - 1984" is left
+  alone, since that's genuinely ambiguous between incomplete metadata and
+  a real title that happens to be a year (Orwell's included).
+- Books using this naming convention still search correctly now, but land
+  in Needs Review rather than auto-matching, since the query still
+  includes the author and Audible's own title field doesn't — worth a
+  follow-up if that turns out to matter in practice.
+
 ## v7.3 — Group audiobooks by author
 - New "Group by Author" toggle in the Audiobooks toolbar. When on, the
   library groups books under a heading per author (sorted A-Z by author,
