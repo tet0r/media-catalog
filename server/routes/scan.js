@@ -90,11 +90,14 @@ async function runScan() {
     const existingPending = new Set(
       db.prepare('SELECT file_path FROM scan_pending').all().map((r) => r.file_path)
     );
+    const ignoredPaths = new Set(
+      db.prepare('SELECT file_path FROM movie_ignored').all().map((r) => r.file_path)
+    );
 
     let matched = 0, pending = 0, skipped = 0;
 
     for (const { file, root } of entries) {
-      if (existingPaths.has(file) || existingPending.has(file)) {
+      if (existingPaths.has(file) || existingPending.has(file) || ignoredPaths.has(file)) {
         skipped++;
         setStatus({ matched, pending, skipped });
         continue;
@@ -174,6 +177,57 @@ router.post('/pending/:id/resolve', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// Unlike a plain "skip" (dismisses this review only — the path isn't
+// recorded anywhere, so the next scan finds it again), this permanently
+// excludes the path.
+router.post('/pending/:id/ignore', (req, res) => {
+  const pendingRow = db.prepare('SELECT * FROM scan_pending WHERE id = ?').get(req.params.id);
+  if (!pendingRow) return res.status(404).json({ error: 'Not found' });
+  db.prepare('INSERT OR IGNORE INTO movie_ignored (file_path, guessed_title, guessed_year) VALUES (?, ?, ?)')
+    .run(pendingRow.file_path, pendingRow.guessed_title, pendingRow.guessed_year);
+  db.prepare('DELETE FROM scan_pending WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+const batchSkip = db.transaction((ids) => {
+  const deletePending = db.prepare('DELETE FROM scan_pending WHERE id = ?');
+  for (const id of ids) deletePending.run(id);
+});
+
+router.post('/pending/batch-skip', (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids is required' });
+  batchSkip(ids);
+  res.json({ ok: true, count: ids.length });
+});
+
+const batchIgnore = db.transaction((rows) => {
+  const insertIgnored = db.prepare('INSERT OR IGNORE INTO movie_ignored (file_path, guessed_title, guessed_year) VALUES (?, ?, ?)');
+  const deletePending = db.prepare('DELETE FROM scan_pending WHERE id = ?');
+  for (const row of rows) {
+    insertIgnored.run(row.file_path, row.guessed_title, row.guessed_year);
+    deletePending.run(row.id);
+  }
+});
+
+router.post('/pending/batch-ignore', (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids is required' });
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = db.prepare(`SELECT * FROM scan_pending WHERE id IN (${placeholders})`).all(...ids);
+  batchIgnore(rows);
+  res.json({ ok: true, count: rows.length });
+});
+
+router.get('/ignored', (req, res) => {
+  res.json(db.prepare('SELECT * FROM movie_ignored ORDER BY created_at DESC').all());
+});
+
+router.delete('/ignored/:id', (req, res) => {
+  db.prepare('DELETE FROM movie_ignored WHERE id = ?').run(req.params.id);
+  res.status(204).end();
 });
 
 module.exports = router;

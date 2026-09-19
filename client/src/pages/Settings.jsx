@@ -34,6 +34,9 @@ export default function Settings() {
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
   const [audiobookBulkStatus, setAudiobookBulkStatus] = useState(null);
+  const [clearingMovies, setClearingMovies] = useState(false);
+  const [clearingAudiobooks, setClearingAudiobooks] = useState(false);
+  const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
     api
@@ -79,6 +82,36 @@ export default function Settings() {
       refreshBulkStatus();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function clearMovies() {
+    if (!confirm('Permanently delete every movie in your collection? This cannot be undone.')) return;
+    setClearingMovies(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearMovieLibrary();
+      setClearMessage(`Removed ${count} movie${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingMovies(false);
+    }
+  }
+
+  async function clearAudiobooks() {
+    if (!confirm('Permanently delete every audiobook in your collection? This cannot be undone.')) return;
+    setClearingAudiobooks(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearAudiobookLibrary();
+      setClearMessage(`Removed ${count} audiobook${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingAudiobooks(false);
     }
   }
 
@@ -159,6 +192,12 @@ export default function Settings() {
       </button>
       {bulkStatus && bulkStatus.message !== 'Idle' && <p className="muted"> {bulkStatus.message}</p>}
 
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every movie in your collection, along with their cached posters/backdrops.</p>
+      <button className="danger" onClick={clearMovies} disabled={clearingMovies}>
+        {clearingMovies ? 'Clearing...' : 'Clear Movie Library'}
+      </button>
+
       <hr />
       <h2>Audiobooks</h2>
 
@@ -202,7 +241,14 @@ export default function Settings() {
       </button>
       {audiobookBulkStatus && audiobookBulkStatus.message !== 'Idle' && <p className="muted"> {audiobookBulkStatus.message}</p>}
 
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every audiobook in your collection, along with their cached covers.</p>
+      <button className="danger" onClick={clearAudiobooks} disabled={clearingAudiobooks}>
+        {clearingAudiobooks ? 'Clearing...' : 'Clear Audiobook Library'}
+      </button>
+
       <hr />
+      {clearMessage && <p className="muted">{clearMessage}</p>}
       <button onClick={save}>Save</button>
       {saved && <span className="muted"> Saved!</span>}
       {error && <p className="error">{error}</p>}

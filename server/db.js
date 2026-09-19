@@ -75,6 +75,17 @@ CREATE TABLE IF NOT EXISTS scan_status (
   message TEXT
 );
 
+-- Same permanent-exclusion idea as audiobook_ignored below — "Skip this
+-- file" only dismisses a Needs Review item for that one review, since the
+-- path isn't recorded anywhere and the next scan finds it again.
+CREATE TABLE IF NOT EXISTS movie_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  guessed_year INTEGER,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- The catalog ID from whichever source metadata_source names — an

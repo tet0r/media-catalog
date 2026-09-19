@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const db = require('../db');
 const { addAudiobookFromExternalId, refreshAudiobookMetadata } = require('../lib/addAudiobook');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
@@ -48,6 +49,20 @@ router.post('/refresh-all', (req, res) => {
 
 router.get('/refresh-all/status', (req, res) => {
   res.json(bulkRefresh.getStatus());
+});
+
+// Wipes the whole collection — used by Settings' "Clear Library". Deletes
+// every row plus its cached cover file. Doesn't touch
+// audiobook_scan_pending/audiobook_ignored/audiobook_scan_status: those
+// are about specific files on disk, not the collection's contents.
+router.post('/clear-all', (req, res) => {
+  const rows = db.prepare('SELECT cover_file FROM audiobooks').all();
+  for (const row of rows) {
+    if (!row.cover_file) continue;
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', row.cover_file)); } catch { /* already gone, fine */ }
+  }
+  const info = db.prepare('DELETE FROM audiobooks').run();
+  res.json({ ok: true, count: info.changes });
 });
 
 router.get('/:id', (req, res) => {

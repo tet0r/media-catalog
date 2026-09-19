@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const db = require('../db');
 const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
@@ -77,6 +78,24 @@ router.post('/refresh-all', (req, res) => {
 
 router.get('/refresh-all/status', (req, res) => {
   res.json(bulkRefresh.getStatus());
+});
+
+// Wipes the whole collection — used by Settings' "Clear Library". Deletes
+// every row plus its cached poster/backdrop files, so a clear-and-rescan
+// cycle doesn't leave orphaned images accumulating in DATA_DIR/posters
+// forever. Doesn't touch scan_pending/movie_ignored/scan_status: those are
+// about specific files on disk, not the collection's contents, and stay
+// meaningful regardless of what's currently in the library.
+router.post('/clear-all', (req, res) => {
+  const rows = db.prepare('SELECT poster_file, backdrop_file FROM movies').all();
+  for (const row of rows) {
+    for (const file of [row.poster_file, row.backdrop_file]) {
+      if (!file) continue;
+      try { fs.unlinkSync(path.join(DATA_DIR, 'posters', file)); } catch { /* already gone, fine */ }
+    }
+  }
+  const info = db.prepare('DELETE FROM movies').run();
+  res.json({ ok: true, count: info.changes });
 });
 
 router.get('/:id', (req, res) => {

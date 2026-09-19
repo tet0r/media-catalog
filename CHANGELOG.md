@@ -5,6 +5,21 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v8.2 — Tabbed Ignored view, plus Clear Library in Settings
+- Scan Library's Needs Review and Ignored lists are now **tabs** instead of
+  stacked sections, for both Movies and Audiobooks — makes it clearer at a
+  glance how many of each there are, and keeps a long Ignored list from
+  pushing Needs Review out of view.
+- Movies' Scan Library gained the same **Ignore** button, permanent
+  `movie_ignored` exclusion list, and checkbox-based **Select all** / **Skip
+  Selected** / **Ignore Selected** batch actions that Audiobooks already had,
+  so both media types behave the same way here.
+- New **Clear Library** button in Settings for each media type — permanently
+  deletes every movie or every audiobook (and their cached poster/cover
+  files), behind a confirmation prompt. Doesn't touch scan history (Needs
+  Review / Ignored), since those track specific files on disk rather than
+  what's currently in the collection.
+
 ## v8.1 — Permanently ignore a Needs Review item, with batch selection
 - "Skip this" on a Needs Review item only ever dismissed it for that one
   review — the file wasn't recorded anywhere, so the very next scan

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 
-export default function PendingItem({ item, busy, onResolve }) {
+export default function PendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
   const [query, setQuery] = useState(item.guessed_title || '');
   const [year, setYear] = useState(item.guessed_year || '');
   const [candidates, setCandidates] = useState(item.candidates);
@@ -39,10 +39,28 @@ export default function PendingItem({ item, busy, onResolve }) {
 
   return (
     <div className="pending-item">
-      <div className="pending-file">{item.file_path}</div>
-      <div className="pending-guess">
-        Guessed: {item.guessed_title} {item.guessed_year ? `(${item.guessed_year})` : ''}
-      </div>
+      <label className="pending-select-row">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => {}}
+          onClick={(e) => {
+            // Fully controlled by the parent's selection state (see
+            // ScanLibrary.jsx) rather than the checkbox's own native toggle,
+            // so a shift-click can select a whole range instead of just this
+            // one box — preventDefault stops the native toggle from
+            // fighting the controlled `checked` value.
+            e.preventDefault();
+            onToggleSelect(e.shiftKey);
+          }}
+        />
+        <div>
+          <div className="pending-file">{item.file_path}</div>
+          <div className="pending-guess">
+            Guessed: {item.guessed_title} {item.guessed_year ? `(${item.guessed_year})` : ''}
+          </div>
+        </div>
+      </label>
 
       <form onSubmit={search} className="pending-search-row">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title" />
@@ -77,8 +95,21 @@ export default function PendingItem({ item, busy, onResolve }) {
             </button>
           </div>
         ))}
-        <button className="muted-btn" disabled={busy} onClick={() => onResolve(null, true)}>
+        <button
+          className="muted-btn"
+          disabled={busy}
+          title="Dismiss for now — this file will show up again on the next scan"
+          onClick={() => onResolve(null, true)}
+        >
           Skip this file
+        </button>
+        <button
+          className="muted-btn"
+          disabled={busy}
+          title="Never show this file again in future scans"
+          onClick={onIgnore}
+        >
+          Ignore
         </button>
       </div>
     </div>

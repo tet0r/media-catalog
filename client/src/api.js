@@ -69,6 +69,23 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }).then(handle),
+  ignoreMoviePending: (id) => fetch(`${BASE}/scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipMoviePending: (ids) =>
+    fetch(`${BASE}/scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreMoviePending: (ids) =>
+    fetch(`${BASE}/scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredMovies: () => fetch(`${BASE}/scan/ignored`).then(handle),
+  unignoreMovie: (id) => fetch(`${BASE}/scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+  clearMovieLibrary: () => fetch(`${BASE}/movies/clear-all`, { method: 'POST' }).then(handle),
+  clearAudiobookLibrary: () => fetch(`${BASE}/audiobooks/clear-all`, { method: 'POST' }).then(handle),
   getSettings: () => fetch(`${BASE}/settings`).then(handle),
   updateSettings: (payload) =>
     fetch(`${BASE}/settings`, {

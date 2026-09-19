@@ -7,6 +7,7 @@ export default function ScanAudiobooks() {
   const [pending, setPending] = useState([]);
   const [ignored, setIgnored] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [activeTab, setActiveTab] = useState('review');
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [batchBusy, setBatchBusy] = useState(false);
@@ -171,21 +172,40 @@ export default function ScanAudiobooks() {
       )}
       {error && <p className="error">{error}</p>}
 
-      {pending.length > 0 && (
+      <div className="picker-tabs" style={{ margin: '16px 0' }}>
+        <button
+          type="button"
+          className={`picker-tab${activeTab === 'review' ? ' active' : ''}`}
+          onClick={() => setActiveTab('review')}
+        >
+          Needs Review ({pending.length})
+        </button>
+        <button
+          type="button"
+          className={`picker-tab${activeTab === 'ignored' ? ' active' : ''}`}
+          onClick={() => setActiveTab('ignored')}
+        >
+          Ignored ({ignored.length})
+        </button>
+      </div>
+
+      {activeTab === 'review' && (
         <>
-          <h2>Needs Review ({pending.length})</h2>
-          <div className="batch-actions-row">
-            <label className="pending-select-row" style={{ display: 'inline-flex' }}>
-              <input type="checkbox" checked={allSelected} onChange={() => (allSelected ? clearSelection() : selectAll())} />
-              <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}</span>
-            </label>
-            <button className="muted-btn" disabled={selectedIds.size === 0 || batchBusy} onClick={batchSkip}>
-              Skip Selected
-            </button>
-            <button className="muted-btn" disabled={selectedIds.size === 0 || batchBusy} onClick={batchIgnore}>
-              Ignore Selected
-            </button>
-          </div>
+          {pending.length === 0 && <p className="muted">Nothing needs review right now.</p>}
+          {pending.length > 0 && (
+            <div className="batch-actions-row">
+              <label className="pending-select-row" style={{ display: 'inline-flex' }}>
+                <input type="checkbox" checked={allSelected} onChange={() => (allSelected ? clearSelection() : selectAll())} />
+                <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}</span>
+              </label>
+              <button className="muted-btn" disabled={selectedIds.size === 0 || batchBusy} onClick={batchSkip}>
+                Skip Selected
+              </button>
+              <button className="muted-btn" disabled={selectedIds.size === 0 || batchBusy} onClick={batchIgnore}>
+                Ignore Selected
+              </button>
+            </div>
+          )}
           {pending.map((p, index) => (
             <AudiobookPendingItem
               key={p.id}
@@ -200,10 +220,12 @@ export default function ScanAudiobooks() {
         </>
       )}
 
-      {ignored.length > 0 && (
+      {activeTab === 'ignored' && (
         <>
-          <h2>Ignored ({ignored.length})</h2>
-          <p className="muted">These paths are permanently skipped — a scan will never surface them, even if the file is still there.</p>
+          {ignored.length === 0 && <p className="muted">No ignored files.</p>}
+          {ignored.length > 0 && (
+            <p className="muted">These paths are permanently skipped — a scan will never surface them, even if the file is still there.</p>
+          )}
           {ignored.map((item) => (
             <div key={item.id} className="pending-item ignored-item">
               <div className="pending-file">{item.file_path}</div>
