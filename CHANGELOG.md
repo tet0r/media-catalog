@@ -5,6 +5,15 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.5 — Show source file(s) on the audiobook detail page
+- Each audiobook's page now shows the on-disk file it was matched from (or
+  all of them, for a multi-part book), so a match found by the scanner can
+  be checked against the actual file — handy while getting a large,
+  varied-naming library scanned in and confirming the auto-matches are
+  actually right. Movies dropped this same info from their page a while
+  back as clutter; audiobooks keep it for now since verifying matches is
+  the more immediate need.
+
 ## v7.4 — Strip embedded years from audiobook search queries
 - Files named like "Author - Year - Title" (e.g. "Stephen King - 1996 -
   Desperation.m4b") were guessing the whole dash-separated string as the

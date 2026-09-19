@@ -151,6 +151,8 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 .stats { display: flex; gap: 16px; color: var(--text-muted); margin-bottom: 10px; flex-wrap: wrap; }
 .crew-line { margin: 2px 0; color: var(--text-muted); font-size: 0.9rem; }
 .crew-line strong { color: var(--text); }
+.filepaths { margin: 10px 0; font-size: 0.85rem; }
+.filepath-line { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); word-break: break-all; margin-top: 3px; }
 .backdrop { height: 220px; background-size: cover; background-position: center; border-radius: 8px; margin-bottom: -80px; opacity: 0.35; filter: blur(1px); }
 
 .cast-section { margin: 14px 0; }

@@ -120,6 +120,15 @@ export default function AudiobookDetail() {
             <p className="muted"><strong>Publisher:</strong> {book.publisher}</p>
           )}
 
+          {book.file_parts && book.file_parts.length > 0 && (
+            <div className="filepaths">
+              <strong>Source file{book.file_parts.length > 1 ? 's' : ''}:</strong>
+              {book.file_parts.map((p) => (
+                <div key={p} className="filepath-line">{p}</div>
+              ))}
+            </div>
+          )}
+
           <div className="tags">
             {book.asin && (
               <a className="tag link-tag" href={`https://www.audible.com/pd/${book.asin}`} target="_blank" rel="noreferrer">
