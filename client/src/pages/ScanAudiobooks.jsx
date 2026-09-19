@@ -60,6 +60,7 @@ export default function ScanAudiobooks() {
             <p>
               {status.files_found} audiobooks found · {status.matched} auto-matched · {status.pending} need review ·{' '}
               {status.skipped} skipped
+              {status.errored ? <> · {status.errored} failed (network error — retried on next scan)</> : null}
               {status.removed ? <> · {status.removed} removed (file no longer found)</> : null}
             </p>
           ) : null}

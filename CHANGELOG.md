@@ -5,6 +5,27 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.1 — Fix a single failed match aborting an entire audiobook scan
+- A real-library scan (695 books) hit a network error on Audible's search
+  API partway through and the whole scan died right there — everything
+  after that one book was left completely unprocessed, reported as "0
+  auto-matched · 0 need review · 0 skipped" even though hundreds of books
+  behind it were perfectly fine. The per-book search/match/add is now
+  wrapped in its own try/catch instead of one shared by the whole scan
+  loop, so one failure just gets counted (new "N failed" in the scan
+  status) and the rest of the library still gets processed. A failed book
+  isn't recorded anywhere, so it's automatically retried on the next scan
+  rather than needing anything manual.
+- Added a browser User-Agent header to the Audible/Audnexus requests
+  (previously sent with none, unlike ThePosterDB's client which already
+  does this) — some APIs reject or drop a connection outright for Node's
+  default fetch identification, which reads as a raw connection failure
+  rather than an HTTP error and was the likely cause of the failure above.
+- Added a small delay between external requests during a scan, partly
+  courtesy to an unofficial API being hit hundreds of times per scan,
+  partly to reduce the odds of tripping whatever's behind this in the
+  first place.
+
 ## v7.0 — Audiobooks, and a media-type sidebar
 - Added a full Audiobooks section, built the same way as Movies: library
   grid with search/sort, a detail page, manual add, folder scanning with a

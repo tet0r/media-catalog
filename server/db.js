@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS audiobook_scan_status (
   pending INTEGER DEFAULT 0,
   skipped INTEGER DEFAULT 0,
   removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
   message TEXT
 );
 `);
@@ -151,6 +152,7 @@ ensureColumn('movies', 'homepage', 'TEXT');
 ensureColumn('movies', 'production_companies', 'TEXT');
 ensureColumn('movies', 'spoken_languages', 'TEXT');
 ensureColumn('movies', 'content_rating', 'TEXT');
+ensureColumn('audiobook_scan_status', 'errored', 'INTEGER DEFAULT 0');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

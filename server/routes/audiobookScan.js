@@ -18,7 +18,11 @@ function setStatus(fields) {
   const cur = db.prepare('SELECT * FROM audiobook_scan_status WHERE id = 1').get();
   const merged = { ...cur, ...fields };
   db.prepare(`UPDATE audiobook_scan_status SET running=@running, last_run=@last_run, files_found=@files_found,
-    matched=@matched, pending=@pending, skipped=@skipped, removed=@removed, message=@message WHERE id = 1`).run(merged);
+    matched=@matched, pending=@pending, skipped=@skipped, removed=@removed, errored=@errored, message=@message WHERE id = 1`).run(merged);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function getSetting(key) {
@@ -64,8 +68,15 @@ function toCandidateList(results) {
   }));
 }
 
+// A small gap between external requests — partly courtesy to an unofficial
+// API this app makes a lot of calls to across a real library, partly to
+// reduce the odds of tripping whatever burst-rate heuristic might be
+// behind a request getting refused outright (see the network-error
+// handling below).
+const REQUEST_DELAY_MS = 200;
+
 async function runScan() {
-  setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0 });
+  setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0, errored: 0 });
   try {
     const groups = walkAllRoots(AUDIOBOOKS_DIRS);
     setStatus({ files_found: groups.length, message: `Found ${groups.length} audiobooks. Matching against Audible...` });
@@ -77,48 +88,55 @@ async function runScan() {
       db.prepare('SELECT file_path FROM audiobook_scan_pending').all().map((r) => r.file_path)
     );
 
-    let matched = 0, pending = 0, skipped = 0;
+    let matched = 0, pending = 0, skipped = 0, errored = 0;
+    let lastError = null;
 
     for (const group of groups) {
       if (existingPaths.has(group.path) || existingPending.has(group.path)) {
         skipped++;
-        setStatus({ matched, pending, skipped });
+        setStatus({ matched, pending, skipped, errored });
         continue;
       }
 
       const title = guessTitle(group);
       if (!title) {
         skipped++;
-        setStatus({ matched, pending, skipped });
+        setStatus({ matched, pending, skipped, errored });
         continue;
       }
 
-      let candidates = [];
+      // Failures here (network blip, DNS hiccup, Audible/Audnexus briefly
+      // unreachable) are common at real-library scale — hundreds of
+      // sequential external requests will occasionally have one go wrong.
+      // One failure used to abort the *entire* scan; now it's counted and
+      // skipped so the other 694 books still get a chance.
       try {
-        candidates = await audible.searchAudiobooks(title);
+        const candidates = await audible.searchAudiobooks(title);
+        await sleep(REQUEST_DELAY_MS);
+
+        // No year signal to cross-check here (unlike movies) — audiobook
+        // folder/file names don't reliably carry a release year the way
+        // "Title (Year)" movie naming does, so an exact normalized-title
+        // match against Audible's own relevance-sorted results is treated
+        // as confident enough to auto-add.
+        const exact = candidates.find((c) => normalizeForMatch(c.title) === normalizeForMatch(title));
+        const sourceFormat = group.kind === 'm4b' ? 'M4B' : 'MP3';
+
+        if (exact) {
+          await addAudiobookFromAsin(exact.asin, { filePath: group.path, fileParts: group.parts, sourceFormat });
+          await sleep(REQUEST_DELAY_MS);
+          matched++;
+        } else {
+          db.prepare(
+            'INSERT OR IGNORE INTO audiobook_scan_pending (file_path, file_parts, source_format, guessed_title, candidates) VALUES (?,?,?,?,?)'
+          ).run(group.path, JSON.stringify(group.parts), sourceFormat, title, JSON.stringify(toCandidateList(candidates)));
+          pending++;
+        }
       } catch (err) {
-        setStatus({ running: 0, message: `Scan stopped: ${err.message}` });
-        return;
+        errored++;
+        lastError = err.message;
       }
-
-      // No year signal to cross-check here (unlike movies) — audiobook
-      // folder/file names don't reliably carry a release year the way
-      // "Title (Year)" movie naming does, so an exact normalized-title
-      // match against Audible's own relevance-sorted results is treated
-      // as confident enough to auto-add.
-      const exact = candidates.find((c) => normalizeForMatch(c.title) === normalizeForMatch(title));
-
-      const sourceFormat = group.kind === 'm4b' ? 'M4B' : 'MP3';
-      if (exact) {
-        await addAudiobookFromAsin(exact.asin, { filePath: group.path, fileParts: group.parts, sourceFormat });
-        matched++;
-      } else {
-        db.prepare(
-          'INSERT OR IGNORE INTO audiobook_scan_pending (file_path, file_parts, source_format, guessed_title, candidates) VALUES (?,?,?,?,?)'
-        ).run(group.path, JSON.stringify(group.parts), sourceFormat, title, JSON.stringify(toCandidateList(candidates)));
-        pending++;
-      }
-      setStatus({ matched, pending, skipped });
+      setStatus({ matched, pending, skipped, errored });
     }
 
     let removed = 0;
@@ -127,7 +145,10 @@ async function runScan() {
       removed = pruneMissingFiles(groups);
     }
 
-    setStatus({ running: 0, last_run: new Date().toISOString(), removed, message: 'Scan complete.' });
+    const message = errored
+      ? `Scan complete — ${errored} book(s) failed (most recent error: ${lastError}). Run the scan again to retry those.`
+      : 'Scan complete.';
+    setStatus({ running: 0, last_run: new Date().toISOString(), removed, message });
   } catch (err) {
     setStatus({ running: 0, message: `Scan failed: ${err.message}` });
   }

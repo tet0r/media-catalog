@@ -7,6 +7,14 @@
 const AUDIBLE_SEARCH_BASE = 'https://api.audible.com/1.0/catalog/products';
 const AUDNEXUS_BASE = 'https://api.audnex.us';
 
+// Node's default fetch User-Agent identifies itself as a bare HTTP client
+// ("node"), which some APIs — including Audible's, seemingly — reject or
+// drop the connection for outright, distinct from returning an HTTP error
+// status. A realistic browser UA avoids that class of failure; see
+// lib/theposterdb.js for the same reasoning applied to ThePosterDB.
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
+
 async function searchAudiobooks(query) {
   if (!query) return [];
   const url = new URL(AUDIBLE_SEARCH_BASE);
@@ -14,7 +22,7 @@ async function searchAudiobooks(query) {
   url.searchParams.set('num_results', '15');
   url.searchParams.set('products_sort_by', 'Relevance');
   url.searchParams.set('response_groups', 'product_desc,media,contributors');
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
   if (!res.ok) throw new Error(`Audible search failed: ${res.status}`);
   const data = await res.json();
   return (data.products || []).map((p) => ({
@@ -28,7 +36,7 @@ async function searchAudiobooks(query) {
 }
 
 async function getAudiobookByAsin(asin) {
-  const res = await fetch(`${AUDNEXUS_BASE}/books/${encodeURIComponent(asin)}`);
+  const res = await fetch(`${AUDNEXUS_BASE}/books/${encodeURIComponent(asin)}`, { headers: { 'User-Agent': USER_AGENT } });
   if (!res.ok) throw new Error(`Audnexus lookup failed: ${res.status}`);
   return res.json();
 }
