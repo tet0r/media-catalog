@@ -61,8 +61,14 @@ same way.
    ```
 
    (This pulls the pre-built image from GHCR. If you want to build from
-   source instead, run `docker build -t ghcr.io/tet0r/media-catalog:latest .`
-   first.)
+   source instead, run `docker build -t ghcr.io/tet0r/movie-cataloger:latest .`
+   first. **Note:** the image is still published under the old
+   `movie-cataloger` name even after the repo/package rename to
+   `media-catalog` — GHCR doesn't rename an existing linked container
+   package just because its source repo is renamed, and the publish
+   workflow's `${{ github.repository }}`-derived tag kept resolving to the
+   pre-rename name in practice. `docker-compose.yml` already points at the
+   working path; this is just a heads-up in case you're pulling manually.)
 
 5. Open **http://localhost:8080** (or `http://<your-server-ip>:8080` from
    another device on your network).
@@ -79,7 +85,7 @@ directly into Portainer — no repo access from the Docker host needed.
    *private* by default, so Portainer (or `docker pull`) won't be able to
    fetch it until you make it public: go to your GitHub profile →
    **Packages** tab (or
-   `https://github.com/users/tet0r/packages/container/package/media-catalog`),
+   `https://github.com/users/tet0r/packages/container/package/movie-cataloger`),
    then **Package settings** → **Change visibility** → **Public**.
    (Alternatively, keep it private and give Portainer a GHCR credential
    under **Registries**.) The compose file itself needs no editing for
@@ -101,7 +107,7 @@ directly into Portainer — no repo access from the Docker host needed.
      e.g. `movies/Movies`
 
 4. Click **Deploy the stack**. Portainer pulls
-   `ghcr.io/tet0r/media-catalog:latest` and starts the container — no
+   `ghcr.io/tet0r/movie-cataloger:latest` and starts the container — no
    source clone or build on the Docker host.
 
 5. To ship a later change, push to `main` (which re-triggers the GitHub

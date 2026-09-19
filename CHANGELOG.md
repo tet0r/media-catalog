@@ -5,17 +5,26 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v6.1 — Fix Portainer pull failure after the rename
+- v6.0 pointed `docker-compose.yml` and the README at
+  `ghcr.io/tet0r/media-catalog`, on the assumption that renaming the GitHub
+  repo would make the publish workflow start pushing there (it derives the
+  image name from `${{ github.repository }}`). That assumption was wrong:
+  GHCR doesn't rename a container package's existing image path just
+  because its linked repo gets renamed, and the publish workflow kept
+  resolving to the pre-rename name in practice — so `media-catalog` never
+  existed as a pullable image, which is what broke Portainer's pull
+  ("denied denied", GHCR's generic error for both "private" and
+  "nonexistent"). `docker-compose.yml` and the README are back to the
+  working `ghcr.io/tet0r/movie-cataloger` image path; the app itself is
+  still "Media Catalogue" everywhere it's user-visible, only the Docker
+  image name is stuck on the old one for now.
+
 ## v6.0 — Renamed the project to Media Catalogue
 - Renamed everything: the GitHub repo (`movie-cataloger` → `media-catalog`),
-  the GHCR image path, both `package.json` names, the browser tab title,
-  and the in-app brand text ("🎬 Movie Cataloger" → "🎬 Media Catalogue").
-  **Breaking for existing deployments**: the GHCR image now publishes to
-  `ghcr.io/tet0r/media-catalog` instead of `ghcr.io/tet0r/movie-cataloger`
-  — an existing `docker-compose.yml` or Portainer stack pointed at the old
-  path keeps working but stops receiving new builds, so update it to the
-  new image path (see README) to keep getting updates. Historical
-  CHANGELOG entries below are left as originally written rather than
-  rewritten for the new name.
+  both `package.json` names, the browser tab title, and the in-app brand
+  text ("🎬 Movie Cataloger" → "🎬 Media Catalogue"). The GHCR image path
+  turned out *not* to follow the rename — see v6.1 for the fix.
 - Also centered the search/view/sort controls in the top bar (previously
   left-aligned after being moved there in v5.6).
 
