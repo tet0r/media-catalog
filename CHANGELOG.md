@@ -11,11 +11,11 @@ aren't versioned separately.
   Hardcoded it to `tet0r/media-catalog` instead, so this doesn't silently
   regress the next time the repo gets renamed (which is on the table,
   since the plan is to widen this beyond just movies). `docker-compose.yml`
-  and the README point at `ghcr.io/tet0r/media-catalog` again. **Once this
-  ships**, the new package will need to be made public the same way the
-  original one was (Package settings → Change visibility → Public) before
-  Portainer can pull it — expect one more "denied denied" until that step
-  is done, same cause as v6.1, different package this time.
+  and the README point at `ghcr.io/tet0r/media-catalog` again, and this
+  time it actually published there — confirmed via the new package page,
+  already **public** by default (unlike the very first package back in
+  v1.1, which needed a manual visibility change), so no extra step was
+  needed before Portainer could pull it.
 
 ## v6.2 — Spelling: Media Catalogue → Media Catalog
 - The brand name from v6.0 used the British spelling ("Catalogue"); changed
