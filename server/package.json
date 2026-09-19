@@ -1,6 +1,6 @@
 {
-  "name": "movie-cataloger-server",
-  "version": "5.6.0",
+  "name": "media-catalog-server",
+  "version": "6.0.0",
   "private": true,
   "main": "index.js",
   "scripts": {

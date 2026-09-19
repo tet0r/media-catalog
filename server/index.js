@@ -35,5 +35,5 @@ if (fs.existsSync(publicDir)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Movie cataloger listening on port ${PORT}`);
+  console.log(`Media Catalogue listening on port ${PORT}`);
 });

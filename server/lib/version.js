@@ -33,7 +33,7 @@ function compareVersions(a, b) {
 }
 
 const VERSION_CHECK_URL =
-  process.env.VERSION_CHECK_URL || 'https://raw.githubusercontent.com/tet0r/movie-cataloger/main/VERSION';
+  process.env.VERSION_CHECK_URL || 'https://raw.githubusercontent.com/tet0r/media-catalog/main/VERSION';
 // Short cache, not the hour this originally used — for a single-user
 // self-hosted app, fetching one small static file every few minutes is
 // nothing GitHub notices, and a long cache meant a push could go

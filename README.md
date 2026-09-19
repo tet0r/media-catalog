@@ -1,4 +1,4 @@
-# Movie Cataloger (self-hosted CLZ Movies alternative)
+# Media Catalogue (self-hosted CLZ Movies alternative)
 
 A self-hosted, Docker-deployable movie collection cataloger, inspired by
 [CLZ Movies](https://clz.com/movies): a personal database of your movies with
@@ -61,7 +61,7 @@ same way.
    ```
 
    (This pulls the pre-built image from GHCR. If you want to build from
-   source instead, run `docker build -t ghcr.io/tet0r/movie-cataloger:latest .`
+   source instead, run `docker build -t ghcr.io/tet0r/media-catalog:latest .`
    first.)
 
 5. Open **http://localhost:8080** (or `http://<your-server-ip>:8080` from
@@ -79,14 +79,14 @@ directly into Portainer — no repo access from the Docker host needed.
    *private* by default, so Portainer (or `docker pull`) won't be able to
    fetch it until you make it public: go to your GitHub profile →
    **Packages** tab (or
-   `https://github.com/users/tet0r/packages/container/package/movie-cataloger`),
+   `https://github.com/users/tet0r/packages/container/package/media-catalog`),
    then **Package settings** → **Change visibility** → **Public**.
    (Alternatively, keep it private and give Portainer a GHCR credential
    under **Registries**.) The compose file itself needs no editing for
    this — your share paths aren't in it (see **Network shares** below).
 
 2. In Portainer: **Stacks → Add stack**.
-   - Name it (e.g. `movie-cataloger`).
+   - Name it (e.g. `media-catalog`).
    - Build method: **Web editor**.
    - Paste the full contents of this repo's `docker-compose.yml` as-is.
 
@@ -101,7 +101,7 @@ directly into Portainer — no repo access from the Docker host needed.
      e.g. `movies/Movies`
 
 4. Click **Deploy the stack**. Portainer pulls
-   `ghcr.io/tet0r/movie-cataloger:latest` and starts the container — no
+   `ghcr.io/tet0r/media-catalog:latest` and starts the container — no
    source clone or build on the Docker host.
 
 5. To ship a later change, push to `main` (which re-triggers the GitHub
@@ -110,7 +110,7 @@ directly into Portainer — no repo access from the Docker host needed.
 
    (If you'd rather have Portainer build from source itself instead of
    pulling a registry image, use **Stacks → Add stack → Repository**
-   pointed at `https://github.com/tet0r/movie-cataloger.git` with a
+   pointed at `https://github.com/tet0r/media-catalog.git` with a
    `build: .` compose file instead — either approach works.)
 
 ## Network shares (Docker Desktop + WSL2)
@@ -162,8 +162,8 @@ To use it:
    creates the named volumes by mounting each CIFS share the first time
    they're used.
 
-**If it still doesn't work**, check `docker compose logs movie-cataloger`
-and `docker volume inspect movie-cataloger_movies1` — a CIFS mount failure
+**If it still doesn't work**, check `docker compose logs media-catalog`
+and `docker volume inspect media-catalog_movies1` — a CIFS mount failure
 (bad credentials, unreachable host, wrong share path) shows up there as an
 actual error, unlike the plain-bind-mount case which fails silently. Note
 that `password=` in the `o:` option breaks if your password contains a

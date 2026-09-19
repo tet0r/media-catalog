@@ -5,6 +5,20 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v6.0 — Renamed the project to Media Catalogue
+- Renamed everything: the GitHub repo (`movie-cataloger` → `media-catalog`),
+  the GHCR image path, both `package.json` names, the browser tab title,
+  and the in-app brand text ("🎬 Movie Cataloger" → "🎬 Media Catalogue").
+  **Breaking for existing deployments**: the GHCR image now publishes to
+  `ghcr.io/tet0r/media-catalog` instead of `ghcr.io/tet0r/movie-cataloger`
+  — an existing `docker-compose.yml` or Portainer stack pointed at the old
+  path keeps working but stops receiving new builds, so update it to the
+  new image path (see README) to keep getting updates. Historical
+  CHANGELOG entries below are left as originally written rather than
+  rewritten for the new name.
+- Also centered the search/view/sort controls in the top bar (previously
+  left-aligned after being moved there in v5.6).
+
 ## v5.6 — Persistent search/view/sort in the top bar, media favicon
 - Search, the rating "View" filter, and the sort menu moved from the top of
   the movie grid into the sticky top bar, so they stay visible and usable

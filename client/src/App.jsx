@@ -42,12 +42,12 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-row">
           <div className="brand">
-            🎬 Movie Cataloger
+            🎬 Media Catalogue
             {version && <span className="version-tag">v{version}</span>}
             {updateInfo?.updateAvailable && (
               <a
                 className="update-badge"
-                href="https://github.com/tet0r/movie-cataloger/blob/main/CHANGELOG.md"
+                href="https://github.com/tet0r/media-catalog/blob/main/CHANGELOG.md"
                 target="_blank"
                 rel="noreferrer"
                 title={`A new version (v${updateInfo.latest}) is available on GitHub`}
