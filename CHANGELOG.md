@@ -5,6 +5,20 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.2 — Fix multi-part .m4b books being split into separate entries
+- A book split across several `.m4b` files (e.g. "Book Part 1.m4b" +
+  "Book Part 2.m4b") was being scanned as two separate audiobooks — the
+  scanner treated every `.m4b` in a folder as its own book, which is right
+  for a folder of genuinely different books (a series dumped in one place)
+  but wrong for one book split into parts. It now detects a trailing
+  Part/Pt/Disc/CD/Volume/Vol marker (or "1 of 3" style) shared by two or
+  more `.m4b` files in the same folder and groups them into a single
+  multi-part entry, the same way it already did for `.mp3` parts — sorted
+  by part number, not filename text. A lone file that happens to say
+  "Part 1" with no sibling "Part 2" is left alone, and files with no
+  shared base (like "Book One.m4b" + "Book Two.m4b") still become separate
+  entries as before.
+
 ## v7.1 — Fix a single failed match aborting an entire audiobook scan
 - A real-library scan (695 books) hit a network error on Audible's search
   API partway through and the whole scan died right there — everything

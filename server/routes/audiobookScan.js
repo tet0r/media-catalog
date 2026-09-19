@@ -120,7 +120,7 @@ async function runScan() {
         // match against Audible's own relevance-sorted results is treated
         // as confident enough to auto-add.
         const exact = candidates.find((c) => normalizeForMatch(c.title) === normalizeForMatch(title));
-        const sourceFormat = group.kind === 'm4b' ? 'M4B' : 'MP3';
+        const sourceFormat = group.kind === 'multi' ? 'MP3' : 'M4B';
 
         if (exact) {
           await addAudiobookFromAsin(exact.asin, { filePath: group.path, fileParts: group.parts, sourceFormat });
