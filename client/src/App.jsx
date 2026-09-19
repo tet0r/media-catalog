@@ -44,6 +44,7 @@ export default function App() {
   const [bookQ, setBookQ] = useState('');
   const [bookSort, setBookSort] = useState('title');
   const [bookDir, setBookDir] = useState('asc');
+  const [bookGroupByAuthor, setBookGroupByAuthor] = useState(false);
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -108,6 +109,13 @@ export default function App() {
         {onAudiobooksLibrary && (
           <div className="toolbar">
             <input placeholder="Search title or author..." value={bookQ} onChange={(e) => setBookQ(e.target.value)} />
+            <button
+              type="button"
+              className={`toolbar-toggle${bookGroupByAuthor ? ' active' : ''}`}
+              onClick={() => setBookGroupByAuthor((g) => !g)}
+            >
+              Group by Author
+            </button>
             <SortMenu
               sort={bookSort}
               dir={bookDir}
@@ -154,6 +162,7 @@ export default function App() {
                   sort={bookSort}
                   dir={bookDir}
                   onSortChange={(s, d) => { setBookSort(s); setBookDir(d); }}
+                  groupByAuthor={bookGroupByAuthor}
                 />
               }
             />

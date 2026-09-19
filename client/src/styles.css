@@ -64,6 +64,8 @@ button { cursor: pointer; background: var(--accent); color: #1a1a1a; border: non
 button:disabled { opacity: 0.6; cursor: default; }
 button.danger { background: var(--danger); color: white; }
 button.muted-btn { background: var(--card); color: var(--text-muted); border: 1px solid var(--border); }
+.toolbar-toggle { background: var(--card); color: var(--text-muted); border: 1px solid var(--border); font-weight: 400; white-space: nowrap; }
+.toolbar-toggle.active { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
 
 .sort-menu { position: relative; }
 .sort-menu-trigger {
@@ -107,6 +109,12 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
   border: 1px solid rgba(224, 138, 60, 0.4); border-radius: 6px; padding: 8px 12px;
 }
 .count { color: var(--text-muted); margin-top: 20px; font-size: 0.85rem; }
+
+.author-group { margin-bottom: 28px; }
+.author-group h2 {
+  font-size: 1.1rem; margin-bottom: 14px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
 
 .library-page { position: relative; padding-right: 34px; }
 .alpha-index {

@@ -9,12 +9,43 @@ const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCod
 // still has to track itself, even though q/sort/dir now live in App.
 let savedScrollY = 0;
 
-function letterFor(title) {
-  const ch = (title || '').trim().charAt(0).toUpperCase();
+function letterFor(str) {
+  const ch = (str || '').trim().charAt(0).toUpperCase();
   return /[A-Z]/.test(ch) ? ch : '#';
 }
 
-export default function AudiobookLibrary({ q, sort, dir, onSortChange }) {
+// A book can have more than one author; grouping uses just the first
+// listed (the primary/credited one), same convention as how a shelf of
+// physical audiobooks would be sorted by whoever's name is on the spine.
+function primaryAuthor(book) {
+  return (book.authors && book.authors[0]) || null;
+}
+
+// Author groups sorted A-Z by name, with "Unknown Author" (no author data
+// at all — e.g. a manually-added book that didn't resolve one) always last
+// and bucketed under '#' rather than wherever "U" would otherwise fall, so
+// it doesn't get confused for a real name.
+function groupByAuthorName(audiobooks) {
+  const map = new Map();
+  for (const book of audiobooks) {
+    const author = primaryAuthor(book) || 'Unknown Author';
+    if (!map.has(author)) map.set(author, []);
+    map.get(author).push(book);
+  }
+  const groups = [...map.entries()].map(([author, books]) => ({
+    author,
+    books,
+    letter: author === 'Unknown Author' ? '#' : letterFor(author),
+  }));
+  groups.sort((a, b) => {
+    if (a.author === 'Unknown Author') return 1;
+    if (b.author === 'Unknown Author') return -1;
+    return a.author.localeCompare(b.author, undefined, { sensitivity: 'base' });
+  });
+  return groups;
+}
+
+export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAuthor }) {
   const [audiobooks, setAudiobooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,15 +78,19 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange }) {
       return;
     }
 
-    if (pendingJump && sort === 'title') {
+    if (pendingJump && (groupByAuthor || sort === 'title')) {
       const el = document.getElementById(`letter-${pendingJump}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setPendingJump(null);
     }
-  }, [audiobooks, loading, sort, pendingJump]);
+  }, [audiobooks, loading, sort, groupByAuthor, pendingJump]);
 
   function jumpTo(letter) {
-    if (sort !== 'title') {
+    // Author groups are always alphabetical regardless of the sort field
+    // (grouping is a separate axis from item-level sort), so jumping while
+    // grouped never needs to force a sort change the way title-jumping
+    // does in flat mode.
+    if (!groupByAuthor && sort !== 'title') {
       setPendingJump(letter);
       onSortChange('title', 'asc');
       return;
@@ -64,7 +99,10 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange }) {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const availableLetters = new Set(audiobooks.map((a) => letterFor(a.title)));
+  const groups = groupByAuthor ? groupByAuthorName(audiobooks) : null;
+  const availableLetters = new Set(
+    groupByAuthor ? groups.map((g) => g.letter) : audiobooks.map((a) => letterFor(a.title))
+  );
   const seenLetters = new Set();
 
   return (
@@ -76,6 +114,25 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange }) {
         <p className="empty">
           No audiobooks yet. Use "Add Audiobook" to search by title, or "Scan Library" to import from your audiobook folder.
         </p>
+      ) : groupByAuthor ? (
+        <div>
+          {groups.map((g) => {
+            const isFirst = !seenLetters.has(g.letter);
+            if (isFirst) seenLetters.add(g.letter);
+            return (
+              <div key={g.author} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
+                <h2>{g.author}</h2>
+                <div className="grid">
+                  {g.books.map((a) => (
+                    <Link key={a.id} to={`/audiobooks/${a.id}`}>
+                      <AudiobookCard audiobook={a} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid">
           {audiobooks.map((a) => {

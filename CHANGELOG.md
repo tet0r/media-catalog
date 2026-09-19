@@ -5,6 +5,15 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v7.3 — Group audiobooks by author
+- New "Group by Author" toggle in the Audiobooks toolbar. When on, the
+  library groups books under a heading per author (sorted A-Z by author,
+  with books lacking any author data bucketed last under "Unknown
+  Author") instead of one flat grid. A book with multiple credited authors
+  groups under whichever is listed first. The A-Z jump index switches to
+  jumping by author initial while grouped, and the toggle — like search
+  and sort — persists across a trip to a book's detail page and back.
+
 ## v7.2 — Fix multi-part .m4b books being split into separate entries
 - A book split across several `.m4b` files (e.g. "Book Part 1.m4b" +
   "Book Part 2.m4b") was being scanned as two separate audiobooks — the
