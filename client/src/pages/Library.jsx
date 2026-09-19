@@ -2,30 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
-import SortMenu from '../components/SortMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
-const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
 // Module-level, not state: Library unmounts when you navigate to a movie
 // (it's a separate route), so anything in component state would be lost by
 // the time you come back. This survives that as long as the tab itself
-// isn't reloaded.
+// isn't reloaded. (Search/rating/sort don't need this trick — they live in
+// App, which never unmounts.)
 let savedScrollY = 0;
-let savedSort = 'title';
-let savedDir = 'asc';
 
 function letterFor(title) {
   const ch = (title || '').trim().charAt(0).toUpperCase();
   return /[A-Z]/.test(ch) ? ch : '#';
 }
 
-export default function Library() {
+export default function Library({ q, rating, sort, dir, onSortChange }) {
   const [movies, setMovies] = useState([]);
-  const [q, setQ] = useState('');
-  const [rating, setRating] = useState('');
-  const [sort, setSort] = useState(savedSort);
-  const [dir, setDir] = useState(savedDir);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
@@ -42,11 +35,6 @@ export default function Library() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    savedSort = sort;
-    savedDir = dir;
-  }, [sort, dir]);
 
   useEffect(() => {
     setLoading(true);
@@ -80,8 +68,7 @@ export default function Library() {
   function jumpTo(letter) {
     if (sort !== 'title') {
       setPendingJump(letter);
-      setSort('title');
-      setDir('asc');
+      onSortChange('title', 'asc');
       return;
     }
     const el = document.getElementById(`letter-${letter}`);
@@ -93,16 +80,6 @@ export default function Library() {
 
   return (
     <div className="library-page">
-      <div className="toolbar">
-        <input placeholder="Search your collection..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={rating} onChange={(e) => setRating(e.target.value)}>
-          <option value="">View: All</option>
-          {RATINGS.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <SortMenu sort={sort} dir={dir} onChange={(s, d) => { setSort(s); setDir(d); }} />
-      </div>
       {error && <p className="error">{error}</p>}
       {loading ? (
         <p>Loading...</p>

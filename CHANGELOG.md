@@ -5,6 +5,14 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.6 — Persistent search/view/sort in the top bar, media favicon
+- Search, the rating "View" filter, and the sort menu moved from the top of
+  the movie grid into the sticky top bar, so they stay visible and usable
+  while scrolling through a long collection instead of scrolling away with
+  the grid. They now only show up on the Library page.
+- Added a clapperboard favicon (`client/public/favicon.svg`) instead of
+  the browser's default blank-page icon.
+
 ## v5.5 — Filter Library by content rating instead of format
 - Replaced the Library's "All formats" dropdown with a "View" dropdown
   filtered by content rating (G, PG, PG-13, R, NC-17, NR) instead of media
