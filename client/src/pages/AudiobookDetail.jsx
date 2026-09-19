@@ -130,7 +130,12 @@ export default function AudiobookDetail() {
           )}
 
           <div className="tags">
-            {book.asin && (
+            {book.asin && book.metadata_source === 'apple' && (
+              <a className="tag link-tag" href={`https://books.apple.com/us/audiobook/id${book.asin}`} target="_blank" rel="noreferrer">
+                Apple Books ↗
+              </a>
+            )}
+            {book.asin && book.metadata_source !== 'apple' && (
               <a className="tag link-tag" href={`https://www.audible.com/pd/${book.asin}`} target="_blank" rel="noreferrer">
                 Audible ↗
               </a>

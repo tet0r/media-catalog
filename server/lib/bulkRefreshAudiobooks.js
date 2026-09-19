@@ -7,12 +7,12 @@ const { refreshAudiobookMetadata } = require('./addAudiobook');
 let status = { running: false, total: 0, done: 0, failed: 0, message: 'Idle' };
 
 async function runBulkRefresh() {
-  const audiobooks = db.prepare('SELECT id, asin FROM audiobooks WHERE asin IS NOT NULL').all();
+  const audiobooks = db.prepare("SELECT id, asin, metadata_source FROM audiobooks WHERE asin IS NOT NULL").all();
   status = { running: true, total: audiobooks.length, done: 0, failed: 0, message: `Refreshing ${audiobooks.length} audiobooks...` };
 
   for (const book of audiobooks) {
     try {
-      await refreshAudiobookMetadata(book.id, book.asin);
+      await refreshAudiobookMetadata(book.id, book.metadata_source || 'audible', book.asin);
       status.done++;
     } catch {
       status.failed++;

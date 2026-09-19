@@ -114,6 +114,8 @@ export const api = {
     }).then(handle),
   searchAudible: (q) => fetch(`${BASE}/search/audible?q=${encodeURIComponent(q)}`).then(handle),
   lookupAudibleUrl: (url) => fetch(`${BASE}/search/audible-url?url=${encodeURIComponent(url)}`).then(handle),
+  searchApple: (q) => fetch(`${BASE}/search/apple?q=${encodeURIComponent(q)}`).then(handle),
+  lookupAppleUrl: (url) => fetch(`${BASE}/search/apple-url?url=${encodeURIComponent(url)}`).then(handle),
   startAudiobookScan: () => fetch(`${BASE}/audiobook-scan`, { method: 'POST' }).then(handle),
   audiobookScanStatus: () => fetch(`${BASE}/audiobook-scan/status`).then(handle),
   audiobookScanPending: () => fetch(`${BASE}/audiobook-scan/pending`).then(handle),

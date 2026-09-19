@@ -1,19 +1,32 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 
+const SOURCES = [
+  { key: 'audible', label: 'Audible', search: api.searchAudible, lookupUrl: api.lookupAudibleUrl, urlPlaceholder: 'Paste an audible.com product URL' },
+  { key: 'apple', label: 'Apple Books', search: api.searchApple, lookupUrl: api.lookupAppleUrl, urlPlaceholder: 'Paste a books.apple.com audiobook URL' },
+];
+
 export default function AudiobookPendingItem({ item, busy, onResolve }) {
+  const [activeKey, setActiveKey] = useState(SOURCES[0].key);
   const [query, setQuery] = useState(item.guessed_title || '');
-  const [candidates, setCandidates] = useState(item.candidates);
-  const [audibleUrl, setAudibleUrl] = useState('');
+  // The scan's own automatic search only ever tries Audible, so that's the
+  // only tab pre-populated with results; Apple Books starts empty until
+  // searched here.
+  const [candidatesByKey, setCandidatesByKey] = useState({ audible: item.candidates || [] });
+  const [urlByKey, setUrlByKey] = useState({});
   const [working, setWorking] = useState(false);
   const [error, setError] = useState(null);
+
+  const active = SOURCES.find((s) => s.key === activeKey);
+  const candidates = candidatesByKey[activeKey] || [];
 
   async function search(e) {
     e.preventDefault();
     setWorking(true);
     setError(null);
     try {
-      setCandidates(await api.searchAudible(query));
+      const c = await active.search(query);
+      setCandidatesByKey((prev) => ({ ...prev, [activeKey]: c }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -26,9 +39,12 @@ export default function AudiobookPendingItem({ item, busy, onResolve }) {
     setWorking(true);
     setError(null);
     try {
-      const result = await api.lookupAudibleUrl(audibleUrl);
-      setCandidates((c) => [result, ...c.filter((existing) => existing.asin !== result.asin)]);
-      setAudibleUrl('');
+      const result = await active.lookupUrl(urlByKey[activeKey] || '');
+      setCandidatesByKey((prev) => ({
+        ...prev,
+        [activeKey]: [result, ...(prev[activeKey] || []).filter((existing) => existing.asin !== result.asin)],
+      }));
+      setUrlByKey((prev) => ({ ...prev, [activeKey]: '' }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,6 +59,19 @@ export default function AudiobookPendingItem({ item, busy, onResolve }) {
       </div>
       <div className="pending-guess">Guessed: {item.guessed_title}</div>
 
+      <div className="picker-tabs" style={{ marginBottom: 10 }}>
+        {SOURCES.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`picker-tab${s.key === activeKey ? ' active' : ''}`}
+            onClick={() => setActiveKey(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={search} className="pending-search-row">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title" />
         <button type="submit" disabled={working}>{working ? 'Searching...' : 'Search'}</button>
@@ -50,27 +79,27 @@ export default function AudiobookPendingItem({ item, busy, onResolve }) {
 
       <form onSubmit={lookupUrl} className="pending-search-row">
         <input
-          value={audibleUrl}
-          onChange={(e) => setAudibleUrl(e.target.value)}
-          placeholder="Or paste an audible.com product URL"
+          value={urlByKey[activeKey] || ''}
+          onChange={(e) => setUrlByKey((prev) => ({ ...prev, [activeKey]: e.target.value }))}
+          placeholder={`Or ${active.urlPlaceholder.toLowerCase()}`}
         />
-        <button type="submit" disabled={working || !audibleUrl}>Look up URL</button>
+        <button type="submit" disabled={working || !(urlByKey[activeKey] || '')}>Look up URL</button>
       </form>
 
       {error && <p className="error">{error}</p>}
 
       <div className="candidates">
-        {candidates.length === 0 && <span className="muted">No Audible matches found.</span>}
+        {candidates.length === 0 && <span className="muted">No {active.label} matches found.</span>}
         {candidates.map((c) => (
           <div key={c.asin} className="candidate">
             {c.cover_url ? <img src={c.cover_url} alt={c.title} /> : null}
             <span>{c.title} — {(c.authors || []).join(', ')}</span>
-            <button disabled={busy} onClick={() => onResolve(c.asin, false)}>
+            <button disabled={busy} onClick={() => onResolve(c.asin, false, activeKey)}>
               Use this
             </button>
           </div>
         ))}
-        <button className="muted-btn" disabled={busy} onClick={() => onResolve(null, true)}>
+        <button className="muted-btn" disabled={busy} onClick={() => onResolve(null, true, activeKey)}>
           Skip this
         </button>
       </div>

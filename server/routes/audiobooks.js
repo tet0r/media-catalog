@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('../db');
-const { addAudiobookFromAsin, refreshAudiobookMetadata } = require('../lib/addAudiobook');
+const { addAudiobookFromExternalId, refreshAudiobookMetadata } = require('../lib/addAudiobook');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshAudiobooks');
 
@@ -58,9 +58,9 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { asin } = req.body;
+    const { asin, source } = req.body;
     if (!asin) return res.status(400).json({ error: 'asin is required' });
-    const row = await addAudiobookFromAsin(asin);
+    const row = await addAudiobookFromExternalId(source || 'audible', asin);
     res.status(201).json(rowToAudiobook(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -119,10 +119,10 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
 
 router.post('/:id/refresh', async (req, res) => {
   try {
-    const existing = db.prepare('SELECT asin FROM audiobooks WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT asin, metadata_source FROM audiobooks WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    if (!existing.asin) return res.status(400).json({ error: 'This audiobook has no Audible match to refresh from' });
-    const row = await refreshAudiobookMetadata(req.params.id, existing.asin);
+    if (!existing.asin) return res.status(400).json({ error: 'This audiobook has no external match to refresh from' });
+    const row = await refreshAudiobookMetadata(req.params.id, existing.metadata_source || 'audible', existing.asin);
     res.json(rowToAudiobook(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

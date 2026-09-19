@@ -77,7 +77,12 @@ CREATE TABLE IF NOT EXISTS scan_status (
 
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- The catalog ID from whichever source metadata_source names — an
+  -- Audible ASIN or an Apple Books/iTunes numeric collection ID. The
+  -- column name predates multi-source support; kept as-is rather than
+  -- renamed to avoid a churny migration for what's an internal detail.
   asin TEXT,
+  metadata_source TEXT DEFAULT 'audible',
   title TEXT NOT NULL,
   subtitle TEXT,
   authors TEXT,
@@ -153,6 +158,7 @@ ensureColumn('movies', 'production_companies', 'TEXT');
 ensureColumn('movies', 'spoken_languages', 'TEXT');
 ensureColumn('movies', 'content_rating', 'TEXT');
 ensureColumn('audiobook_scan_status', 'errored', 'INTEGER DEFAULT 0');
+ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

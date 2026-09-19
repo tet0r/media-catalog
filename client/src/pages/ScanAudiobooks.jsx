@@ -29,10 +29,10 @@ export default function ScanAudiobooks() {
     }
   }
 
-  async function resolve(id, asin, skip) {
+  async function resolve(id, asin, skip, source) {
     setBusyId(id);
     try {
-      await api.resolveAudiobookPending(id, { asin, skip });
+      await api.resolveAudiobookPending(id, { asin, skip, source });
       setPending((p) => p.filter((x) => x.id !== id));
     } catch (err) {
       setError(err.message);
@@ -48,7 +48,8 @@ export default function ScanAudiobooks() {
         Scans the audiobook folder mounted into the container (see <code>docker-compose.yml</code>) and matches
         each book against Audible. A folder with an .m4b file is treated as one book; a folder of .mp3/.m4a parts
         with no .m4b is treated as one multi-part book — either way, each folder becomes exactly one entry, never
-        one per file. Exact title matches are added automatically; anything uncertain lands below for you to confirm.
+        one per file. Exact title matches are added automatically; anything uncertain lands below for you to confirm
+        — where you can also search Apple Books instead, in case Audible's catalog doesn't have it.
       </p>
       <button onClick={startScan} disabled={status?.running}>
         {status?.running ? 'Scanning...' : 'Scan Now'}
@@ -77,7 +78,7 @@ export default function ScanAudiobooks() {
               key={p.id}
               item={p}
               busy={busyId === p.id}
-              onResolve={(asin, skip) => resolve(p.id, asin, skip)}
+              onResolve={(asin, skip, source) => resolve(p.id, asin, skip, source)}
             />
           ))}
         </>

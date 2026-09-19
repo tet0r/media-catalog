@@ -5,6 +5,29 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v8.0 — Search Apple Books as a second audiobook source
+- Most "major audiobook websites" (Libro.fm, Chirp, Storytel, Spotify, Kobo,
+  Google Play) simply don't have a public search API to integrate with.
+  Apple's iTunes Search API does — official, documented, free, no key —
+  and gives genuinely independent catalog coverage from Audible, so it's
+  now a second source rather than the only option.
+- **Add Audiobook** and resolving a **Needs Review** item both gained an
+  Audible / Apple Books tab switcher (same pattern as the movie poster
+  picker's ThePosterDB/TMDB tabs), each with its own search box, URL-paste
+  fallback, and results — switching tabs doesn't lose what you already
+  found on the other one.
+- Apple's catalog is thinner than Audible's (via Audnexus): no narrator,
+  series, runtime, or rating, just title/author/cover/description/genre/
+  year. A book added from Apple Books just has those fields blank rather
+  than guessing at them. "Refresh Metadata" and the bulk refresh in
+  Settings both know which source a book came from and refresh from the
+  right one automatically.
+- Scan-time auto-matching stays Audible-only for now — doubling every
+  scan's external-request count to also try Apple automatically isn't
+  worth it for a library-wide scan. Apple Books is there as a fallback for
+  the books that need manual attention regardless (Needs Review), which is
+  where a second source actually matters.
+
 ## v7.5 — Show source file(s) on the audiobook detail page
 - Each audiobook's page now shows the on-disk file it was matched from (or
   all of them, for a multi-part book), so a match found by the scanner can

@@ -1,5 +1,6 @@
 const db = require('../db');
 const audible = require('./audible');
+const apple = require('./apple');
 const path = require('path');
 const { cacheImageFromUrl } = require('./images');
 
@@ -23,7 +24,7 @@ function stripHtml(html) {
 
 // Shared by both a fresh add and a metadata refresh, so the two never drift
 // out of sync with each other — same reasoning as addMovie.js's extractMetadata.
-function extractMetadata(details) {
+function extractMetadataFromAudnexus(details) {
   return {
     title: details.title,
     subtitle: details.subtitle || null,
@@ -45,22 +46,64 @@ function extractMetadata(details) {
   };
 }
 
+// Apple's catalog is much thinner than Audnexus's — no narrator, no
+// series, no runtime, no rating — so those fields just stay null for a
+// book added from this source. Still enough for a usable entry (title,
+// author, cover, description, genre, year), and better than nothing for a
+// book Audible's own catalog doesn't have.
+function extractMetadataFromApple(details) {
+  return {
+    title: apple.cleanCollectionName(details.collectionName),
+    subtitle: null,
+    authors: JSON.stringify(details.artistName ? [details.artistName] : []),
+    narrators: JSON.stringify([]),
+    series: null,
+    series_sequence: null,
+    description: stripHtml(details.description),
+    genres: JSON.stringify(details.primaryGenreName ? [details.primaryGenreName] : []),
+    release_date: details.releaseDate ? details.releaseDate.slice(0, 10) : null,
+    year: details.releaseDate ? parseInt(details.releaseDate.slice(0, 4), 10) : null,
+    runtime_minutes: null,
+    publisher: details.copyright || null,
+    language: null,
+    rating: null,
+    abridged: /\(abridged\)/i.test(details.collectionName || '') ? 1 : 0,
+  };
+}
+
+async function fetchAndExtract(source, externalId) {
+  if (source === 'apple') {
+    const details = await apple.getAudiobookById(externalId);
+    return {
+      meta: extractMetadataFromApple(details),
+      coverUrl: apple.upsizeArtwork(details.artworkUrl100),
+      resolvedId: String(details.collectionId),
+    };
+  }
+  const details = await audible.getAudiobookByAsin(externalId);
+  return {
+    meta: extractMetadataFromAudnexus(details),
+    coverUrl: details.image || null,
+    resolvedId: details.asin || externalId,
+  };
+}
+
 const INSERT_SQL = `INSERT INTO audiobooks
-  (asin, title, subtitle, authors, narrators, series, series_sequence, description, genres,
+  (asin, metadata_source, title, subtitle, authors, narrators, series, series_sequence, description, genres,
    release_date, year, runtime_minutes, publisher, language, rating, abridged,
    cover_file, file_path, file_parts, source_format)
-  VALUES (@asin,@title,@subtitle,@authors,@narrators,@series,@series_sequence,@description,@genres,
+  VALUES (@asin,@metadata_source,@title,@subtitle,@authors,@narrators,@series,@series_sequence,@description,@genres,
    @release_date,@year,@runtime_minutes,@publisher,@language,@rating,@abridged,
    @cover_file,@file_path,@file_parts,@source_format)`;
 
-async function addAudiobookFromAsin(asin, { filePath = null, fileParts = null, sourceFormat = null } = {}) {
-  const details = await audible.getAudiobookByAsin(asin);
-  const meta = extractMetadata(details);
-  const coverFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image) : null;
+async function addAudiobookFromExternalId(source, externalId, { filePath = null, fileParts = null, sourceFormat = null } = {}) {
+  const { meta, coverUrl, resolvedId } = await fetchAndExtract(source, externalId);
+  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl) : null;
 
   const info = db.prepare(INSERT_SQL).run({
     ...meta,
-    asin: details.asin || asin,
+    asin: resolvedId,
+    metadata_source: source,
     cover_file: coverFile,
     file_path: filePath,
     file_parts: fileParts ? JSON.stringify(fileParts) : null,
@@ -72,12 +115,14 @@ async function addAudiobookFromAsin(asin, { filePath = null, fileParts = null, s
 // Deliberately leaves cover_file untouched, same rationale as
 // refreshMovieMetadata: a custom cover shouldn't be silently overwritten
 // by a metadata refresh.
-async function refreshAudiobookMetadata(audiobookId, asin) {
-  const details = await audible.getAudiobookByAsin(asin);
-  const meta = extractMetadata(details);
+async function refreshAudiobookMetadata(audiobookId, source, externalId) {
+  const { meta } = await fetchAndExtract(source, externalId);
   const setClause = Object.keys(meta).map((k) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE audiobooks SET ${setClause} WHERE id = @id`).run({ ...meta, id: audiobookId });
   return db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(audiobookId);
 }
 
-module.exports = { addAudiobookFromAsin, refreshAudiobookMetadata, extractMetadata, stripHtml };
+module.exports = {
+  addAudiobookFromExternalId, refreshAudiobookMetadata,
+  extractMetadataFromAudnexus, extractMetadataFromApple, stripHtml,
+};

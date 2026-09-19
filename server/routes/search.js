@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const tmdb = require('../lib/tmdb');
 const audible = require('../lib/audible');
+const apple = require('../lib/apple');
 
 const router = express.Router();
 
@@ -105,6 +106,49 @@ router.get('/audible-url', async (req, res) => {
       authors: (details.authors || []).map((a) => a.name),
       year: details.releaseDate ? details.releaseDate.slice(0, 4) : null,
       cover_url: details.image || null,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/apple', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const results = await apple.searchAudiobooks(q);
+    res.json(results.map((r) => ({
+      asin: r.asin,
+      title: r.title,
+      subtitle: r.subtitle,
+      authors: r.authors,
+      year: r.release_date ? r.release_date.slice(0, 4) : null,
+      cover_url: r.cover_url,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right book: paste a
+// books.apple.com audiobook URL and resolve its collection ID directly.
+router.get('/apple-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/books\.apple\.com\/[a-z]{2}\/audiobook\/(?:[^/?]*\/)?id(\d+)/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable books.apple.com audiobook URL (expected .../audiobook/.../id<digits>)',
+      });
+    }
+    const details = await apple.getAudiobookById(match[1]);
+    res.json({
+      asin: String(details.collectionId),
+      title: apple.cleanCollectionName(details.collectionName),
+      subtitle: null,
+      authors: details.artistName ? [details.artistName] : [],
+      year: details.releaseDate ? details.releaseDate.slice(0, 4) : null,
+      cover_url: apple.upsizeArtwork(details.artworkUrl100),
     });
   } catch (err) {
     res.status(400).json({ error: err.message });

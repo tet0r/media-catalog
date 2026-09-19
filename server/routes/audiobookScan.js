@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const db = require('../db');
 const audible = require('../lib/audible');
-const { addAudiobookFromAsin } = require('../lib/addAudiobook');
+const { addAudiobookFromExternalId } = require('../lib/addAudiobook');
 const { walkAllRoots, guessTitle } = require('../lib/audiobookScanner');
 const { normalizeForMatch } = require('../lib/titleMatch');
 
@@ -123,7 +123,12 @@ async function runScan() {
         const sourceFormat = group.kind === 'multi' ? 'MP3' : 'M4B';
 
         if (exact) {
-          await addAudiobookFromAsin(exact.asin, { filePath: group.path, fileParts: group.parts, sourceFormat });
+          // Scan-time auto-matching stays Audible-only for now — Apple
+          // Books is available as a second source for interactive search
+          // (Add Audiobook, and resolving a Needs Review item below), but
+          // doubling every scan's external-request count to also try Apple
+          // automatically isn't worth it for a library-wide scan.
+          await addAudiobookFromExternalId('audible', exact.asin, { filePath: group.path, fileParts: group.parts, sourceFormat });
           await sleep(REQUEST_DELAY_MS);
           matched++;
         } else {
@@ -178,9 +183,9 @@ router.post('/pending/:id/resolve', async (req, res) => {
   try {
     const pendingRow = db.prepare('SELECT * FROM audiobook_scan_pending WHERE id = ?').get(req.params.id);
     if (!pendingRow) return res.status(404).json({ error: 'Not found' });
-    const { asin, skip } = req.body;
+    const { asin, skip, source } = req.body;
     if (!skip && asin) {
-      await addAudiobookFromAsin(asin, {
+      await addAudiobookFromExternalId(source || 'audible', asin, {
         filePath: pendingRow.file_path,
         fileParts: JSON.parse(pendingRow.file_parts || '[]'),
         sourceFormat: pendingRow.source_format,
