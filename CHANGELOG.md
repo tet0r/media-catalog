@@ -5,6 +5,19 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v5.5 — Filter Library by content rating instead of format
+- Replaced the Library's "All formats" dropdown with a "View" dropdown
+  filtered by content rating (G, PG, PG-13, R, NC-17, NR) instead of media
+  format, which wasn't a very useful way to browse a folder-scanned
+  collection. "NR" also catches movies with no US certification at all,
+  not just an explicit "Not Rated".
+- Movies didn't have a content rating in their metadata before this — it's
+  now pulled from TMDB's US release-date certification alongside the rest
+  of a movie's details, and shown on the movie detail page next to runtime
+  and the TMDB score. Existing movies need a metadata refresh (per-movie or
+  the bulk one in Settings) to pick it up, same as other fields added in
+  past versions.
+
 ## v5.4 — Tabbed poster picker with upload, readable A-Z index
 - The A-Z jump index on the Library page was hard to read (tiny letters
   with no visual separation from the page). It's now larger, in a

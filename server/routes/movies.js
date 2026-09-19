@@ -32,7 +32,7 @@ function rowToMovie(row) {
 const SORT_COLUMNS = new Set(['title', 'year', 'added_at', 'personal_rating', 'tmdb_rating', 'runtime']);
 
 router.get('/', (req, res) => {
-  const { q, genre, format, watched, sort = 'title', dir = 'asc' } = req.query;
+  const { q, genre, format, rating, watched, sort = 'title', dir = 'asc' } = req.query;
   let sql = 'SELECT * FROM movies WHERE 1=1';
   const params = [];
   if (q) {
@@ -46,6 +46,16 @@ router.get('/', (req, res) => {
   if (format) {
     sql += ' AND format = ?';
     params.push(format);
+  }
+  if (rating) {
+    // "NR" also catches movies with no certification at all (no US release
+    // entry, or one with an empty certification), not just an explicit "NR".
+    if (rating === 'NR') {
+      sql += " AND (content_rating IS NULL OR content_rating = '' OR content_rating = 'NR')";
+    } else {
+      sql += ' AND content_rating = ?';
+      params.push(rating);
+    }
   }
   if (watched === 'true') sql += ' AND watched = 1';
   if (watched === 'false') sql += ' AND watched = 0';

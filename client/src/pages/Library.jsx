@@ -5,6 +5,7 @@ import MovieCard from '../components/MovieCard.jsx';
 import SortMenu from '../components/SortMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
+const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
 // Module-level, not state: Library unmounts when you navigate to a movie
 // (it's a separate route), so anything in component state would be lost by
@@ -22,7 +23,7 @@ function letterFor(title) {
 export default function Library() {
   const [movies, setMovies] = useState([]);
   const [q, setQ] = useState('');
-  const [format, setFormat] = useState('');
+  const [rating, setRating] = useState('');
   const [sort, setSort] = useState(savedSort);
   const [dir, setDir] = useState(savedDir);
   const [loading, setLoading] = useState(true);
@@ -50,11 +51,11 @@ export default function Library() {
   useEffect(() => {
     setLoading(true);
     api
-      .listMovies({ q, format, sort, dir })
+      .listMovies({ q, rating, sort, dir })
       .then(setMovies)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [q, format, sort, dir]);
+  }, [q, rating, sort, dir]);
 
   useEffect(() => {
     if (loading) return;
@@ -94,13 +95,11 @@ export default function Library() {
     <div className="library-page">
       <div className="toolbar">
         <input placeholder="Search your collection..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={format} onChange={(e) => setFormat(e.target.value)}>
-          <option value="">All formats</option>
-          <option value="DVD">DVD</option>
-          <option value="Blu-ray">Blu-ray</option>
-          <option value="4K UHD">4K UHD</option>
-          <option value="Digital">Digital</option>
-          <option value="File">File</option>
+        <select value={rating} onChange={(e) => setRating(e.target.value)}>
+          <option value="">View: All</option>
+          {RATINGS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
         </select>
         <SortMenu sort={sort} dir={dir} onChange={(s, d) => { setSort(s); setDir(d); }} />
       </div>

@@ -96,6 +96,7 @@ ensureColumn('movies', 'original_language', 'TEXT');
 ensureColumn('movies', 'homepage', 'TEXT');
 ensureColumn('movies', 'production_companies', 'TEXT');
 ensureColumn('movies', 'spoken_languages', 'TEXT');
+ensureColumn('movies', 'content_rating', 'TEXT');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 

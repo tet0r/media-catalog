@@ -13,6 +13,16 @@ const NOTABLE_CREW_JOBS = new Set([
   'Director of Photography', 'Original Music Composer', 'Editor',
 ]);
 
+// US MPAA rating (G/PG/PG-13/R/NC-17/NR) from TMDB's release_dates data,
+// which is keyed by country and then by release type (theatrical, digital,
+// ...) — take the first US entry that actually has a certification set.
+function extractContentRating(details) {
+  const us = (details.release_dates?.results || []).find((r) => r.iso_3166_1 === 'US');
+  if (!us) return null;
+  const withCert = (us.release_dates || []).find((rd) => rd.certification);
+  return withCert ? withCert.certification : null;
+}
+
 // Shared by both a fresh add and a metadata refresh of an existing movie,
 // so the two never drift out of sync with each other.
 function extractMetadata(details) {
@@ -44,16 +54,17 @@ function extractMetadata(details) {
     homepage: details.homepage || null,
     production_companies: JSON.stringify((details.production_companies || []).map((c) => c.name)),
     spoken_languages: JSON.stringify((details.spoken_languages || []).map((l) => l.english_name || l.name)),
+    content_rating: extractContentRating(details),
   };
 }
 
 const INSERT_SQL = `INSERT INTO movies
   (tmdb_id, title, original_title, year, overview, tagline, runtime, genres, director, cast, crew,
    poster_file, backdrop_file, tmdb_rating, vote_count, imdb_id, budget, revenue, status,
-   original_language, homepage, production_companies, spoken_languages, file_path, format)
+   original_language, homepage, production_companies, spoken_languages, content_rating, file_path, format)
   VALUES (@tmdb_id,@title,@original_title,@year,@overview,@tagline,@runtime,@genres,@director,@cast,@crew,
    @poster_file,@backdrop_file,@tmdb_rating,@vote_count,@imdb_id,@budget,@revenue,@status,
-   @original_language,@homepage,@production_companies,@spoken_languages,@file_path,@format)`;
+   @original_language,@homepage,@production_companies,@spoken_languages,@content_rating,@file_path,@format)`;
 
 async function addMovieFromTmdbId(tmdbId, { filePath = null, format = null } = {}) {
   const details = await tmdb.getMovieDetails(db, tmdbId);

@@ -25,7 +25,7 @@ async function getMovieDetails(db, tmdbId) {
   if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
   const url = new URL(`${BASE}/movie/${tmdbId}`);
   url.searchParams.set('api_key', apiKey);
-  url.searchParams.set('append_to_response', 'credits');
+  url.searchParams.set('append_to_response', 'credits,release_dates');
   const res = await fetch(url);
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`);
   return res.json();

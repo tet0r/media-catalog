@@ -107,6 +107,7 @@ export default function MovieDetail() {
           </div>
 
           <div className="stats">
+            {movie.content_rating ? <span>{movie.content_rating}</span> : null}
             {movie.runtime ? <span>{movie.runtime} min</span> : null}
             {movie.tmdb_rating ? (
               <span>
