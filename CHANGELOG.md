@@ -5,6 +5,11 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v6.2 — Spelling: Media Catalogue → Media Catalog
+- The brand name from v6.0 used the British spelling ("Catalogue"); changed
+  every occurrence (browser tab title, in-app brand text, README heading,
+  server startup log line) to "Media Catalog" instead.
+
 ## v6.1 — Fix Portainer pull failure after the rename
 - v6.0 pointed `docker-compose.yml` and the README at
   `ghcr.io/tet0r/media-catalog`, on the assumption that renaming the GitHub
@@ -17,13 +22,13 @@ aren't versioned separately.
   ("denied denied", GHCR's generic error for both "private" and
   "nonexistent"). `docker-compose.yml` and the README are back to the
   working `ghcr.io/tet0r/movie-cataloger` image path; the app itself is
-  still "Media Catalogue" everywhere it's user-visible, only the Docker
-  image name is stuck on the old one for now.
+  still user-visibly renamed, only the Docker image name is stuck on the
+  old one for now.
 
-## v6.0 — Renamed the project to Media Catalogue
+## v6.0 — Renamed the project to Media Catalog
 - Renamed everything: the GitHub repo (`movie-cataloger` → `media-catalog`),
   both `package.json` names, the browser tab title, and the in-app brand
-  text ("🎬 Movie Cataloger" → "🎬 Media Catalogue"). The GHCR image path
+  text ("🎬 Movie Cataloger" → "🎬 Media Catalog"). The GHCR image path
   turned out *not* to follow the rename — see v6.1 for the fix.
 - Also centered the search/view/sort controls in the top bar (previously
   left-aligned after being moved there in v5.6).

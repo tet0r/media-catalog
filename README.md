@@ -1,4 +1,4 @@
-# Media Catalogue (self-hosted CLZ Movies alternative)
+# Media Catalog (self-hosted CLZ Movies alternative)
 
 A self-hosted, Docker-deployable movie collection cataloger, inspired by
 [CLZ Movies](https://clz.com/movies): a personal database of your movies with

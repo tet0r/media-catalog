@@ -42,7 +42,7 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-row">
           <div className="brand">
-            🎬 Media Catalogue
+            🎬 Media Catalog
             {version && <span className="version-tag">v{version}</span>}
             {updateInfo?.updateAvailable && (
               <a
