@@ -47,20 +47,6 @@ narrator(s), series, description, genres, runtime — via
 [Audnexus](https://audnex.us), the same pairing self-hosted audiobook
 tools like Audiobookshelf use under the hood.
 
-**Folder scanning and the m4b/mp3 duplicate problem**: an audiobook can be
-a single `.m4b` file or a folder of `.mp3`/`.m4a` parts, and the scanner
-treats a whole folder as *one* book either way, not one entry per file:
-
-- A folder containing an `.m4b` → that file is the book. Any stray `.mp3`s
-  sitting alongside it (e.g. the files it was originally ripped from) are
-  assumed to be the same book and ignored, so a folder with both never
-  becomes two library entries.
-- A folder with no `.m4b`, just `.mp3`/`.m4a`/`.flac`/`.ogg`/`.aac` files →
-  every one of those files is one part of a single multi-part book, sorted
-  naturally (`Part 2` before `Part 10`) and stored together.
-- Two `.m4b` files in the same folder (e.g. a whole series dumped in one
-  place) are correctly treated as two separate books, not merged.
-
 Point `AUDIOBOOKS_DIR` at the folder(s) where your audiobooks live, same
 comma-separated-multi-path support as `MOVIES_DIR`.
 
