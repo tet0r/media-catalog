@@ -11,6 +11,7 @@
 
 const SEARCH_BASE = 'https://openlibrary.org/search.json';
 const WORKS_BASE = 'https://openlibrary.org/works';
+const ISBN_BASE = 'https://openlibrary.org/isbn';
 
 function coverUrl(coverId, size = 'L') {
   return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg` : null;
@@ -77,4 +78,16 @@ async function getBookByKey(key) {
   };
 }
 
-module.exports = { searchBooks, getBookByKey, coverUrl, workKeyFromPath };
+// A book's ISBN, when we have one, identifies it far more precisely than
+// any title search — this resolves it straight to a work key, skipping the
+// title-matching guesswork entirely. Returns null (not a throw) for an
+// unrecognized/unlisted ISBN, so callers can fall back to a title search.
+async function getWorkKeyByIsbn(isbn) {
+  if (!isbn) return null;
+  const res = await fetch(`${ISBN_BASE}/${encodeURIComponent(isbn)}.json`, { redirect: 'follow' });
+  if (!res.ok) return null;
+  const edition = await res.json();
+  return workKeyFromPath(edition.works?.[0]?.key);
+}
+
+module.exports = { searchBooks, getBookByKey, getWorkKeyByIsbn, coverUrl, workKeyFromPath };

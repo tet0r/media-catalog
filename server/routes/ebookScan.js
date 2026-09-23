@@ -5,6 +5,7 @@ const db = require('../db');
 const openlibrary = require('../lib/openlibrary');
 const { addEbookFromExternalId } = require('../lib/addEbook');
 const { walk, guessTitle } = require('../lib/ebookScanner');
+const { readEpubMetadata } = require('../lib/epubMetadata');
 const { normalizeForMatch } = require('../lib/titleMatch');
 
 const router = express.Router();
@@ -106,19 +107,36 @@ async function runScan() {
         continue;
       }
 
-      const title = guessTitle(file);
+      const format = path.extname(file).slice(1).toLowerCase();
+      // An EPUB carries its real title/author/ISBN as embedded metadata —
+      // authoritative when present, so it's used ahead of any filename
+      // guess (which only kicks in for non-EPUB formats, or an EPUB that
+      // doesn't parse as one for whatever reason).
+      const epubMeta = format === 'epub' ? readEpubMetadata(file) : null;
+      const title = epubMeta?.title || guessTitle(file);
       if (!title) {
         skipped++;
         setStatus({ matched, pending, skipped, errored });
         continue;
       }
 
-      const format = path.extname(file).slice(1).toLowerCase();
-
       // Same "count and skip rather than abort the whole scan" handling as
       // audiobookScan.js — a network blip against hundreds of sequential
       // Open Library requests shouldn't cost every book after it a chance.
       try {
+        // An EPUB's own ISBN identifies its exact edition — when there is
+        // one, this resolves straight to a work key and skips title
+        // matching (and the search-results list) entirely.
+        const isbnKey = epubMeta?.isbn ? await openlibrary.getWorkKeyByIsbn(epubMeta.isbn) : null;
+        if (epubMeta?.isbn) await sleep(REQUEST_DELAY_MS);
+        if (isbnKey) {
+          await addEbookFromExternalId(isbnKey, { filePath: file, fileFormat: format });
+          await sleep(REQUEST_DELAY_MS);
+          matched++;
+          setStatus({ matched, pending, skipped, errored });
+          continue;
+        }
+
         const candidates = await openlibrary.searchBooks(title);
         await sleep(REQUEST_DELAY_MS);
 

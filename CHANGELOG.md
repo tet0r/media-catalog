@@ -5,6 +5,21 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v9.1 — Much better ebook auto-matching
+- Shared ebook collections very commonly name files "Author - Series NN -
+  Title - Author" (the author bookends the whole filename around an
+  optional series marker) — fed straight to Open Library's search, that
+  whole string found nothing, so effectively every scanned file landed in
+  Needs Review regardless of how well-known the book was. The scanner now
+  strips the repeated author and series-number segment down to just the
+  title before searching.
+- More importantly, an EPUB's own embedded metadata (its Dublin Core
+  title/author/ISBN, read directly out of the file — no filename guessing
+  needed) is now used ahead of any filename-derived guess whenever it's
+  present, and an ISBN resolves straight to its Open Library work with no
+  title-matching step at all. Between the two, auto-matching an EPUB no
+  longer depends much on how the file happens to be named.
+
 ## v9.0 — Ebooks, a third media type
 - **Ebooks** joins Movies and Audiobooks as a full media type: its own
   sidebar tab, library grid (with search/sort/Group by Author, same as

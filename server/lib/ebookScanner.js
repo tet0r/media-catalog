@@ -30,15 +30,36 @@ function cleanTitle(str) {
     .trim();
 }
 
-// Unlike movies ("Title (Year)") or audiobooks (folder = one book), ebook
-// filenames don't follow one dominant convention — "Author - Title.epub",
-// "Title.epub" inside an Author-named folder, and bare "Title.epub" are all
-// common, and guessing which dash-separated segment is the title is
-// genuinely ambiguous either way. So this just cleans the filename itself
-// and leaves getting the right match to the search box in Needs Review,
-// same as any other guess that misses.
+// A short "SeriesName NN" segment (e.g. "Malazan 03") — distinguishable
+// from a real title because it's a name followed by a bare number, not
+// prose.
+const SERIES_MARKER_RE = /^[\w' ]{2,40}\s+\d{1,3}$/;
+
+// Ebook filenames don't follow one dominant convention the way movies
+// ("Title (Year)") or audiobooks (folder = one book) do, but shared ebook
+// collections very commonly use one specific scheme: the author bookends
+// the whole filename around an optional series marker and the title —
+// "Lastname, First - Series NN - Title - Lastname, First". Fed straight to
+// a title search, that whole string is noise Open Library's search can't
+// resolve at all (not just a near-miss); stripping the repeated author and
+// any series-number segment recovers just "Title".
+//
+// Any other dash-separated shape (a plain "Author - Title" or "Title -
+// Author", with no bookend repeat) is genuinely ambiguous about which side
+// is the title, so it's left as the full cleaned string rather than risk
+// guessing the wrong segment — same reasoning as before.
 function guessTitle(filePath) {
-  return cleanTitle(path.basename(filePath, path.extname(filePath)));
+  const raw = cleanTitle(path.basename(filePath, path.extname(filePath)));
+  const segments = raw.split(/\s+-\s+/).map((s) => s.trim()).filter(Boolean);
+  if (segments.length < 3) return raw;
+
+  const first = segments[0];
+  const last = segments[segments.length - 1];
+  if (first.toLowerCase() !== last.toLowerCase()) return raw;
+
+  const middle = segments.slice(1, -1).filter((s) => !SERIES_MARKER_RE.test(s));
+  if (middle.length === 0) return raw;
+  return middle[middle.length - 1];
 }
 
 module.exports = { walk, guessTitle, EBOOK_EXTENSIONS };
