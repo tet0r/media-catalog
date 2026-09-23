@@ -9,6 +9,9 @@ A self-hosted, Docker-deployable media collection cataloger, inspired by
   Audnexus; see **Audiobooks** below.
 - **Ebooks** — cover, author(s), description, genres, via Open Library; see
   **Ebooks** below.
+- **Music (Albums)** — cover, artist, tracklist, genres, via MusicBrainz; see
+  **Music** below. (A Discogs-backed **Vinyl** section lives alongside it —
+  see **Vinyl** below.)
 
 Each media type gets its own tab in the left sidebar, its own library-folder
 scanner, and its own section in Settings — more types can be added the same
@@ -63,25 +66,46 @@ Point `EBOOKS_DIR` at the folder(s) where your ebooks live, same
 comma-separated-multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR` — commonly
 the same network share as your audiobooks, just a different sub-path.
 
+## Music
+
+Metadata comes from [MusicBrainz](https://musicbrainz.org) (cover, artist,
+tracklist, genres, year), with cover art from the
+[Cover Art Archive](https://coverartarchive.org). Both are free and need no
+API key, but MusicBrainz limits unauthenticated clients to **1 request per
+second** — a full library scan or bulk metadata refresh is correspondingly
+slower than the other media types' (a handful of seconds per album, not
+per-file).
+
+Unlike the other media types, an album is a **folder** of tracks, not a
+single file — scans pick up `.mp3`, `.flac`, `.m4a` and `.ogg` files and
+group every folder that has them directly inside into one album. Either an
+`Artist/Album/tracks` (two nested folders) or a flat `Artist - Album/tracks`
+layout is recognized automatically; you don't need to know in advance which
+one your library uses.
+
+Point `ALBUMS_DIR` at the folder(s) where your music lives, same
+comma-separated-multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR`/`EBOOKS_DIR`
+— commonly the same network share as those, just a different sub-path.
+
 ## Setup
 
 1. **Get a free TMDB API key**: sign up at themoviedb.org, then go to
    [Settings → API](https://www.themoviedb.org/settings/api) and request a
    free "Developer" API key (approved instantly for personal use).
 
-2. **Point it at your movie, audiobook and/or ebook folders.** If they're on
-   local disk, just bind mount them directly (`- /path/to/movies:/movies:ro`)
-   and add `/movies` to the `MOVIES_DIR` env var (same idea for audiobooks/
-   `AUDIOBOOKS_DIR` and ebooks/`EBOOKS_DIR`). **If they're on a network share
-   (NAS, another PC), see Network shares below first** — plain bind-mounting
-   a network path is unreliable on Docker Desktop and needs a different
-   setup.
+2. **Point it at your movie, audiobook, ebook and/or music folders.** If
+   they're on local disk, just bind mount them directly
+   (`- /path/to/movies:/movies:ro`) and add `/movies` to the `MOVIES_DIR` env
+   var (same idea for audiobooks/`AUDIOBOOKS_DIR`, ebooks/`EBOOKS_DIR` and
+   music/`ALBUMS_DIR`). **If they're on a network share (NAS, another PC),
+   see Network shares below first** — plain bind-mounting a network path is
+   unreliable on Docker Desktop and needs a different setup.
 
    If a library is split across multiple shares/folders, give each one its
    own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add it
    to the corresponding environment variable — the scanner only looks at
    paths listed there, so a volume mounted but left out of `MOVIES_DIR` (or
-   `AUDIOBOOKS_DIR`/`EBOOKS_DIR`) will silently never get scanned.
+   `AUDIOBOOKS_DIR`/`EBOOKS_DIR`/`ALBUMS_DIR`) will silently never get scanned.
 
 3. **Set your API key and (if using network shares) SMB details**: copy
    `.env.example` to `.env` and fill it in — or leave `TMDB_API_KEY` blank
@@ -135,6 +159,7 @@ directly into Portainer — no repo access from the Docker host needed.
    - `SMB_SHARE_AUDIOBOOKS` = the audiobook folder's sub-path (can be on
      the same share as the movies, just a different sub-path)
    - `SMB_SHARE_EBOOKS` = the ebook folder's sub-path, same idea again
+   - `SMB_SHARE_ALBUMS` = the music folder's sub-path, same idea again
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/media-catalog:latest` and starts the container — no
@@ -176,7 +201,7 @@ volumes:
 
 Note that none of your actual folder names/paths live in `docker-compose.yml`
 itself — they're all environment variables (`SMB_HOST`, `SMB_SHARE1/2/3`,
-`SMB_SHARE_AUDIOBOOKS`, `SMB_SHARE_EBOOKS`), so this file stays generic even
+`SMB_SHARE_AUDIOBOOKS`, `SMB_SHARE_EBOOKS`, `SMB_SHARE_ALBUMS`), so this file stays generic even
 if the repo is public. Your real values go in `.env`, which is gitignored, or
 in Portainer's stack environment variables (which aren't part of the compose
 file either).
@@ -198,6 +223,7 @@ To use it:
      (can be on the very same share, just a different sub-path — that's
      the common case, since it's usually all one NAS).
    - `SMB_SHARE_EBOOKS` — the ebook folder's sub-path, same idea again.
+   - `SMB_SHARE_ALBUMS` — the music folder's sub-path, same idea again.
 2. `docker compose up -d` (or redeploy the Portainer stack, with those same
    variables set under its Environment variables instead of `.env`). Docker
    creates the named volumes by mounting each CIFS share the first time
@@ -222,7 +248,7 @@ folder up if you want to preserve your collection.
 # terminal 1 — API server
 cd server
 npm install
-TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks EBOOKS_DIR=/path/to/ebooks node index.js
+TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks EBOOKS_DIR=/path/to/ebooks ALBUMS_DIR=/path/to/albums node index.js
 
 # terminal 2 — frontend dev server (proxies /api to :8080)
 cd client

@@ -33,14 +33,19 @@ export default function Settings() {
   const [ebookAutoScanEnabled, setEbookAutoScanEnabled] = useState(false);
   const [ebookAutoScanInterval, setEbookAutoScanInterval] = useState(60);
   const [ebookAutoPruneMissing, setEbookAutoPruneMissing] = useState(false);
+  const [albumAutoScanEnabled, setAlbumAutoScanEnabled] = useState(false);
+  const [albumAutoScanInterval, setAlbumAutoScanInterval] = useState(60);
+  const [albumAutoPruneMissing, setAlbumAutoPruneMissing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
   const [audiobookBulkStatus, setAudiobookBulkStatus] = useState(null);
   const [ebookBulkStatus, setEbookBulkStatus] = useState(null);
+  const [albumBulkStatus, setAlbumBulkStatus] = useState(null);
   const [clearingMovies, setClearingMovies] = useState(false);
   const [clearingAudiobooks, setClearingAudiobooks] = useState(false);
   const [clearingEbooks, setClearingEbooks] = useState(false);
+  const [clearingAlbums, setClearingAlbums] = useState(false);
   const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
@@ -58,6 +63,9 @@ export default function Settings() {
         setEbookAutoScanEnabled(!!s.ebook_auto_scan_enabled);
         setEbookAutoScanInterval(s.ebook_auto_scan_interval_minutes || 60);
         setEbookAutoPruneMissing(!!s.ebook_auto_prune_missing);
+        setAlbumAutoScanEnabled(!!s.album_auto_scan_enabled);
+        setAlbumAutoScanInterval(s.album_auto_scan_interval_minutes || 60);
+        setAlbumAutoPruneMissing(!!s.album_auto_prune_missing);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -66,6 +74,7 @@ export default function Settings() {
     api.bulkRefreshStatus().then(setBulkStatus).catch(() => {});
     api.bulkRefreshAudiobooksStatus().then(setAudiobookBulkStatus).catch(() => {});
     api.bulkRefreshEbooksStatus().then(setEbookBulkStatus).catch(() => {});
+    api.bulkRefreshAlbumsStatus().then(setAlbumBulkStatus).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -149,6 +158,31 @@ export default function Settings() {
     }
   }
 
+  async function startAlbumBulkRefresh() {
+    setError(null);
+    try {
+      await api.startBulkRefreshAlbums();
+      refreshBulkStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function clearAlbums() {
+    if (!confirm('Permanently delete every album in your collection? This cannot be undone.')) return;
+    setClearingAlbums(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearAlbumLibrary();
+      setClearMessage(`Removed ${count} album${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingAlbums(false);
+    }
+  }
+
   async function save() {
     setError(null);
     try {
@@ -163,6 +197,9 @@ export default function Settings() {
         ebook_auto_scan_enabled: ebookAutoScanEnabled,
         ebook_auto_scan_interval_minutes: ebookAutoScanInterval,
         ebook_auto_prune_missing: ebookAutoPruneMissing,
+        album_auto_scan_enabled: albumAutoScanEnabled,
+        album_auto_scan_interval_minutes: albumAutoScanInterval,
+        album_auto_prune_missing: albumAutoPruneMissing,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -331,6 +368,56 @@ export default function Settings() {
       <p className="muted">Permanently deletes every ebook in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearEbooks} disabled={clearingEbooks}>
         {clearingEbooks ? 'Clearing...' : 'Clear Ebook Library'}
+      </button>
+
+      <hr />
+      <h2>Music — Albums</h2>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={albumAutoScanEnabled}
+            onChange={(e) => setAlbumAutoScanEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically scan for new albums</span>
+        <IntervalSelect value={albumAutoScanInterval} onChange={setAlbumAutoScanInterval} disabled={!albumAutoScanEnabled} />
+      </div>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={albumAutoPruneMissing}
+            onChange={(e) => setAlbumAutoPruneMissing(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Remove albums whose folder is no longer found</span>
+      </div>
+
+      <p className="muted">
+        Same safety net as movies/audiobooks/ebooks: skipped for any share that returns zero albums
+        that scan, so a briefly-disconnected network mount can't wipe out your collection.
+      </p>
+
+      <h3>Bulk Actions</h3>
+      <p className="muted">
+        Re-fetches every album's metadata from MusicBrainz in place. MusicBrainz limits requests to
+        1/second, so this is slower than the other media types' bulk refresh. Doesn't touch covers,
+        so any custom upload is left alone.
+      </p>
+      <button onClick={startAlbumBulkRefresh} disabled={albumBulkStatus?.running}>
+        {albumBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
+      </button>
+      {albumBulkStatus && albumBulkStatus.message !== 'Idle' && <p className="muted"> {albumBulkStatus.message}</p>}
+
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every album in your collection, along with their cached covers.</p>
+      <button className="danger" onClick={clearAlbums} disabled={clearingAlbums}>
+        {clearingAlbums ? 'Clearing...' : 'Clear Album Library'}
       </button>
 
       <hr />

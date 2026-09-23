@@ -212,6 +212,56 @@ CREATE TABLE IF NOT EXISTS ebook_scan_status (
   errored INTEGER DEFAULT 0,
   message TEXT
 );
+
+CREATE TABLE IF NOT EXISTS albums (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- A MusicBrainz release-group MBID.
+  external_id TEXT,
+  title TEXT NOT NULL,
+  artist TEXT,
+  year INTEGER,
+  genres TEXT,
+  -- JSON array of {title, length_ms}, from one representative release in
+  -- the release-group (a release-group itself has no tracklist — only its
+  -- specific releases do).
+  tracks TEXT,
+  cover_file TEXT,
+  -- Like audiobooks, an album is identified by its FOLDER's path, not any
+  -- one track file's path — see lib/albumScanner.js.
+  file_path TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS album_scan_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_artist TEXT,
+  guessed_album TEXT,
+  candidates TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Same permanent-exclusion idea as ebook_ignored/audiobook_ignored/movie_ignored.
+CREATE TABLE IF NOT EXISTS album_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_artist TEXT,
+  guessed_album TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS album_scan_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  files_found INTEGER DEFAULT 0,
+  matched INTEGER DEFAULT 0,
+  pending INTEGER DEFAULT 0,
+  skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
+  message TEXT
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -241,5 +291,6 @@ ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

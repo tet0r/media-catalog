@@ -28,6 +28,9 @@ router.get('/', (req, res) => {
     ebook_auto_scan_enabled: map.ebook_auto_scan_enabled === 'true',
     ebook_auto_scan_interval_minutes: Number(map.ebook_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     ebook_auto_prune_missing: map.ebook_auto_prune_missing === 'true',
+    album_auto_scan_enabled: map.album_auto_scan_enabled === 'true',
+    album_auto_scan_interval_minutes: Number(map.album_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
+    album_auto_prune_missing: map.album_auto_prune_missing === 'true',
   });
 });
 
@@ -42,6 +45,7 @@ router.put('/', (req, res) => {
     tmdb_api_key, auto_scan_enabled, auto_scan_interval_minutes, auto_prune_missing,
     audiobook_auto_scan_enabled, audiobook_auto_scan_interval_minutes, audiobook_auto_prune_missing,
     ebook_auto_scan_enabled, ebook_auto_scan_interval_minutes, ebook_auto_prune_missing,
+    album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -53,6 +57,9 @@ router.put('/', (req, res) => {
   if (typeof ebook_auto_scan_enabled === 'boolean') upsert('ebook_auto_scan_enabled', ebook_auto_scan_enabled ? 'true' : 'false');
   if (typeof ebook_auto_prune_missing === 'boolean') upsert('ebook_auto_prune_missing', ebook_auto_prune_missing ? 'true' : 'false');
   upsertInterval('ebook_auto_scan_interval_minutes', ebook_auto_scan_interval_minutes);
+  if (typeof album_auto_scan_enabled === 'boolean') upsert('album_auto_scan_enabled', album_auto_scan_enabled ? 'true' : 'false');
+  if (typeof album_auto_prune_missing === 'boolean') upsert('album_auto_prune_missing', album_auto_prune_missing ? 'true' : 'false');
+  upsertInterval('album_auto_scan_interval_minutes', album_auto_scan_interval_minutes);
   res.json({ ok: true });
 });
 

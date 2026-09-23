@@ -4,6 +4,7 @@ const tmdb = require('../lib/tmdb');
 const audible = require('../lib/audible');
 const apple = require('../lib/apple');
 const openlibrary = require('../lib/openlibrary');
+const musicbrainz = require('../lib/musicbrainz');
 
 const router = express.Router();
 
@@ -190,6 +191,47 @@ router.get('/openlibrary-url', async (req, res) => {
       key,
       title: details.title,
       authors: details.authors,
+      year: details.year,
+      cover_url: details.cover_url,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/musicbrainz', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const results = await musicbrainz.searchAlbums(q);
+    res.json(results.map((r) => ({
+      key: r.key,
+      title: r.title,
+      artist: r.artist,
+      year: r.year,
+      cover_url: musicbrainz.coverArtUrl(r.key),
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right album: paste a
+// musicbrainz.org release-group URL and resolve its MBID directly.
+router.get('/musicbrainz-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/musicbrainz\.org\/release-group\/([0-9a-f-]{36})/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable musicbrainz.org release-group URL (expected .../release-group/<id>)',
+      });
+    }
+    const details = await musicbrainz.getAlbumDetails(match[1]);
+    res.json({
+      key: details.key,
+      title: details.title,
+      artist: details.artist,
       year: details.year,
       cover_url: details.cover_url,
     });

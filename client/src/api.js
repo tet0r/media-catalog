@@ -220,4 +220,67 @@ export const api = {
   listIgnoredEbooks: () => fetch(`${BASE}/ebook-scan/ignored`).then(handle),
   unignoreEbook: (id) => fetch(`${BASE}/ebook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearEbookLibrary: () => fetch(`${BASE}/ebooks/clear-all`, { method: 'POST' }).then(handle),
+
+  listAlbums: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/albums?${qs}`).then(handle);
+  },
+  getAlbum: (id) => fetch(`${BASE}/albums/${id}`).then(handle),
+  addAlbum: (payload) =>
+    fetch(`${BASE}/albums`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  updateAlbum: (id, payload) =>
+    fetch(`${BASE}/albums/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  deleteAlbum: (id) => fetch(`${BASE}/albums/${id}`, { method: 'DELETE' }).then(handle),
+  refreshAlbum: (id) => fetch(`${BASE}/albums/${id}/refresh`, { method: 'POST' }).then(handle),
+  startBulkRefreshAlbums: () => fetch(`${BASE}/albums/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshAlbumsStatus: () => fetch(`${BASE}/albums/refresh-all/status`).then(handle),
+  setAlbumCover: (id, imageUrl) =>
+    fetch(`${BASE}/albums/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadAlbumCover: (id, file) =>
+    fetch(`${BASE}/albums/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  searchMusicBrainz: (q) => fetch(`${BASE}/search/musicbrainz?q=${encodeURIComponent(q)}`).then(handle),
+  lookupMusicBrainzUrl: (url) => fetch(`${BASE}/search/musicbrainz-url?url=${encodeURIComponent(url)}`).then(handle),
+  startAlbumScan: () => fetch(`${BASE}/album-scan`, { method: 'POST' }).then(handle),
+  albumScanStatus: () => fetch(`${BASE}/album-scan/status`).then(handle),
+  albumScanPending: () => fetch(`${BASE}/album-scan/pending`).then(handle),
+  resolveAlbumPending: (id, payload) =>
+    fetch(`${BASE}/album-scan/pending/${id}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  ignoreAlbumPending: (id) => fetch(`${BASE}/album-scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipAlbumPending: (ids) =>
+    fetch(`${BASE}/album-scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreAlbumPending: (ids) =>
+    fetch(`${BASE}/album-scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredAlbums: () => fetch(`${BASE}/album-scan/ignored`).then(handle),
+  unignoreAlbum: (id) => fetch(`${BASE}/album-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+  clearAlbumLibrary: () => fetch(`${BASE}/albums/clear-all`, { method: 'POST' }).then(handle),
 };

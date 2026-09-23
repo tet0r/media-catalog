@@ -51,6 +51,11 @@ code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; }
 .sidebar-link:hover { background: var(--card); color: var(--text); }
 .sidebar-link.active { background: var(--card); color: var(--accent); }
 .sidebar-icon { font-size: 1.05rem; }
+.sidebar-group-label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px 2px; color: var(--text-muted); font-weight: 600; font-size: 0.95rem;
+}
+.sidebar-sublink { padding: 6px 12px 6px 34px; font-size: 0.88rem; font-weight: 500; }
 
 .content { flex: 1; min-width: 0; padding: 24px; max-width: 1200px; margin: 0 auto; }
 
@@ -153,6 +158,9 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 .crew-line strong { color: var(--text); }
 .filepaths { margin: 10px 0; font-size: 0.85rem; }
 .filepath-line { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); word-break: break-all; margin-top: 3px; }
+.tracklist { margin: 12px 0; padding-left: 22px; }
+.tracklist li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.tracklist li:last-child { border-bottom: none; }
 .backdrop { height: 220px; background-size: cover; background-position: center; border-radius: 8px; margin-bottom: -80px; opacity: 0.35; filter: blur(1px); }
 
 .cast-section { margin: 14px 0; }

@@ -5,6 +5,33 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v10.0 — Music (Albums), a fourth media type
+- **Music** joins Movies, Audiobooks and Ebooks as a full media type, under
+  a new "Music" sidebar group (which also makes room for the Vinyl section
+  alongside it) — its own library grid (with search/sort/Group by Artist),
+  Add Album page, detail page with tracklist, and a Scan Library with the
+  same tabbed Needs Review/Ignored view and batch select/skip/ignore the
+  other media types have.
+- Metadata (cover, artist, tracklist, genres, year) comes from
+  [MusicBrainz](https://musicbrainz.org), with cover art from the
+  [Cover Art Archive](https://coverartarchive.org) — both free, no API key.
+  MusicBrainz limits unauthenticated clients to 1 request/second, so a full
+  scan or bulk refresh is correspondingly slower than the other media
+  types' — this app respects that limit automatically for every request.
+- Unlike the other media types, an album is a **folder** of tracks
+  (`.mp3`/`.flac`/`.m4a`/`.ogg`), not a single file. Scans group every
+  folder that has those files directly inside into one album, and recognize
+  either an `Artist/Album/tracks` (two nested folders) or a flat
+  `Artist - Album/tracks` layout automatically under the new `ALBUMS_DIR`
+  env var — same comma-separated multi-path support as the other media
+  types' folder settings.
+- Matching an album needs both the title AND the artist to line up (unlike
+  the other media types' title-only check) — album titles alone are often
+  ambiguous (self-titled albums, "Greatest Hits", a bare "IV"), so knowing
+  the artist is what actually disambiguates a confident auto-match.
+- Settings gained a full Music section: auto-scan, remove-missing, bulk
+  metadata refresh, and Clear Library — same shape as the other media types.
+
 ## v9.1 — Much better ebook auto-matching
 - Shared ebook collections very commonly name files "Author - Series NN -
   Title - Author" (the author bookends the whole filename around an
