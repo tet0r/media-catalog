@@ -30,12 +30,17 @@ export default function Settings() {
   const [audiobookAutoScanEnabled, setAudiobookAutoScanEnabled] = useState(false);
   const [audiobookAutoScanInterval, setAudiobookAutoScanInterval] = useState(60);
   const [audiobookAutoPruneMissing, setAudiobookAutoPruneMissing] = useState(false);
+  const [ebookAutoScanEnabled, setEbookAutoScanEnabled] = useState(false);
+  const [ebookAutoScanInterval, setEbookAutoScanInterval] = useState(60);
+  const [ebookAutoPruneMissing, setEbookAutoPruneMissing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
   const [audiobookBulkStatus, setAudiobookBulkStatus] = useState(null);
+  const [ebookBulkStatus, setEbookBulkStatus] = useState(null);
   const [clearingMovies, setClearingMovies] = useState(false);
   const [clearingAudiobooks, setClearingAudiobooks] = useState(false);
+  const [clearingEbooks, setClearingEbooks] = useState(false);
   const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
@@ -50,6 +55,9 @@ export default function Settings() {
         setAudiobookAutoScanEnabled(!!s.audiobook_auto_scan_enabled);
         setAudiobookAutoScanInterval(s.audiobook_auto_scan_interval_minutes || 60);
         setAudiobookAutoPruneMissing(!!s.audiobook_auto_prune_missing);
+        setEbookAutoScanEnabled(!!s.ebook_auto_scan_enabled);
+        setEbookAutoScanInterval(s.ebook_auto_scan_interval_minutes || 60);
+        setEbookAutoPruneMissing(!!s.ebook_auto_prune_missing);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -57,6 +65,7 @@ export default function Settings() {
   const refreshBulkStatus = useCallback(() => {
     api.bulkRefreshStatus().then(setBulkStatus).catch(() => {});
     api.bulkRefreshAudiobooksStatus().then(setAudiobookBulkStatus).catch(() => {});
+    api.bulkRefreshEbooksStatus().then(setEbookBulkStatus).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -115,6 +124,31 @@ export default function Settings() {
     }
   }
 
+  async function startEbookBulkRefresh() {
+    setError(null);
+    try {
+      await api.startBulkRefreshEbooks();
+      refreshBulkStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function clearEbooks() {
+    if (!confirm('Permanently delete every ebook in your collection? This cannot be undone.')) return;
+    setClearingEbooks(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearEbookLibrary();
+      setClearMessage(`Removed ${count} ebook${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingEbooks(false);
+    }
+  }
+
   async function save() {
     setError(null);
     try {
@@ -126,6 +160,9 @@ export default function Settings() {
         audiobook_auto_scan_enabled: audiobookAutoScanEnabled,
         audiobook_auto_scan_interval_minutes: audiobookAutoScanInterval,
         audiobook_auto_prune_missing: audiobookAutoPruneMissing,
+        ebook_auto_scan_enabled: ebookAutoScanEnabled,
+        ebook_auto_scan_interval_minutes: ebookAutoScanInterval,
+        ebook_auto_prune_missing: ebookAutoPruneMissing,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -245,6 +282,55 @@ export default function Settings() {
       <p className="muted">Permanently deletes every audiobook in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearAudiobooks} disabled={clearingAudiobooks}>
         {clearingAudiobooks ? 'Clearing...' : 'Clear Audiobook Library'}
+      </button>
+
+      <hr />
+      <h2>Ebooks</h2>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={ebookAutoScanEnabled}
+            onChange={(e) => setEbookAutoScanEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically scan for new ebooks</span>
+        <IntervalSelect value={ebookAutoScanInterval} onChange={setEbookAutoScanInterval} disabled={!ebookAutoScanEnabled} />
+      </div>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={ebookAutoPruneMissing}
+            onChange={(e) => setEbookAutoPruneMissing(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Remove ebooks whose file is no longer found</span>
+      </div>
+
+      <p className="muted">
+        Same safety net as movies/audiobooks: skipped for any share that returns zero ebooks that scan,
+        so a briefly-disconnected network mount can't wipe out your collection.
+      </p>
+
+      <h3>Bulk Actions</h3>
+      <p className="muted">
+        Re-fetches every ebook's metadata from Open Library in place. Doesn't touch covers,
+        so any custom upload is left alone.
+      </p>
+      <button onClick={startEbookBulkRefresh} disabled={ebookBulkStatus?.running}>
+        {ebookBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
+      </button>
+      {ebookBulkStatus && ebookBulkStatus.message !== 'Idle' && <p className="muted"> {ebookBulkStatus.message}</p>}
+
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every ebook in your collection, along with their cached covers.</p>
+      <button className="danger" onClick={clearEbooks} disabled={clearingEbooks}>
+        {clearingEbooks ? 'Clearing...' : 'Clear Ebook Library'}
       </button>
 
       <hr />

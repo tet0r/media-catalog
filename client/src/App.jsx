@@ -9,6 +9,10 @@ import AudiobookLibrary from './pages/AudiobookLibrary.jsx';
 import AudiobookDetail from './pages/AudiobookDetail.jsx';
 import AddAudiobook from './pages/AddAudiobook.jsx';
 import ScanAudiobooks from './pages/ScanAudiobooks.jsx';
+import EbookLibrary from './pages/EbookLibrary.jsx';
+import EbookDetail from './pages/EbookDetail.jsx';
+import AddEbook from './pages/AddEbook.jsx';
+import ScanEbooks from './pages/ScanEbooks.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 
@@ -18,6 +22,7 @@ const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 // future media type just slots in here and the sidebar/order follow.
 const SECTIONS = [
   { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
+  { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
   { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
 ];
 
@@ -29,6 +34,7 @@ export default function App() {
   const activeSection = SECTIONS.find((s) => location.pathname.startsWith(s.path));
   const onMoviesLibrary = location.pathname === '/movies';
   const onAudiobooksLibrary = location.pathname === '/audiobooks';
+  const onEbooksLibrary = location.pathname === '/ebooks';
 
   // Lifted up from the library pages themselves: App never unmounts while
   // navigating between routes, so keeping this state here means it just
@@ -45,6 +51,11 @@ export default function App() {
   const [bookSort, setBookSort] = useState('title');
   const [bookDir, setBookDir] = useState('asc');
   const [bookGroupByAuthor, setBookGroupByAuthor] = useState(false);
+
+  const [ebookQ, setEbookQ] = useState('');
+  const [ebookSort, setEbookSort] = useState('title');
+  const [ebookDir, setEbookDir] = useState('asc');
+  const [ebookGroupByAuthor, setEbookGroupByAuthor] = useState(false);
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -91,6 +102,13 @@ export default function App() {
                 <NavLink to="/audiobooks/scan">Scan Library</NavLink>
               </>
             )}
+            {activeSection?.key === 'ebooks' && (
+              <>
+                <NavLink to="/ebooks" end>Library</NavLink>
+                <NavLink to="/ebooks/add">Add Ebook</NavLink>
+                <NavLink to="/ebooks/scan">Scan Library</NavLink>
+              </>
+            )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
         </div>
@@ -121,6 +139,24 @@ export default function App() {
               dir={bookDir}
               onChange={(s, d) => { setBookSort(s); setBookDir(d); }}
               options={AUDIOBOOK_SORT_OPTIONS}
+            />
+          </div>
+        )}
+        {onEbooksLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search title or author..." value={ebookQ} onChange={(e) => setEbookQ(e.target.value)} />
+            <button
+              type="button"
+              className={`toolbar-toggle${ebookGroupByAuthor ? ' active' : ''}`}
+              onClick={() => setEbookGroupByAuthor((g) => !g)}
+            >
+              Group by Author
+            </button>
+            <SortMenu
+              sort={ebookSort}
+              dir={ebookDir}
+              onChange={(s, d) => { setEbookSort(s); setEbookDir(d); }}
+              options={EBOOK_SORT_OPTIONS}
             />
           </div>
         )}
@@ -170,6 +206,22 @@ export default function App() {
             <Route path="/audiobooks/add" element={<AddAudiobook />} />
             <Route path="/audiobooks/scan" element={<ScanAudiobooks />} />
 
+            <Route
+              path="/ebooks"
+              element={
+                <EbookLibrary
+                  q={ebookQ}
+                  sort={ebookSort}
+                  dir={ebookDir}
+                  onSortChange={(s, d) => { setEbookSort(s); setEbookDir(d); }}
+                  groupByAuthor={ebookGroupByAuthor}
+                />
+              }
+            />
+            <Route path="/ebooks/:id" element={<EbookDetail />} />
+            <Route path="/ebooks/add" element={<AddEbook />} />
+            <Route path="/ebooks/scan" element={<ScanEbooks />} />
+
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
@@ -183,4 +235,10 @@ const AUDIOBOOK_SORT_OPTIONS = [
   { key: 'year', label: 'Year' },
   { key: 'runtime_minutes', label: 'Length' },
   { key: 'rating', label: 'Rating' },
+];
+
+const EBOOK_SORT_OPTIONS = [
+  { key: 'title', label: 'A-Z' },
+  { key: 'year', label: 'Year' },
+  { key: 'page_count', label: 'Length' },
 ];

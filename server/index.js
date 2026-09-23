@@ -14,12 +14,15 @@ app.use('/posters', express.static(path.join(DATA_DIR, 'posters')));
 
 const scanRouter = require('./routes/scan');
 const audiobookScanRouter = require('./routes/audiobookScan');
+const ebookScanRouter = require('./routes/ebookScan');
 
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/audiobooks', require('./routes/audiobooks'));
+app.use('/api/ebooks', require('./routes/ebooks'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
 app.use('/api/audiobook-scan', audiobookScanRouter);
+app.use('/api/ebook-scan', ebookScanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/version-check', require('./routes/version'));
@@ -38,6 +41,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'audiobook_auto_scan_enabled',
     intervalKey: 'audiobook_auto_scan_interval_minutes',
     statusTable: 'audiobook_scan_status',
+  },
+  {
+    runScan: ebookScanRouter.runScan,
+    enabledKey: 'ebook_auto_scan_enabled',
+    intervalKey: 'ebook_auto_scan_interval_minutes',
+    statusTable: 'ebook_scan_status',
   },
 ]);
 

@@ -157,4 +157,67 @@ export const api = {
     }).then(handle),
   listIgnoredAudiobooks: () => fetch(`${BASE}/audiobook-scan/ignored`).then(handle),
   unignoreAudiobook: (id) => fetch(`${BASE}/audiobook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+
+  listEbooks: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/ebooks?${qs}`).then(handle);
+  },
+  getEbook: (id) => fetch(`${BASE}/ebooks/${id}`).then(handle),
+  addEbook: (payload) =>
+    fetch(`${BASE}/ebooks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  updateEbook: (id, payload) =>
+    fetch(`${BASE}/ebooks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  deleteEbook: (id) => fetch(`${BASE}/ebooks/${id}`, { method: 'DELETE' }).then(handle),
+  refreshEbook: (id) => fetch(`${BASE}/ebooks/${id}/refresh`, { method: 'POST' }).then(handle),
+  startBulkRefreshEbooks: () => fetch(`${BASE}/ebooks/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshEbooksStatus: () => fetch(`${BASE}/ebooks/refresh-all/status`).then(handle),
+  setEbookCover: (id, imageUrl) =>
+    fetch(`${BASE}/ebooks/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadEbookCover: (id, file) =>
+    fetch(`${BASE}/ebooks/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  searchOpenLibrary: (q) => fetch(`${BASE}/search/openlibrary?q=${encodeURIComponent(q)}`).then(handle),
+  lookupOpenLibraryUrl: (url) => fetch(`${BASE}/search/openlibrary-url?url=${encodeURIComponent(url)}`).then(handle),
+  startEbookScan: () => fetch(`${BASE}/ebook-scan`, { method: 'POST' }).then(handle),
+  ebookScanStatus: () => fetch(`${BASE}/ebook-scan/status`).then(handle),
+  ebookScanPending: () => fetch(`${BASE}/ebook-scan/pending`).then(handle),
+  resolveEbookPending: (id, payload) =>
+    fetch(`${BASE}/ebook-scan/pending/${id}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  ignoreEbookPending: (id) => fetch(`${BASE}/ebook-scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipEbookPending: (ids) =>
+    fetch(`${BASE}/ebook-scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreEbookPending: (ids) =>
+    fetch(`${BASE}/ebook-scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredEbooks: () => fetch(`${BASE}/ebook-scan/ignored`).then(handle),
+  unignoreEbook: (id) => fetch(`${BASE}/ebook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+  clearEbookLibrary: () => fetch(`${BASE}/ebooks/clear-all`, { method: 'POST' }).then(handle),
 };

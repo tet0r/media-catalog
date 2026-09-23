@@ -3,6 +3,7 @@ const db = require('../db');
 const tmdb = require('../lib/tmdb');
 const audible = require('../lib/audible');
 const apple = require('../lib/apple');
+const openlibrary = require('../lib/openlibrary');
 
 const router = express.Router();
 
@@ -149,6 +150,48 @@ router.get('/apple-url', async (req, res) => {
       authors: details.artistName ? [details.artistName] : [],
       year: details.releaseDate ? details.releaseDate.slice(0, 4) : null,
       cover_url: apple.upsizeArtwork(details.artworkUrl100),
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/openlibrary', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const results = await openlibrary.searchBooks(q);
+    res.json(results.map((r) => ({
+      key: r.key,
+      title: r.title,
+      authors: r.authors,
+      year: r.year,
+      cover_url: r.cover_url,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right book: paste an
+// openlibrary.org work URL and resolve its work key directly.
+router.get('/openlibrary-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/openlibrary\.org\/works\/(OL\d+W)/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable openlibrary.org work URL (expected .../works/OL...W)',
+      });
+    }
+    const key = match[1].toUpperCase();
+    const details = await openlibrary.getBookByKey(key);
+    res.json({
+      key,
+      title: details.title,
+      authors: details.authors,
+      year: details.year,
+      cover_url: details.cover_url,
     });
   } catch (err) {
     res.status(400).json({ error: err.message });

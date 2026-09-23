@@ -11,6 +11,8 @@ services:
       - MOVIES_DIR=/movies,/movies2,/movies3
       # Same idea for the audiobook library.
       - AUDIOBOOKS_DIR=/audiobooks
+      # Same idea for the ebook library.
+      - EBOOKS_DIR=/ebooks
     volumes:
       # App data: the SQLite database + cached posters/covers. Keep this on
       # a persistent path so your collection survives container rebuilds.
@@ -28,6 +30,8 @@ services:
       # Audiobooks, on the same network share as the movies (same SMB_HOST/
       # USER/PASS), just a different sub-path.
       - audiobooks1:/audiobooks:ro
+      # Ebooks, same idea again — same share, different sub-path.
+      - ebooks1:/ebooks:ro
     restart: unless-stopped
 
 volumes:
@@ -55,3 +59,9 @@ volumes:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
       device: "//${SMB_HOST}/${SMB_SHARE_AUDIOBOOKS}"
+  ebooks1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_EBOOKS}"

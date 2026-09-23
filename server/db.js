@@ -159,6 +159,59 @@ CREATE TABLE IF NOT EXISTS audiobook_scan_status (
   errored INTEGER DEFAULT 0,
   message TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ebooks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- An Open Library work key (e.g. "OL27448W"), unqualified — mirrors
+  -- audiobooks' asin/metadata_source pair, minus metadata_source since
+  -- there's only the one source.
+  external_id TEXT,
+  title TEXT NOT NULL,
+  authors TEXT,
+  description TEXT,
+  genres TEXT,
+  year INTEGER,
+  publisher TEXT,
+  language TEXT,
+  page_count INTEGER,
+  isbn TEXT,
+  cover_file TEXT,
+  -- Unlike audiobooks, an ebook is always exactly one file — no folder-of-
+  -- parts case to model, so this is just the file's own path.
+  file_path TEXT,
+  file_format TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ebook_scan_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  guessed_format TEXT,
+  candidates TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Same permanent-exclusion idea as audiobook_ignored/movie_ignored.
+CREATE TABLE IF NOT EXISTS ebook_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ebook_scan_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  files_found INTEGER DEFAULT 0,
+  matched INTEGER DEFAULT 0,
+  pending INTEGER DEFAULT 0,
+  skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
+  message TEXT
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -187,5 +240,6 @@ ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

@@ -5,6 +5,25 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v9.0 — Ebooks, a third media type
+- **Ebooks** joins Movies and Audiobooks as a full media type: its own
+  sidebar tab, library grid (with search/sort/Group by Author, same as
+  Audiobooks), Add Ebook page, detail page, and a Scan Library with the same
+  tabbed Needs Review/Ignored view and batch select/skip/ignore that Movies
+  and Audiobooks already have.
+- Metadata (cover, author(s), description, genres, publisher, page count,
+  ISBN) comes from [Open Library](https://openlibrary.org)'s free, no-key
+  public API.
+- Scans pick up `.epub`, `.pdf`, `.mobi` and `.azw3` files under `EBOOKS_DIR`
+  (same comma-separated multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR`)
+  — one library entry per file, since unlike audiobooks an ebook is never
+  split across multiple files. Ebook filenames don't follow one dominant
+  naming convention the way movies or audiobooks do, so the auto-guess is
+  just the cleaned filename; anything that doesn't get an exact title match
+  lands in Needs Review same as always.
+- Settings gained a full Ebooks section: auto-scan, remove-missing, bulk
+  metadata refresh, and Clear Library — same shape as Movies/Audiobooks.
+
 ## v8.2 — Tabbed Ignored view, plus Clear Library in Settings
 - Scan Library's Needs Review and Ignored lists are now **tabs** instead of
   stacked sections, for both Movies and Audiobooks — makes it clearer at a
