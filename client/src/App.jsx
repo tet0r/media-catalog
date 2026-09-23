@@ -17,6 +17,8 @@ import AlbumLibrary from './pages/AlbumLibrary.jsx';
 import AlbumDetail from './pages/AlbumDetail.jsx';
 import AddAlbum from './pages/AddAlbum.jsx';
 import ScanAlbums from './pages/ScanAlbums.jsx';
+import VinylLibrary from './pages/VinylLibrary.jsx';
+import VinylDetail from './pages/VinylDetail.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 
@@ -60,6 +62,7 @@ export default function App() {
   const onAudiobooksLibrary = location.pathname === '/audiobooks';
   const onEbooksLibrary = location.pathname === '/ebooks';
   const onAlbumsLibrary = location.pathname === '/music/albums';
+  const onVinylLibrary = location.pathname === '/music/vinyl';
 
   // Lifted up from the library pages themselves: App never unmounts while
   // navigating between routes, so keeping this state here means it just
@@ -86,6 +89,11 @@ export default function App() {
   const [albumSort, setAlbumSort] = useState('title');
   const [albumDir, setAlbumDir] = useState('asc');
   const [albumGroupByArtist, setAlbumGroupByArtist] = useState(false);
+
+  const [vinylQ, setVinylQ] = useState('');
+  const [vinylSort, setVinylSort] = useState('title');
+  const [vinylDir, setVinylDir] = useState('asc');
+  const [vinylGroupByArtist, setVinylGroupByArtist] = useState(false);
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -145,6 +153,9 @@ export default function App() {
                 <NavLink to="/music/albums/add">Add Album</NavLink>
                 <NavLink to="/music/albums/scan">Scan Library</NavLink>
               </>
+            )}
+            {activeSection?.key === 'vinyl' && (
+              <NavLink to="/music/vinyl" end>Library</NavLink>
             )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
@@ -211,6 +222,24 @@ export default function App() {
               sort={albumSort}
               dir={albumDir}
               onChange={(s, d) => { setAlbumSort(s); setAlbumDir(d); }}
+              options={ALBUM_SORT_OPTIONS}
+            />
+          </div>
+        )}
+        {onVinylLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search title or artist..." value={vinylQ} onChange={(e) => setVinylQ(e.target.value)} />
+            <button
+              type="button"
+              className={`toolbar-toggle${vinylGroupByArtist ? ' active' : ''}`}
+              onClick={() => setVinylGroupByArtist((g) => !g)}
+            >
+              Group by Artist
+            </button>
+            <SortMenu
+              sort={vinylSort}
+              dir={vinylDir}
+              onChange={(s, d) => { setVinylSort(s); setVinylDir(d); }}
               options={ALBUM_SORT_OPTIONS}
             />
           </div>
@@ -311,6 +340,20 @@ export default function App() {
             <Route path="/music/albums/:id" element={<AlbumDetail />} />
             <Route path="/music/albums/add" element={<AddAlbum />} />
             <Route path="/music/albums/scan" element={<ScanAlbums />} />
+
+            <Route
+              path="/music/vinyl"
+              element={
+                <VinylLibrary
+                  q={vinylQ}
+                  sort={vinylSort}
+                  dir={vinylDir}
+                  onSortChange={(s, d) => { setVinylSort(s); setVinylDir(d); }}
+                  groupByArtist={vinylGroupByArtist}
+                />
+              }
+            />
+            <Route path="/music/vinyl/:id" element={<VinylDetail />} />
 
             <Route path="/settings" element={<Settings />} />
           </Routes>

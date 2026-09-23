@@ -31,6 +31,13 @@ router.get('/', (req, res) => {
     album_auto_scan_enabled: map.album_auto_scan_enabled === 'true',
     album_auto_scan_interval_minutes: Number(map.album_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     album_auto_prune_missing: map.album_auto_prune_missing === 'true',
+    discogs_username: map.discogs_username || '',
+    discogs_token: map.discogs_token || '',
+    discogs_source: map.discogs_username && map.discogs_token
+      ? 'settings'
+      : (process.env.DISCOGS_USERNAME && process.env.DISCOGS_TOKEN ? 'env' : 'none'),
+    vinyl_auto_sync_enabled: map.vinyl_auto_sync_enabled === 'true',
+    vinyl_auto_sync_interval_minutes: Number(map.vinyl_auto_sync_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
   });
 });
 
@@ -46,6 +53,7 @@ router.put('/', (req, res) => {
     audiobook_auto_scan_enabled, audiobook_auto_scan_interval_minutes, audiobook_auto_prune_missing,
     ebook_auto_scan_enabled, ebook_auto_scan_interval_minutes, ebook_auto_prune_missing,
     album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
+    discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -60,6 +68,10 @@ router.put('/', (req, res) => {
   if (typeof album_auto_scan_enabled === 'boolean') upsert('album_auto_scan_enabled', album_auto_scan_enabled ? 'true' : 'false');
   if (typeof album_auto_prune_missing === 'boolean') upsert('album_auto_prune_missing', album_auto_prune_missing ? 'true' : 'false');
   upsertInterval('album_auto_scan_interval_minutes', album_auto_scan_interval_minutes);
+  if (typeof discogs_username === 'string') upsert('discogs_username', discogs_username);
+  if (typeof discogs_token === 'string') upsert('discogs_token', discogs_token);
+  if (typeof vinyl_auto_sync_enabled === 'boolean') upsert('vinyl_auto_sync_enabled', vinyl_auto_sync_enabled ? 'true' : 'false');
+  upsertInterval('vinyl_auto_sync_interval_minutes', vinyl_auto_sync_interval_minutes);
   res.json({ ok: true });
 });
 

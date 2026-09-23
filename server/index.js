@@ -16,11 +16,13 @@ const scanRouter = require('./routes/scan');
 const audiobookScanRouter = require('./routes/audiobookScan');
 const ebookScanRouter = require('./routes/ebookScan');
 const albumScanRouter = require('./routes/albumScan');
+const { runSync: runVinylSync } = require('./lib/vinylSync');
 
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/audiobooks', require('./routes/audiobooks'));
 app.use('/api/ebooks', require('./routes/ebooks'));
 app.use('/api/albums', require('./routes/albums'));
+app.use('/api/vinyl', require('./routes/vinyl'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
 app.use('/api/audiobook-scan', audiobookScanRouter);
@@ -56,6 +58,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'album_auto_scan_enabled',
     intervalKey: 'album_auto_scan_interval_minutes',
     statusTable: 'album_scan_status',
+  },
+  {
+    runScan: runVinylSync,
+    enabledKey: 'vinyl_auto_sync_enabled',
+    intervalKey: 'vinyl_auto_sync_interval_minutes',
+    statusTable: 'vinyl_sync_status',
   },
 ]);
 

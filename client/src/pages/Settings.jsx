@@ -36,6 +36,11 @@ export default function Settings() {
   const [albumAutoScanEnabled, setAlbumAutoScanEnabled] = useState(false);
   const [albumAutoScanInterval, setAlbumAutoScanInterval] = useState(60);
   const [albumAutoPruneMissing, setAlbumAutoPruneMissing] = useState(false);
+  const [discogsUsername, setDiscogsUsername] = useState('');
+  const [discogsToken, setDiscogsToken] = useState('');
+  const [discogsSource, setDiscogsSource] = useState('none');
+  const [vinylAutoSyncEnabled, setVinylAutoSyncEnabled] = useState(false);
+  const [vinylAutoSyncInterval, setVinylAutoSyncInterval] = useState(60);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -46,6 +51,7 @@ export default function Settings() {
   const [clearingAudiobooks, setClearingAudiobooks] = useState(false);
   const [clearingEbooks, setClearingEbooks] = useState(false);
   const [clearingAlbums, setClearingAlbums] = useState(false);
+  const [clearingVinyl, setClearingVinyl] = useState(false);
   const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
@@ -66,6 +72,11 @@ export default function Settings() {
         setAlbumAutoScanEnabled(!!s.album_auto_scan_enabled);
         setAlbumAutoScanInterval(s.album_auto_scan_interval_minutes || 60);
         setAlbumAutoPruneMissing(!!s.album_auto_prune_missing);
+        setDiscogsUsername(s.discogs_username || '');
+        setDiscogsToken(s.discogs_token || '');
+        setDiscogsSource(s.discogs_source);
+        setVinylAutoSyncEnabled(!!s.vinyl_auto_sync_enabled);
+        setVinylAutoSyncInterval(s.vinyl_auto_sync_interval_minutes || 60);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -183,6 +194,21 @@ export default function Settings() {
     }
   }
 
+  async function clearVinyl() {
+    if (!confirm('Delete the local copy of your vinyl collection? It will come back on the next Discogs sync — this does not touch your actual Discogs collection.')) return;
+    setClearingVinyl(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearVinylLibrary();
+      setClearMessage(`Removed ${count} record${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingVinyl(false);
+    }
+  }
+
   async function save() {
     setError(null);
     try {
@@ -200,6 +226,10 @@ export default function Settings() {
         album_auto_scan_enabled: albumAutoScanEnabled,
         album_auto_scan_interval_minutes: albumAutoScanInterval,
         album_auto_prune_missing: albumAutoPruneMissing,
+        discogs_username: discogsUsername,
+        discogs_token: discogsToken,
+        vinyl_auto_sync_enabled: vinylAutoSyncEnabled,
+        vinyl_auto_sync_interval_minutes: vinylAutoSyncInterval,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -418,6 +448,59 @@ export default function Settings() {
       <p className="muted">Permanently deletes every album in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearAlbums} disabled={clearingAlbums}>
         {clearingAlbums ? 'Clearing...' : 'Clear Album Library'}
+      </button>
+
+      <hr />
+      <h2>Music — Vinyl</h2>
+      <p className="muted">
+        Vinyl is a direct mirror of your existing collection on{' '}
+        <a href="https://www.discogs.com" target="_blank" rel="noreferrer">Discogs</a> — there's no
+        local-file scanning involved. Generate a token at{' '}
+        <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noreferrer">
+          discogs.com/settings/developers
+        </a>{' '}
+        ("Generate new token"), then enter it and your username below.
+      </p>
+      <div className="form-grid">
+        <label>
+          Discogs Username
+          <input value={discogsUsername} onChange={(e) => setDiscogsUsername(e.target.value)} placeholder="Your Discogs username" />
+        </label>
+        <label>
+          Discogs Personal Access Token
+          <input value={discogsToken} onChange={(e) => setDiscogsToken(e.target.value)} placeholder="Paste your token" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {discogsSource === 'env'
+          ? 'environment variables (DISCOGS_USERNAME/DISCOGS_TOKEN)'
+          : discogsSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        .
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={vinylAutoSyncEnabled}
+            onChange={(e) => setVinylAutoSyncEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically sync with Discogs</span>
+        <IntervalSelect value={vinylAutoSyncInterval} onChange={setVinylAutoSyncInterval} disabled={!vinylAutoSyncEnabled} />
+      </div>
+
+      <h3>Danger Zone</h3>
+      <p className="muted">
+        Deletes the local copy of your vinyl collection, along with their cached covers. It comes back
+        on the next sync — this never touches your actual Discogs collection.
+      </p>
+      <button className="danger" onClick={clearVinyl} disabled={clearingVinyl}>
+        {clearingVinyl ? 'Clearing...' : 'Clear Local Vinyl Copy'}
       </button>
 
       <hr />

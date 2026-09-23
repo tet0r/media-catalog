@@ -283,4 +283,28 @@ export const api = {
   listIgnoredAlbums: () => fetch(`${BASE}/album-scan/ignored`).then(handle),
   unignoreAlbum: (id) => fetch(`${BASE}/album-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearAlbumLibrary: () => fetch(`${BASE}/albums/clear-all`, { method: 'POST' }).then(handle),
+
+  listVinyl: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/vinyl?${qs}`).then(handle);
+  },
+  getVinylRecord: (id) => fetch(`${BASE}/vinyl/${id}`).then(handle),
+  deleteVinylRecord: (id) => fetch(`${BASE}/vinyl/${id}`, { method: 'DELETE' }).then(handle),
+  setVinylCover: (id, imageUrl) =>
+    fetch(`${BASE}/vinyl/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadVinylCover: (id, file) =>
+    fetch(`${BASE}/vinyl/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  startVinylSync: () => fetch(`${BASE}/vinyl/sync`, { method: 'POST' }).then(handle),
+  vinylSyncStatus: () => fetch(`${BASE}/vinyl/sync/status`).then(handle),
+  clearVinylLibrary: () => fetch(`${BASE}/vinyl/clear-all`, { method: 'POST' }).then(handle),
 };

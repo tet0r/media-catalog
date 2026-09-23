@@ -87,6 +87,23 @@ Point `ALBUMS_DIR` at the folder(s) where your music lives, same
 comma-separated-multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR`/`EBOOKS_DIR`
 — commonly the same network share as those, just a different sub-path.
 
+## Vinyl
+
+Unlike every other media type here, Vinyl doesn't scan any local files —
+it's a direct mirror of a collection you already maintain on
+[Discogs](https://www.discogs.com). There's no folder to point it at and no
+env var for it; instead, generate a Personal Access Token at
+[discogs.com/settings/developers](https://www.discogs.com/settings/developers)
+("Generate new token") and enter it, along with your username, in Settings.
+Click "Sync from Discogs" (or turn on auto-sync) and it pulls your whole
+collection — cover, artist, format, label, genres — via the Discogs API,
+which is free and needs no separate key beyond that token.
+
+Discogs stays the source of truth: add, edit or remove records on Discogs
+itself, then sync again here to catch up. Removing something from the local
+copy in this app (or clearing the whole local copy in Settings) doesn't
+touch your actual Discogs collection — it just comes back on the next sync.
+
 ## Setup
 
 1. **Get a free TMDB API key**: sign up at themoviedb.org, then go to

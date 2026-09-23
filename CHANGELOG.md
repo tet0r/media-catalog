@@ -5,6 +5,28 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.0 — Vinyl, backed by your Discogs collection
+- **Vinyl** joins Albums as the second section under "Music" (now a sidebar
+  group), but works completely differently from every other media type
+  here: instead of scanning local files, it mirrors a collection you
+  already maintain on [Discogs](https://www.discogs.com) — no folder, no
+  env var, just a Discogs username and Personal Access Token entered in
+  Settings, then a "Sync from Discogs" button (or auto-sync on a schedule,
+  same as the file-scanning media types).
+- A sync pulls your whole collection in a few paginated requests (cover,
+  artist, format, label, genres, catalog number), respecting Discogs' own
+  rate limit the same way lib/musicbrainz.js already respects
+  MusicBrainz's. Re-syncing is idempotent — it updates existing records,
+  adds new ones, and mirrors removals (an item taken off Discogs
+  disappears here too), without re-touching a cover you've manually
+  swapped in.
+- Discogs is treated as the actual source of truth: there's no way to add,
+  edit, or manually match a record from within this app at all — that
+  happens on Discogs itself. "Remove from Local Library" and Settings'
+  "Clear Local Vinyl Copy" only ever delete the local mirror; both come
+  back on the next sync unless the item is also removed from the real
+  Discogs collection.
+
 ## v10.0 — Music (Albums), a fourth media type
 - **Music** joins Movies, Audiobooks and Ebooks as a full media type, under
   a new "Music" sidebar group (which also makes room for the Vinyl section

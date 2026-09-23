@@ -262,6 +262,43 @@ CREATE TABLE IF NOT EXISTS album_scan_status (
   errored INTEGER DEFAULT 0,
   message TEXT
 );
+
+-- Unlike every other media type, Vinyl has no "Needs Review" concept at
+-- all — it's a direct mirror of a Discogs collection, not a local-file
+-- scan matched against a catalog, so there's no scan_pending/ignored pair
+-- here, just the records themselves plus a sync_status table shaped like
+-- the others' scan_status for UI consistency.
+CREATE TABLE IF NOT EXISTS vinyl_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- Identifies this specific physical copy in the user's Discogs
+  -- collection (Discogs supports owning more than one copy of the same
+  -- release, each with its own instance_id) — the release id itself
+  -- (discogs_release_id) identifies the edition/pressing, not the copy.
+  discogs_instance_id INTEGER UNIQUE,
+  discogs_release_id INTEGER,
+  title TEXT NOT NULL,
+  artist TEXT,
+  year INTEGER,
+  genres TEXT,
+  format TEXT,
+  label TEXT,
+  catalog_number TEXT,
+  cover_file TEXT,
+  date_added TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS vinyl_sync_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  total_found INTEGER DEFAULT 0,
+  added INTEGER DEFAULT 0,
+  updated INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
+  message TEXT
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -292,5 +329,6 @@ db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run(
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;
