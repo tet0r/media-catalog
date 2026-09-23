@@ -4,6 +4,7 @@ const db = require('../db');
 const musicbrainz = require('../lib/musicbrainz');
 const { addAlbumFromExternalId } = require('../lib/addAlbum');
 const { walkAllRoots, guessArtistAlbum } = require('../lib/albumScanner');
+const { readAudioTags } = require('../lib/audioTags');
 const { normalizeForMatch } = require('../lib/titleMatch');
 
 const router = express.Router();
@@ -91,7 +92,14 @@ async function runScan() {
         continue;
       }
 
-      const { artist, album } = guessArtistAlbum(group);
+      // A track's own embedded tags are more reliable than any folder-name
+      // guess — read from the first track (all tracks in an album share
+      // the same artist/album tags), falling back to the folder-based
+      // guess per-field for whichever one is missing or unreadable.
+      const tags = readAudioTags(group.tracks[0]);
+      const guessed = guessArtistAlbum(group);
+      const artist = tags?.artist || guessed.artist;
+      const album = tags?.album || guessed.album;
       if (!album) {
         skipped++;
         setStatus({ matched, pending, skipped, errored });

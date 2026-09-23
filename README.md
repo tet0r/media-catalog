@@ -78,10 +78,15 @@ per-file).
 
 Unlike the other media types, an album is a **folder** of tracks, not a
 single file — scans pick up `.mp3`, `.flac`, `.m4a` and `.ogg` files and
-group every folder that has them directly inside into one album. Either an
-`Artist/Album/tracks` (two nested folders) or a flat `Artist - Album/tracks`
-layout is recognized automatically; you don't need to know in advance which
-one your library uses.
+group every folder that has them directly inside into one album. The
+artist/album used for matching comes from the first track's own embedded
+tags (ID3v2/v1, Vorbis comments, or iTunes-style atoms, depending on
+format) when it has them — reading a file's own tags beats guessing from
+folder names, and no dependency on your folder naming convention. Only
+when a track has no usable tags does it fall back to the folder name,
+recognizing either an `Artist/Album/tracks` (two nested folders) or a flat
+`Artist - Album/tracks` layout automatically; you don't need to know in
+advance which one your library uses.
 
 Point `ALBUMS_DIR` at the folder(s) where your music lives, same
 comma-separated-multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR`/`EBOOKS_DIR`

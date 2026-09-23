@@ -5,6 +5,16 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.1 — Albums matched by embedded tags, not just folder names
+- Album scans now read the first track's own embedded tags (ID3v2/v1 for
+  MP3, Vorbis comments for FLAC/OGG, iTunes-style atoms for M4A) for the
+  artist/album used to search MusicBrainz, falling back to the
+  folder-name guess per-field only when a track has no usable tags. A
+  correctly-tagged file matches regardless of how its folder happens to
+  be named — the same "read the file's own metadata instead of guessing"
+  principle already applied to EPUBs in v9.1, extended to four more
+  binary formats (lib/audioTags.js), with no new dependency.
+
 ## v11.0 — Vinyl, backed by your Discogs collection
 - **Vinyl** joins Albums as the second section under "Music" (now a sidebar
   group), but works completely differently from every other media type
