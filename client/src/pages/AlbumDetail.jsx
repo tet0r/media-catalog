@@ -158,7 +158,7 @@ export default function AlbumDetail() {
   if (!album) return <p>Loading...</p>;
 
   async function remove() {
-    if (!confirm(`Remove "${album.title}" from your collection?`)) return;
+    if (!confirm(`Remove "${album.title}" from your collection? Its folder(s) will be added to Ignored, so a re-scan won't add it back automatically.`)) return;
     await api.deleteAlbum(id);
     navigate('/music/albums');
   }

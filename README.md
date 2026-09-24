@@ -113,6 +113,13 @@ Got the wrong match? Every album's own page has a **Search Again** button
 re-points that same folder(s) at the new match (cover included), without
 deleting and re-adding the album.
 
+Removing an album from its own page adds its folder(s) to Ignored
+automatically, so a re-scan doesn't just re-discover and re-add it right
+back — un-ignore it (Scan Library's Ignored tab) if you change your mind.
+This only applies to the single "Remove from Collection" action; Settings'
+"Clear Library" is a bulk reset meant to be followed by a fresh re-scan, so
+it doesn't ignore anything.
+
 ## Vinyl
 
 Unlike every other media type here, Vinyl doesn't scan any local files —

@@ -5,6 +5,19 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.5 — Removing an album now ignores its folder(s) too
+- Removing an album via "Remove from Collection" now adds its folder(s)
+  to Ignored automatically, so a re-scan doesn't just re-discover the
+  same folder and add it right back — a manual removal is a deliberate
+  "I don't want this one", same as ignoring a Needs Review item. Un-ignore
+  it from Scan Library's Ignored tab to reverse it.
+- Deliberately doesn't apply to Settings' "Clear Library" — that's a bulk
+  reset meant to be followed by a fresh re-scan, not "ignore everything".
+- Verified end-to-end: removed an album, confirmed it showed up in
+  Ignored with the folder path(s) it was actually matched from, re-scanned
+  and confirmed it stayed gone, then un-ignored it and confirmed a re-scan
+  brought it back.
+
 ## v11.4 — Multi-disc albums, and re-matching an album from its own page
 - A multi-disc release split across sibling folders ("Album CD1"/"Album
   CD2", "Disc 1"/"Disc 2", etc.) is now recognized as **one** album, not

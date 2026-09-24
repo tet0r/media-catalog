@@ -159,7 +159,17 @@ router.post('/:id/rematch', async (req, res) => {
   }
 });
 
+// A manual removal is deliberate — without recording it, the next scan
+// would just re-discover the same folder(s) and re-add the album right
+// back. Unlike Settings' "Clear Library" (a bulk reset meant to be
+// followed by a fresh re-scan), this is "I don't want this one", so it
+// gets permanently ignored the same way a Needs Review item does.
 router.delete('/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM albums WHERE id = ?').get(req.params.id);
+  if (row && row.file_path) {
+    db.prepare('INSERT OR IGNORE INTO album_ignored (file_path, guessed_artist, guessed_album, disc_paths) VALUES (?, ?, ?, ?)')
+      .run(row.file_path, row.artist, row.title, row.disc_paths);
+  }
   db.prepare('DELETE FROM albums WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
