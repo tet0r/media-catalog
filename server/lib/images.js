@@ -54,4 +54,19 @@ async function cacheImageBuffer(dataDir, buffer, contentType) {
   return filename;
 }
 
-module.exports = { cachePoster, cacheImageFromUrl, cacheImageBuffer };
+// For an image that's already a local file readable by this process (e.g.
+// LaunchBox's own cached box art on a mounted network share) rather than
+// something fetched over HTTP. Named by a hash of the source path, same
+// no-op-on-repeat rationale as the other cache* helpers.
+function cacheImageFromLocalFile(dataDir, srcPath) {
+  const postersDir = path.join(dataDir, 'posters');
+  fs.mkdirSync(postersDir, { recursive: true });
+  const ext = path.extname(srcPath).replace('.', '').toLowerCase() || 'jpg';
+  const hash = crypto.createHash('sha1').update(srcPath).digest('hex');
+  const filename = `custom-${hash}.${ext}`;
+  const dest = path.join(postersDir, filename);
+  if (!fs.existsSync(dest)) fs.copyFileSync(srcPath, dest);
+  return filename;
+}
+
+module.exports = { cachePoster, cacheImageFromUrl, cacheImageBuffer, cacheImageFromLocalFile };

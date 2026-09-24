@@ -5,6 +5,33 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v12.0 — Games, mirrored from a local LaunchBox installation
+- New "Games" media type. Unlike every scanned media type, it isn't matched
+  against a public catalog at all — LaunchBox (launchbox-app.com) has no
+  public search API and no documented scraping-free path to one, but its
+  desktop app already downloads per-platform game metadata and box art as
+  plain XML/image files for offline use once you've imported/identified
+  your games there. This just reads those files directly (lib/
+  launchboxLibrary.js), mirroring the whole approach Vinyl already
+  established for Discogs: a direct sync/mirror, no Needs Review/Ignored,
+  LaunchBox stays the source of truth.
+- Since LaunchBox normally runs on a different PC than this server, there's
+  no live network-share mount for it — instead you keep a synced copy of
+  just its `Data` and `Images` folders on the Docker host (`LAUNCHBOX_DIR`
+  env var, `LAUNCHBOX_SYNC_PATH` in `.env`) via whatever sync tool you like
+  (robocopy/rsync/Syncthing/...). See the README's new **Games** section.
+- Games page mirrors Vinyl's: a "Sync from LaunchBox" button (plus optional
+  auto-sync in Settings), grid view groupable by platform, a detail page
+  showing developer/publisher/genre/rating/overview, and a manual cover
+  upload if you want to override LaunchBox's box art.
+- Verified against a real local LaunchBox install (936 games across 9
+  platforms): parsed metadata correctly (including numeric/hex XML entity
+  decoding), matched and cached box art for every title whose filename
+  needed Windows-invalid-character sanitization first (e.g. "Anno 1701:
+  History Edition" → "Anno 1701_ History Edition-01.jpg" on disk — missed
+  entirely before accounting for this), and confirmed a full sync via a
+  realistic server-boot + HTTP test end-to-end with no errors.
+
 ## v11.5 — Removing an album now ignores its folder(s) too
 - Removing an album via "Remove from Collection" now adds its folder(s)
   to Ignored automatically, so a re-scan doesn't just re-discover the

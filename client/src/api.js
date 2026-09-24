@@ -315,4 +315,28 @@ export const api = {
   startVinylSync: () => fetch(`${BASE}/vinyl/sync`, { method: 'POST' }).then(handle),
   vinylSyncStatus: () => fetch(`${BASE}/vinyl/sync/status`).then(handle),
   clearVinylLibrary: () => fetch(`${BASE}/vinyl/clear-all`, { method: 'POST' }).then(handle),
+
+  listGames: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/games?${qs}`).then(handle);
+  },
+  getGame: (id) => fetch(`${BASE}/games/${id}`).then(handle),
+  deleteGame: (id) => fetch(`${BASE}/games/${id}`, { method: 'DELETE' }).then(handle),
+  setGameCover: (id, imageUrl) =>
+    fetch(`${BASE}/games/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadGameCover: (id, file) =>
+    fetch(`${BASE}/games/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  startGamesSync: () => fetch(`${BASE}/games/sync`, { method: 'POST' }).then(handle),
+  gamesSyncStatus: () => fetch(`${BASE}/games/sync/status`).then(handle),
+  clearGamesLibrary: () => fetch(`${BASE}/games/clear-all`, { method: 'POST' }).then(handle),
 };

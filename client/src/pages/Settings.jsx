@@ -43,6 +43,9 @@ export default function Settings() {
   const [discogsSource, setDiscogsSource] = useState('none');
   const [vinylAutoSyncEnabled, setVinylAutoSyncEnabled] = useState(false);
   const [vinylAutoSyncInterval, setVinylAutoSyncInterval] = useState(60);
+  const [gamesAutoSyncEnabled, setGamesAutoSyncEnabled] = useState(false);
+  const [gamesAutoSyncInterval, setGamesAutoSyncInterval] = useState(60);
+  const [launchboxDirConfigured, setLaunchboxDirConfigured] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -54,6 +57,7 @@ export default function Settings() {
   const [clearingEbooks, setClearingEbooks] = useState(false);
   const [clearingAlbums, setClearingAlbums] = useState(false);
   const [clearingVinyl, setClearingVinyl] = useState(false);
+  const [clearingGames, setClearingGames] = useState(false);
   const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
@@ -81,6 +85,9 @@ export default function Settings() {
         setDiscogsSource(s.discogs_source);
         setVinylAutoSyncEnabled(!!s.vinyl_auto_sync_enabled);
         setVinylAutoSyncInterval(s.vinyl_auto_sync_interval_minutes || 60);
+        setGamesAutoSyncEnabled(!!s.games_auto_sync_enabled);
+        setGamesAutoSyncInterval(s.games_auto_sync_interval_minutes || 60);
+        setLaunchboxDirConfigured(!!s.launchbox_dir_configured);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -213,6 +220,21 @@ export default function Settings() {
     }
   }
 
+  async function clearGames() {
+    if (!confirm('Delete the local copy of your game library? It will come back on the next LaunchBox sync — this does not touch your actual LaunchBox installation.')) return;
+    setClearingGames(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearGamesLibrary();
+      setClearMessage(`Removed ${count} game${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingGames(false);
+    }
+  }
+
   async function save() {
     setError(null);
     try {
@@ -235,6 +257,8 @@ export default function Settings() {
         discogs_token: discogsToken,
         vinyl_auto_sync_enabled: vinylAutoSyncEnabled,
         vinyl_auto_sync_interval_minutes: vinylAutoSyncInterval,
+        games_auto_sync_enabled: gamesAutoSyncEnabled,
+        games_auto_sync_interval_minutes: gamesAutoSyncInterval,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -527,6 +551,45 @@ export default function Settings() {
       </p>
       <button className="danger" onClick={clearVinyl} disabled={clearingVinyl}>
         {clearingVinyl ? 'Clearing...' : 'Clear Local Vinyl Copy'}
+      </button>
+
+      <hr />
+      <h2>Games</h2>
+      <p className="muted">
+        Games is a direct mirror of your local{' '}
+        <a href="https://www.launchbox-app.com" target="_blank" rel="noreferrer">LaunchBox</a>{' '}
+        installation — LaunchBox has already matched and identified these games, so there's no
+        catalog search here, just a read of its <code>Data</code>/<code>Images</code> folders.
+        Since LaunchBox usually runs on a different PC than this server, copy (or keep synced) its{' '}
+        <code>Data</code> folder and <code>Images</code> folder (or just each platform's{' '}
+        <code>Box - Front</code> subfolder, to save space) to somewhere this server's Docker host
+        can reach, then bind-mount that folder and set <code>LAUNCHBOX_DIR</code> to it — see the
+        README's Games section for the exact <code>docker-compose.yml</code> lines.
+      </p>
+      <p className="muted">
+        <code>LAUNCHBOX_DIR</code>: {launchboxDirConfigured ? 'configured' : 'not configured'}.
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={gamesAutoSyncEnabled}
+            onChange={(e) => setGamesAutoSyncEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically sync with LaunchBox</span>
+        <IntervalSelect value={gamesAutoSyncInterval} onChange={setGamesAutoSyncInterval} disabled={!gamesAutoSyncEnabled} />
+      </div>
+
+      <h3>Danger Zone</h3>
+      <p className="muted">
+        Deletes the local copy of your game library, along with their cached covers. It comes back
+        on the next sync — this never touches your actual LaunchBox installation.
+      </p>
+      <button className="danger" onClick={clearGames} disabled={clearingGames}>
+        {clearingGames ? 'Clearing...' : 'Clear Local Games Copy'}
       </button>
 
       <hr />

@@ -15,6 +15,14 @@ services:
       - EBOOKS_DIR=/ebooks
       # Same idea for the music (album) library.
       - ALBUMS_DIR=/albums
+      # Where your synced LaunchBox Data/ and Images/ folders land on this
+      # Docker host — see "Games" in the README. Unlike the other _DIR vars,
+      # this points at a plain local folder (bind-mounted below), not a
+      # network share: LaunchBox usually runs on a different PC than this
+      # server, so you keep a copy of its Data/Images folders synced to
+      # somewhere on this machine (e.g. via a scheduled robocopy/rsync/
+      # Syncthing job) rather than mounting the other PC's share live.
+      - LAUNCHBOX_DIR=/launchbox
     volumes:
       # App data: the SQLite database + cached posters/covers. Keep this on
       # a persistent path so your collection survives container rebuilds.
@@ -36,6 +44,12 @@ services:
       - ebooks1:/ebooks:ro
       # Music, same idea again — same share, different sub-path.
       - albums1:/albums:ro
+      # Your synced local copy of LaunchBox's Data/ and Images/ folders — a
+      # plain bind mount (not a CIFS volume like the ones above) since this
+      # is meant to be a local path on the Docker host itself, e.g.
+      # C:\LaunchBoxSync if you've synced it there. Change the host side
+      # (left of the colon) to wherever you keep that synced copy.
+      - ${LAUNCHBOX_SYNC_PATH:-./launchbox}:/launchbox:ro
     restart: unless-stopped
 
 volumes:

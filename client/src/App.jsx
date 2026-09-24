@@ -19,6 +19,8 @@ import AddAlbum from './pages/AddAlbum.jsx';
 import ScanAlbums from './pages/ScanAlbums.jsx';
 import VinylLibrary from './pages/VinylLibrary.jsx';
 import VinylDetail from './pages/VinylDetail.jsx';
+import GamesLibrary from './pages/GamesLibrary.jsx';
+import GameDetail from './pages/GameDetail.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 
@@ -44,6 +46,7 @@ const SECTIONS = [
   },
   { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
   { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
+  { key: 'games', label: 'Games', path: '/games', icon: '🎮' },
   { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
 ];
 
@@ -63,6 +66,7 @@ export default function App() {
   const onEbooksLibrary = location.pathname === '/ebooks';
   const onAlbumsLibrary = location.pathname === '/music/albums';
   const onVinylLibrary = location.pathname === '/music/vinyl';
+  const onGamesLibrary = location.pathname === '/games';
 
   // Lifted up from the library pages themselves: App never unmounts while
   // navigating between routes, so keeping this state here means it just
@@ -94,6 +98,11 @@ export default function App() {
   const [vinylSort, setVinylSort] = useState('title');
   const [vinylDir, setVinylDir] = useState('asc');
   const [vinylGroupByArtist, setVinylGroupByArtist] = useState(false);
+
+  const [gamesQ, setGamesQ] = useState('');
+  const [gamesSort, setGamesSort] = useState('title');
+  const [gamesDir, setGamesDir] = useState('asc');
+  const [gamesGroupByPlatform, setGamesGroupByPlatform] = useState(false);
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -156,6 +165,9 @@ export default function App() {
             )}
             {activeSection?.key === 'vinyl' && (
               <NavLink to="/music/vinyl" end>Library</NavLink>
+            )}
+            {activeSection?.key === 'games' && (
+              <NavLink to="/games" end>Library</NavLink>
             )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
@@ -241,6 +253,24 @@ export default function App() {
               dir={vinylDir}
               onChange={(s, d) => { setVinylSort(s); setVinylDir(d); }}
               options={ALBUM_SORT_OPTIONS}
+            />
+          </div>
+        )}
+        {onGamesLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search title or platform..." value={gamesQ} onChange={(e) => setGamesQ(e.target.value)} />
+            <button
+              type="button"
+              className={`toolbar-toggle${gamesGroupByPlatform ? ' active' : ''}`}
+              onClick={() => setGamesGroupByPlatform((g) => !g)}
+            >
+              Group by Platform
+            </button>
+            <SortMenu
+              sort={gamesSort}
+              dir={gamesDir}
+              onChange={(s, d) => { setGamesSort(s); setGamesDir(d); }}
+              options={GAME_SORT_OPTIONS}
             />
           </div>
         )}
@@ -355,6 +385,20 @@ export default function App() {
             />
             <Route path="/music/vinyl/:id" element={<VinylDetail />} />
 
+            <Route
+              path="/games"
+              element={
+                <GamesLibrary
+                  q={gamesQ}
+                  sort={gamesSort}
+                  dir={gamesDir}
+                  onSortChange={(s, d) => { setGamesSort(s); setGamesDir(d); }}
+                  groupByPlatform={gamesGroupByPlatform}
+                />
+              }
+            />
+            <Route path="/games/:id" element={<GameDetail />} />
+
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
@@ -380,4 +424,10 @@ const ALBUM_SORT_OPTIONS = [
   { key: 'title', label: 'A-Z' },
   { key: 'artist', label: 'Artist' },
   { key: 'year', label: 'Year' },
+];
+
+const GAME_SORT_OPTIONS = [
+  { key: 'title', label: 'A-Z' },
+  { key: 'platform', label: 'Platform' },
+  { key: 'release_date', label: 'Release Date' },
 ];

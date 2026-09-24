@@ -12,6 +12,8 @@ A self-hosted, Docker-deployable media collection cataloger, inspired by
 - **Music (Albums)** — cover, artist, tracklist, genres, via MusicBrainz; see
   **Music** below. (A Discogs-backed **Vinyl** section lives alongside it —
   see **Vinyl** below.)
+- **Games** — cover, platform, developer/publisher, genres, overview, mirrored
+  from a local LaunchBox installation; see **Games** below.
 
 Each media type gets its own tab in the left sidebar, its own library-folder
 scanner, and its own section in Settings — more types can be added the same
@@ -137,6 +139,41 @@ itself, then sync again here to catch up. Removing something from the local
 copy in this app (or clearing the whole local copy in Settings) doesn't
 touch your actual Discogs collection — it just comes back on the next sync.
 
+## Games
+
+Like Vinyl, Games doesn't scan/match anything — it mirrors a library you've
+already built in [LaunchBox](https://www.launchbox-app.com), the free
+game-launcher app. LaunchBox has no public search API (and no documented
+scraping-free path to one), but its desktop app already downloads per-game
+metadata (title, platform, developer, genre, box art, ...) as plain files
+for offline use once you've imported/identified your games there — this app
+just reads those files directly instead of hitting LaunchBox's site.
+
+Since LaunchBox usually runs on a different PC than the one hosting this
+app, there's no live network-share mount for it the way Movies/Audiobooks/
+Ebooks/Albums have. Instead:
+
+1. On the LaunchBox PC, locate your LaunchBox install folder (Start Menu →
+   right-click the LaunchBox shortcut → "Open file location" if unsure) and
+   find its `Data` and `Images` subfolders.
+2. Keep a synced copy of just those two folders somewhere reachable by the
+   Docker host — a scheduled `robocopy`, rsync, or a sync tool like
+   Syncthing all work. You only need `Data` (the metadata) and `Images`
+   (the box art — you can limit this to each platform's `Box - Front`
+   subfolder to save space, e.g. `Images\Sony Playstation\Box - Front\`).
+   You don't need `Core`, `ROMs`, `Themes`, etc.
+3. In `.env`, set `LAUNCHBOX_SYNC_PATH` to that local folder on the Docker
+   host (e.g. `C:\LaunchBoxSync`) — `docker-compose.yml` bind-mounts it to
+   `/launchbox` and `LAUNCHBOX_DIR=/launchbox` tells the app where to look.
+4. Click "Sync from LaunchBox" on the Games page (or turn on auto-sync in
+   Settings).
+
+LaunchBox stays the source of truth: add, edit or remove games there (then
+re-sync your copied folders and click sync here to catch up). Removing a
+game from the local copy in this app (or clearing the whole local copy in
+Settings) doesn't touch your actual LaunchBox library — it just comes back
+on the next sync.
+
 ## Setup
 
 1. **Get a free TMDB API key**: sign up at themoviedb.org, then go to
@@ -210,6 +247,9 @@ directly into Portainer — no repo access from the Docker host needed.
      the same share as the movies, just a different sub-path)
    - `SMB_SHARE_EBOOKS` = the ebook folder's sub-path, same idea again
    - `SMB_SHARE_ALBUMS` = the music folder's sub-path, same idea again
+   - `LAUNCHBOX_SYNC_PATH` = if using Games, a path *on the Docker host
+     itself* (not a network share) with your synced LaunchBox `Data`/
+     `Images` folders — see **Games** above
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/media-catalog:latest` and starts the container — no

@@ -327,6 +327,40 @@ CREATE TABLE IF NOT EXISTS vinyl_sync_status (
   errored INTEGER DEFAULT 0,
   message TEXT
 );
+
+-- Same rationale as Vinyl above: a game's already been identified and
+-- matched by LaunchBox itself (title, platform, box art, ...), so this is a
+-- direct mirror of that local LaunchBox library rather than a scan/match
+-- against a catalog. No scan_pending/ignored pair here either.
+CREATE TABLE IF NOT EXISTS games (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  launchbox_id TEXT UNIQUE,
+  database_id TEXT,
+  title TEXT NOT NULL,
+  platform TEXT,
+  developer TEXT,
+  publisher TEXT,
+  genres TEXT,
+  release_date TEXT,
+  overview TEXT,
+  rating TEXT,
+  version TEXT,
+  cover_file TEXT,
+  file_path TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS games_sync_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  total_found INTEGER DEFAULT 0,
+  added INTEGER DEFAULT 0,
+  updated INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
+  message TEXT
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -363,5 +397,6 @@ db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1,
 db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

@@ -40,6 +40,9 @@ router.get('/', (req, res) => {
     vinyl_auto_sync_interval_minutes: Number(map.vinyl_auto_sync_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     lastfm_api_key: map.lastfm_api_key || '',
     lastfm_api_key_source: map.lastfm_api_key ? 'settings' : (process.env.LASTFM_API_KEY ? 'env' : 'none'),
+    games_auto_sync_enabled: map.games_auto_sync_enabled === 'true',
+    games_auto_sync_interval_minutes: Number(map.games_auto_sync_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
+    launchbox_dir_configured: !!process.env.LAUNCHBOX_DIR,
   });
 });
 
@@ -56,7 +59,7 @@ router.put('/', (req, res) => {
     ebook_auto_scan_enabled, ebook_auto_scan_interval_minutes, ebook_auto_prune_missing,
     album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
-    lastfm_api_key,
+    lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -76,6 +79,8 @@ router.put('/', (req, res) => {
   if (typeof vinyl_auto_sync_enabled === 'boolean') upsert('vinyl_auto_sync_enabled', vinyl_auto_sync_enabled ? 'true' : 'false');
   upsertInterval('vinyl_auto_sync_interval_minutes', vinyl_auto_sync_interval_minutes);
   if (typeof lastfm_api_key === 'string') upsert('lastfm_api_key', lastfm_api_key);
+  if (typeof games_auto_sync_enabled === 'boolean') upsert('games_auto_sync_enabled', games_auto_sync_enabled ? 'true' : 'false');
+  upsertInterval('games_auto_sync_interval_minutes', games_auto_sync_interval_minutes);
   res.json({ ok: true });
 });
 
