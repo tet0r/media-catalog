@@ -68,18 +68,22 @@ the same network share as your audiobooks, just a different sub-path.
 
 ## Music
 
-Metadata comes from [MusicBrainz](https://musicbrainz.org) (cover, artist,
-tracklist, genres, year), with cover art from the
-[Cover Art Archive](https://coverartarchive.org). Both are free and need no
-API key, but MusicBrainz limits unauthenticated clients to **1 request per
-second** — a full library scan or bulk metadata refresh is correspondingly
-slower than the other media types' (a handful of seconds per album, not
-per-file). Scan-time auto-matching always uses MusicBrainz; [Last.fm](https://www.last.fm)
-is available as a second, independent search source in **Add Album** and
-**Needs Review**, for the occasional album MusicBrainz's own search misses
-— it needs a free API key (get one at
-[last.fm/api/account/create](https://www.last.fm/api/account/create) and
-add it in Settings), since unlike MusicBrainz, Last.fm's API requires one.
+Metadata comes from [Last.fm](https://www.last.fm) by default, with
+[MusicBrainz](https://musicbrainz.org) (cover art via the
+[Cover Art Archive](https://coverartarchive.org)) as a second, independent
+search source in **Add Album** and **Needs Review**, for the occasional
+album Last.fm's own search misses. Last.fm needs a free API key — get one
+at [last.fm/api/account/create](https://www.last.fm/api/account/create) and
+add it in Settings — while MusicBrainz needs none.
+
+**Without a Last.fm key configured**, both scans and the default Add
+Album/Needs Review tab fall back to MusicBrainz automatically, so the app
+still works out of the box with zero setup — you only need a key if you
+want Last.fm as the default. MusicBrainz also limits unauthenticated
+clients to **1 request per second**, so a full library scan or bulk
+metadata refresh over MusicBrainz is correspondingly slower than the other
+media types' (a handful of seconds per album, not per-file); Last.fm's own
+limit is more generous.
 
 Unlike the other media types, an album is a **folder** of tracks, not a
 single file — scans pick up `.mp3`, `.flac`, `.m4a` and `.ogg` files and

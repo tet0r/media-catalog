@@ -5,6 +5,24 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.3 — Last.fm is now the default album search source
+- Last.fm is now the default in Add Album/Needs Review's tab picker and
+  the source folder scans auto-match against, with MusicBrainz as the
+  secondary/fallback source in both places — reversing v11.2's default.
+- Since Last.fm needs an API key and MusicBrainz doesn't, a scan
+  automatically falls back to MusicBrainz whenever no Last.fm key is
+  configured, rather than failing every album on a fresh install that
+  hasn't set one up yet — the app still works out of the box with zero
+  setup.
+- lib/lastfm.js gained the same kind of request throttle
+  lib/musicbrainz.js already has: fine for Vinyl's occasional sync, but a
+  full album scan can now fire one search per unmatched album in a tight
+  loop, which needed pacing against Last.fm's API the same way.
+- `album_scan_pending` gained a `source` column recording which source a
+  Needs Review item's pre-filled candidates actually came from, so its
+  tab picker opens on the right tab instead of always defaulting to
+  Last.fm with an empty list for an item a scan matched via MusicBrainz.
+
 ## v11.2 — Last.fm as a second album search source
 - [Last.fm](https://www.last.fm) joins MusicBrainz as a second, independent
   search source in **Add Album** and **Needs Review** (same tabbed

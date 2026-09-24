@@ -244,6 +244,11 @@ CREATE TABLE IF NOT EXISTS album_scan_pending (
   guessed_artist TEXT,
   guessed_album TEXT,
   candidates TEXT,
+  -- Which source (musicbrainz|lastfm) the scan actually searched to
+  -- produce the candidates column above — the scan's default source can
+  -- vary (Last.fm when a key is configured, else MusicBrainz), so the
+  -- client needs this to know which tab to show those candidates under.
+  source TEXT DEFAULT 'musicbrainz',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -331,6 +336,7 @@ ensureColumn('movies', 'content_rating', 'TEXT');
 ensureColumn('audiobook_scan_status', 'errored', 'INTEGER DEFAULT 0');
 ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
 ensureColumn('albums', 'metadata_source', "TEXT DEFAULT 'musicbrainz'");
+ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

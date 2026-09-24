@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import CoverImage from '../components/CoverImage.jsx';
 
-// Two independent catalogs, since MusicBrainz's own search occasionally
-// misses an album Last.fm carries (or the reverse). Each tab keeps its own
+// Two independent catalogs, since Last.fm's own search occasionally misses
+// an album MusicBrainz carries (or the reverse). Each tab keeps its own
 // results so switching back and forth doesn't lose what you already found.
+// Last.fm is first/default; scans use the same default (see
+// routes/albumScan.js) when a Last.fm API key is configured.
 const SOURCES = [
-  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
   { key: 'lastfm', label: 'Last.fm', search: api.searchLastfm, lookupUrl: api.lookupLastfmUrl, urlPlaceholder: 'Paste a last.fm album URL' },
+  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
 ];
 
 export default function AddAlbum() {

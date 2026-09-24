@@ -3,19 +3,24 @@ import { api } from '../api.js';
 import CoverImage from './CoverImage.jsx';
 
 const SOURCES = [
-  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
   { key: 'lastfm', label: 'Last.fm', search: api.searchLastfm, lookupUrl: api.lookupLastfmUrl, urlPlaceholder: 'Paste a last.fm album URL' },
+  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
 ];
 
 export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
-  const [activeKey, setActiveKey] = useState(SOURCES[0].key);
+  // The scan searched whichever source item.source names (Last.fm when a
+  // key's configured, else MusicBrainz) — default to that tab so the
+  // pre-filled candidates below are actually visible on load, rather than
+  // always opening on Last.fm and showing an empty list for an item the
+  // scan actually searched via MusicBrainz.
+  const [activeKey, setActiveKey] = useState(item.source || SOURCES[0].key);
   const [query, setQuery] = useState(
     [item.guessed_album, item.guessed_artist].filter(Boolean).join(' ')
   );
-  // The scan's own automatic search only ever tries MusicBrainz, so that's
-  // the only tab pre-populated with results; Last.fm starts empty until
-  // searched here.
-  const [candidatesByKey, setCandidatesByKey] = useState({ musicbrainz: item.candidates || [] });
+  // Only the source the scan actually searched (item.source) comes
+  // pre-populated with results; the other tab starts empty until searched
+  // here.
+  const [candidatesByKey, setCandidatesByKey] = useState({ [item.source || 'musicbrainz']: item.candidates || [] });
   const [urlByKey, setUrlByKey] = useState({});
   const [working, setWorking] = useState(false);
   const [error, setError] = useState(null);

@@ -11,6 +11,22 @@
 
 const API_BASE = 'http://ws.audioscrobbler.com/2.0/';
 
+// Last.fm's API is generally understood to tolerate a handful of requests
+// per second, which was plenty when this was only ever called a few times
+// per Vinyl sync — but as the scan-time match source for a whole album
+// library, this can now fire one search per unmatched album in a tight
+// loop, so it gets the same kind of throttle musicbrainz.js already has
+// (just a shorter interval, since Last.fm's limit is more generous than
+// MusicBrainz's documented 1/sec).
+const MIN_INTERVAL_MS = 250;
+let lastRequestAt = 0;
+
+async function throttle() {
+  const wait = lastRequestAt + MIN_INTERVAL_MS - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastRequestAt = Date.now();
+}
+
 function getApiKey(db) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('lastfm_api_key');
   return (row && row.value) || process.env.LASTFM_API_KEY || '';
@@ -57,6 +73,7 @@ function yearFromReleaseDate(str) {
 
 async function lastfmFetch(apiKey, params) {
   if (!apiKey) throw new Error('Last.fm API key not configured. Add it in Settings.');
+  await throttle();
   const url = new URL(API_BASE);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set('api_key', apiKey);

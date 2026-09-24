@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const db = require('../db');
 const musicbrainz = require('../lib/musicbrainz');
+const lastfm = require('../lib/lastfm');
 const { addAlbumFromExternalId } = require('../lib/addAlbum');
 const { walkAllRoots, guessArtistAlbum } = require('../lib/albumScanner');
 const { readAudioTags } = require('../lib/audioTags');
@@ -67,9 +68,20 @@ async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0, errored: 0 });
   try {
     const groups = walkAllRoots(ALBUMS_DIRS);
+
+    // Last.fm is the default match source, but scanning shouldn't hard-fail
+    // on every single album just because a fresh install hasn't set up a
+    // (free, but required) Last.fm API key yet — fall back to MusicBrainz
+    // (which needs none) for the whole scan instead of erroring per item.
+    const useLastfm = !!lastfm.getApiKey(db);
+    const source = useLastfm ? 'lastfm' : 'musicbrainz';
+    const searchAlbums = (query) => (useLastfm ? lastfm.searchAlbums(db, query) : musicbrainz.searchAlbums(query));
+
     setStatus({
       files_found: groups.length,
-      message: `Found ${groups.length} albums. Matching against MusicBrainz (rate-limited to 1 request/second, so this can take a while)...`,
+      message: useLastfm
+        ? `Found ${groups.length} albums. Matching against Last.fm...`
+        : `Found ${groups.length} albums. Matching against MusicBrainz (rate-limited to 1 request/second, so this can take a while)...`,
     });
 
     const existingPaths = new Set(
@@ -115,7 +127,7 @@ async function runScan() {
         // disambiguates, unlike movies/ebooks where a title search alone
         // is usually enough.
         const query = artist ? `${album} ${artist}` : album;
-        const candidates = await musicbrainz.searchAlbums(query);
+        const candidates = await searchAlbums(query);
 
         // Requires the artist to match too when we have one, for the same
         // disambiguation reason — an exact title match alone isn't
@@ -127,12 +139,12 @@ async function runScan() {
         });
 
         if (exact) {
-          await addAlbumFromExternalId('musicbrainz', exact.key, { filePath: group.path });
+          await addAlbumFromExternalId(source, exact.key, { filePath: group.path });
           matched++;
         } else {
           db.prepare(
-            'INSERT OR IGNORE INTO album_scan_pending (file_path, guessed_artist, guessed_album, candidates) VALUES (?,?,?,?)'
-          ).run(group.path, artist, album, JSON.stringify(toCandidateList(candidates)));
+            'INSERT OR IGNORE INTO album_scan_pending (file_path, guessed_artist, guessed_album, candidates, source) VALUES (?,?,?,?,?)'
+          ).run(group.path, artist, album, JSON.stringify(toCandidateList(candidates)), source);
           pending++;
         }
       } catch (err) {
