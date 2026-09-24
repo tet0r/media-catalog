@@ -2,21 +2,34 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import CoverImage from './CoverImage.jsx';
 
+const SOURCES = [
+  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
+  { key: 'lastfm', label: 'Last.fm', search: api.searchLastfm, lookupUrl: api.lookupLastfmUrl, urlPlaceholder: 'Paste a last.fm album URL' },
+];
+
 export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
+  const [activeKey, setActiveKey] = useState(SOURCES[0].key);
   const [query, setQuery] = useState(
     [item.guessed_album, item.guessed_artist].filter(Boolean).join(' ')
   );
-  const [candidates, setCandidates] = useState(item.candidates);
-  const [mbUrl, setMbUrl] = useState('');
+  // The scan's own automatic search only ever tries MusicBrainz, so that's
+  // the only tab pre-populated with results; Last.fm starts empty until
+  // searched here.
+  const [candidatesByKey, setCandidatesByKey] = useState({ musicbrainz: item.candidates || [] });
+  const [urlByKey, setUrlByKey] = useState({});
   const [working, setWorking] = useState(false);
   const [error, setError] = useState(null);
+
+  const active = SOURCES.find((s) => s.key === activeKey);
+  const candidates = candidatesByKey[activeKey] || [];
 
   async function search(e) {
     e.preventDefault();
     setWorking(true);
     setError(null);
     try {
-      setCandidates(await api.searchMusicBrainz(query));
+      const c = await active.search(query);
+      setCandidatesByKey((prev) => ({ ...prev, [activeKey]: c }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -29,9 +42,12 @@ export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, sele
     setWorking(true);
     setError(null);
     try {
-      const result = await api.lookupMusicBrainzUrl(mbUrl);
-      setCandidates((c) => [result, ...c.filter((existing) => existing.key !== result.key)]);
-      setMbUrl('');
+      const result = await active.lookupUrl(urlByKey[activeKey] || '');
+      setCandidatesByKey((prev) => ({
+        ...prev,
+        [activeKey]: [result, ...(prev[activeKey] || []).filter((existing) => existing.key !== result.key)],
+      }));
+      setUrlByKey((prev) => ({ ...prev, [activeKey]: '' }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -64,6 +80,19 @@ export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, sele
         </div>
       </label>
 
+      <div className="picker-tabs" style={{ marginBottom: 10 }}>
+        {SOURCES.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`picker-tab${s.key === activeKey ? ' active' : ''}`}
+            onClick={() => setActiveKey(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={search} className="pending-search-row">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search album or artist" />
         <button type="submit" disabled={working}>{working ? 'Searching...' : 'Search'}</button>
@@ -71,22 +100,22 @@ export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, sele
 
       <form onSubmit={lookupUrl} className="pending-search-row">
         <input
-          value={mbUrl}
-          onChange={(e) => setMbUrl(e.target.value)}
-          placeholder="Or paste a musicbrainz.org release-group URL"
+          value={urlByKey[activeKey] || ''}
+          onChange={(e) => setUrlByKey((prev) => ({ ...prev, [activeKey]: e.target.value }))}
+          placeholder={`Or ${active.urlPlaceholder.toLowerCase()}`}
         />
-        <button type="submit" disabled={working || !mbUrl}>Look up URL</button>
+        <button type="submit" disabled={working || !(urlByKey[activeKey] || '')}>Look up URL</button>
       </form>
 
       {error && <p className="error">{error}</p>}
 
       <div className="candidates">
-        {candidates.length === 0 && <span className="muted">No MusicBrainz matches found.</span>}
+        {candidates.length === 0 && <span className="muted">No {active.label} matches found.</span>}
         {candidates.map((c) => (
           <div key={c.key} className="candidate">
             <CoverImage url={c.cover_url} alt={c.title} />
             <span>{c.title} — {c.artist}{c.year ? ` (${c.year})` : ''}</span>
-            <button disabled={busy} onClick={() => onResolve(c.key, false)}>
+            <button disabled={busy} onClick={() => onResolve(c.key, false, activeKey)}>
               Use this
             </button>
           </div>
@@ -95,7 +124,7 @@ export default function AlbumPendingItem({ item, busy, onResolve, onIgnore, sele
           className="muted-btn"
           disabled={busy}
           title="Dismiss for now — this folder will show up again on the next scan"
-          onClick={() => onResolve(null, true)}
+          onClick={() => onResolve(null, true, activeKey)}
         >
           Skip this
         </button>

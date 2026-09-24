@@ -7,7 +7,7 @@ const { refreshAlbumMetadata } = require('./addAlbum');
 let status = { running: false, total: 0, done: 0, failed: 0, message: 'Idle' };
 
 async function runBulkRefresh() {
-  const albums = db.prepare('SELECT id, external_id FROM albums WHERE external_id IS NOT NULL').all();
+  const albums = db.prepare('SELECT id, external_id, metadata_source FROM albums WHERE external_id IS NOT NULL').all();
   status = {
     running: true, total: albums.length, done: 0, failed: 0,
     message: `Refreshing ${albums.length} albums (MusicBrainz is rate-limited to 1 request/second, so this will take a while)...`,
@@ -15,7 +15,7 @@ async function runBulkRefresh() {
 
   for (const album of albums) {
     try {
-      await refreshAlbumMetadata(album.id, album.external_id);
+      await refreshAlbumMetadata(album.id, album.metadata_source || 'musicbrainz', album.external_id);
       status.done++;
     } catch {
       status.failed++;

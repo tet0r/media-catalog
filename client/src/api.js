@@ -258,6 +258,8 @@ export const api = {
     }).then(handle),
   searchMusicBrainz: (q) => fetch(`${BASE}/search/musicbrainz?q=${encodeURIComponent(q)}`).then(handle),
   lookupMusicBrainzUrl: (url) => fetch(`${BASE}/search/musicbrainz-url?url=${encodeURIComponent(url)}`).then(handle),
+  searchLastfm: (q) => fetch(`${BASE}/search/lastfm?q=${encodeURIComponent(q)}`).then(handle),
+  lookupLastfmUrl: (url) => fetch(`${BASE}/search/lastfm-url?url=${encodeURIComponent(url)}`).then(handle),
   startAlbumScan: () => fetch(`${BASE}/album-scan`, { method: 'POST' }).then(handle),
   albumScanStatus: () => fetch(`${BASE}/album-scan/status`).then(handle),
   albumScanPending: () => fetch(`${BASE}/album-scan/pending`).then(handle),

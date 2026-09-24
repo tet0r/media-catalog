@@ -215,8 +215,14 @@ CREATE TABLE IF NOT EXISTS ebook_scan_status (
 
 CREATE TABLE IF NOT EXISTS albums (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  -- A MusicBrainz release-group MBID.
+  -- A MusicBrainz release-group MBID when metadata_source='musicbrainz'
+  -- (the default — everything a scan auto-matches or Add Album's primary
+  -- tab adds). When metadata_source='lastfm', this is instead a
+  -- JSON-encoded {artist,album} pair — see lib/lastfm.js — since Last.fm
+  -- search results don't reliably carry a stable ID the way every other
+  -- source's catalog entries do.
   external_id TEXT,
+  metadata_source TEXT DEFAULT 'musicbrainz',
   title TEXT NOT NULL,
   artist TEXT,
   year INTEGER,
@@ -324,6 +330,7 @@ ensureColumn('movies', 'spoken_languages', 'TEXT');
 ensureColumn('movies', 'content_rating', 'TEXT');
 ensureColumn('audiobook_scan_status', 'errored', 'INTEGER DEFAULT 0');
 ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
+ensureColumn('albums', 'metadata_source', "TEXT DEFAULT 'musicbrainz'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

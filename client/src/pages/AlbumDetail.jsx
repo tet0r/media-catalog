@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 
+function lastfmUrl(externalId) {
+  try {
+    const { artist, album } = JSON.parse(externalId);
+    return `https://www.last.fm/music/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`;
+  } catch {
+    return null;
+  }
+}
+
 function formatDuration(ms) {
   if (!ms) return null;
   const totalSeconds = Math.round(ms / 1000);
@@ -116,7 +125,12 @@ export default function AlbumDetail() {
           )}
 
           <div className="tags">
-            {album.external_id && (
+            {album.external_id && album.metadata_source === 'lastfm' && (
+              <a className="tag link-tag" href={lastfmUrl(album.external_id)} target="_blank" rel="noreferrer">
+                Last.fm ↗
+              </a>
+            )}
+            {album.external_id && album.metadata_source !== 'lastfm' && (
               <a className="tag link-tag" href={`https://musicbrainz.org/release-group/${album.external_id}`} target="_blank" rel="noreferrer">
                 MusicBrainz ↗
               </a>

@@ -36,6 +36,8 @@ export default function Settings() {
   const [albumAutoScanEnabled, setAlbumAutoScanEnabled] = useState(false);
   const [albumAutoScanInterval, setAlbumAutoScanInterval] = useState(60);
   const [albumAutoPruneMissing, setAlbumAutoPruneMissing] = useState(false);
+  const [lastfmKey, setLastfmKey] = useState('');
+  const [lastfmSource, setLastfmSource] = useState('none');
   const [discogsUsername, setDiscogsUsername] = useState('');
   const [discogsToken, setDiscogsToken] = useState('');
   const [discogsSource, setDiscogsSource] = useState('none');
@@ -72,6 +74,8 @@ export default function Settings() {
         setAlbumAutoScanEnabled(!!s.album_auto_scan_enabled);
         setAlbumAutoScanInterval(s.album_auto_scan_interval_minutes || 60);
         setAlbumAutoPruneMissing(!!s.album_auto_prune_missing);
+        setLastfmKey(s.lastfm_api_key || '');
+        setLastfmSource(s.lastfm_api_key_source);
         setDiscogsUsername(s.discogs_username || '');
         setDiscogsToken(s.discogs_token || '');
         setDiscogsSource(s.discogs_source);
@@ -226,6 +230,7 @@ export default function Settings() {
         album_auto_scan_enabled: albumAutoScanEnabled,
         album_auto_scan_interval_minutes: albumAutoScanInterval,
         album_auto_prune_missing: albumAutoPruneMissing,
+        lastfm_api_key: lastfmKey,
         discogs_username: discogsUsername,
         discogs_token: discogsToken,
         vinyl_auto_sync_enabled: vinylAutoSyncEnabled,
@@ -402,6 +407,27 @@ export default function Settings() {
 
       <hr />
       <h2>Music — Albums</h2>
+
+      <div className="form-grid">
+        <label>
+          Last.fm API Key
+          <input value={lastfmKey} onChange={(e) => setLastfmKey(e.target.value)} placeholder="Get a free key at last.fm/api/account/create" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {lastfmSource === 'env'
+          ? 'environment variable (LASTFM_API_KEY)'
+          : lastfmSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        . Optional — MusicBrainz needs no key and works without this; a key here just enables
+        Last.fm as a second search source in Add Album and Needs Review. Get a free one at{' '}
+        <a href="https://www.last.fm/api/account/create" target="_blank" rel="noreferrer">
+          last.fm/api/account/create
+        </a>
+        .
+      </p>
 
       <div className="auto-scan-row">
         <label className="toggle-switch">

@@ -74,7 +74,12 @@ tracklist, genres, year), with cover art from the
 API key, but MusicBrainz limits unauthenticated clients to **1 request per
 second** — a full library scan or bulk metadata refresh is correspondingly
 slower than the other media types' (a handful of seconds per album, not
-per-file).
+per-file). Scan-time auto-matching always uses MusicBrainz; [Last.fm](https://www.last.fm)
+is available as a second, independent search source in **Add Album** and
+**Needs Review**, for the occasional album MusicBrainz's own search misses
+— it needs a free API key (get one at
+[last.fm/api/account/create](https://www.last.fm/api/account/create) and
+add it in Settings), since unlike MusicBrainz, Last.fm's API requires one.
 
 Unlike the other media types, an album is a **folder** of tracks, not a
 single file — scans pick up `.mp3`, `.flac`, `.m4a` and `.ogg` files and

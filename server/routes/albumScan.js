@@ -127,7 +127,7 @@ async function runScan() {
         });
 
         if (exact) {
-          await addAlbumFromExternalId(exact.key, { filePath: group.path });
+          await addAlbumFromExternalId('musicbrainz', exact.key, { filePath: group.path });
           matched++;
         } else {
           db.prepare(
@@ -177,9 +177,9 @@ router.post('/pending/:id/resolve', async (req, res) => {
   try {
     const pendingRow = db.prepare('SELECT * FROM album_scan_pending WHERE id = ?').get(req.params.id);
     if (!pendingRow) return res.status(404).json({ error: 'Not found' });
-    const { key, skip } = req.body;
+    const { key, skip, source } = req.body;
     if (!skip && key) {
-      await addAlbumFromExternalId(key, { filePath: pendingRow.file_path });
+      await addAlbumFromExternalId(source || 'musicbrainz', key, { filePath: pendingRow.file_path });
     }
     db.prepare('DELETE FROM album_scan_pending WHERE id = ?').run(req.params.id);
     res.json({ ok: true });

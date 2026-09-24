@@ -70,9 +70,9 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { external_id } = req.body;
+    const { external_id, source } = req.body;
     if (!external_id) return res.status(400).json({ error: 'external_id is required' });
-    const row = await addAlbumFromExternalId(external_id);
+    const row = await addAlbumFromExternalId(source || 'musicbrainz', external_id);
     res.status(201).json(rowToAlbum(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -131,10 +131,10 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
 
 router.post('/:id/refresh', async (req, res) => {
   try {
-    const existing = db.prepare('SELECT external_id FROM albums WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT external_id, metadata_source FROM albums WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.external_id) return res.status(400).json({ error: 'This album has no external match to refresh from' });
-    const row = await refreshAlbumMetadata(req.params.id, existing.external_id);
+    const row = await refreshAlbumMetadata(req.params.id, existing.metadata_source || 'musicbrainz', existing.external_id);
     res.json(rowToAlbum(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

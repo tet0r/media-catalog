@@ -5,6 +5,7 @@ const audible = require('../lib/audible');
 const apple = require('../lib/apple');
 const openlibrary = require('../lib/openlibrary');
 const musicbrainz = require('../lib/musicbrainz');
+const lastfm = require('../lib/lastfm');
 
 const router = express.Router();
 
@@ -228,6 +229,51 @@ router.get('/musicbrainz-url', async (req, res) => {
       });
     }
     const details = await musicbrainz.getAlbumDetails(match[1]);
+    res.json({
+      key: details.key,
+      title: details.title,
+      artist: details.artist,
+      year: details.year,
+      cover_url: details.cover_url,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/lastfm', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const results = await lastfm.searchAlbums(db, q);
+    res.json(results.map((r) => ({
+      key: r.key,
+      title: r.title,
+      artist: r.artist,
+      year: r.year,
+      cover_url: r.cover_url,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right album: paste a
+// last.fm album URL (last.fm/music/<Artist>/<Album>) and resolve it
+// directly — no separate ID-lookup call needed, since the URL already
+// carries the artist+album name that album.getInfo resolves by.
+router.get('/lastfm-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/last\.fm\/music\/([^/?]+)\/([^/?]+)/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable last.fm album URL (expected .../music/<Artist>/<Album>)',
+      });
+    }
+    const artist = decodeURIComponent(match[1].replace(/\+/g, ' '));
+    const album = decodeURIComponent(match[2].replace(/\+/g, ' '));
+    const details = await lastfm.getAlbumDetails(db, lastfm.keyFor(artist, album));
     res.json({
       key: details.key,
       title: details.title,

@@ -45,10 +45,10 @@ export default function ScanAlbums() {
     }
   }
 
-  async function resolve(id, key, skip) {
+  async function resolve(id, key, skip, source) {
     setBusyId(id);
     try {
-      await api.resolveAlbumPending(id, { key, skip });
+      await api.resolveAlbumPending(id, { key, skip, source });
       setPending((p) => p.filter((x) => x.id !== id));
     } catch (err) {
       setError(err.message);
@@ -207,7 +207,7 @@ export default function ScanAlbums() {
               busy={busyId === p.id}
               selected={selectedIds.has(p.id)}
               onToggleSelect={(shiftKey) => toggleSelect(index, p.id, shiftKey)}
-              onResolve={(key, skip) => resolve(p.id, key, skip)}
+              onResolve={(key, skip, source) => resolve(p.id, key, skip, source)}
               onIgnore={() => ignoreOne(p.id)}
             />
           ))}

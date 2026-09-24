@@ -5,6 +5,22 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.2 — Last.fm as a second album search source
+- [Last.fm](https://www.last.fm) joins MusicBrainz as a second, independent
+  search source in **Add Album** and **Needs Review** (same tabbed
+  picker pattern Audiobooks already has for Audible/Apple Books) — for the
+  occasional album MusicBrainz's own search misses. Needs a free API key
+  (unlike MusicBrainz, which needs none), added in Settings under Music —
+  Albums.
+- AllMusic.com was considered first but has no public API and its
+  `robots.txt` explicitly disallows automated access to its search pages —
+  scraping it would've meant a fundamentally different (and fragile, ToS-
+  violating) approach than every other source this app uses, so Last.fm
+  was used instead.
+- Scan-time auto-matching stays MusicBrainz-only, same reasoning as
+  Audiobooks keeping Apple Books interactive-only: doubling every scan's
+  external request count isn't worth it for a library-wide scan.
+
 ## v11.1 — Albums matched by embedded tags, not just folder names
 - Album scans now read the first track's own embedded tags (ID3v2/v1 for
   MP3, Vorbis comments for FLAC/OGG, iTunes-style atoms for M4A) for the
