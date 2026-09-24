@@ -242,6 +242,12 @@ export const api = {
     }).then(handle),
   deleteAlbum: (id) => fetch(`${BASE}/albums/${id}`, { method: 'DELETE' }).then(handle),
   refreshAlbum: (id) => fetch(`${BASE}/albums/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchAlbum: (id, payload) =>
+    fetch(`${BASE}/albums/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
   startBulkRefreshAlbums: () => fetch(`${BASE}/albums/refresh-all`, { method: 'POST' }).then(handle),
   bulkRefreshAlbumsStatus: () => fetch(`${BASE}/albums/refresh-all/status`).then(handle),
   setAlbumCover: (id, imageUrl) =>

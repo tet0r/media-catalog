@@ -97,9 +97,21 @@ recognizing either an `Artist/Album/tracks` (two nested folders) or a flat
 `Artist - Album/tracks` layout automatically; you don't need to know in
 advance which one your library uses.
 
+A multi-disc release split across sibling folders (e.g. `Album CD1`/
+`Album CD2`, or `Disc 1`/`Disc 2`) is recognized as **one** album, not
+two — their tracks are combined in disc order and the disc marker is
+stripped from the guessed name before matching. A lone folder that happens
+to say "Disc 1" with no sibling isn't treated as multi-disc, since that's
+just its actual name.
+
 Point `ALBUMS_DIR` at the folder(s) where your music lives, same
 comma-separated-multi-path support as `MOVIES_DIR`/`AUDIOBOOKS_DIR`/`EBOOKS_DIR`
 — commonly the same network share as those, just a different sub-path.
+
+Got the wrong match? Every album's own page has a **Search Again** button
+— pick a different result from either Last.fm or MusicBrainz and it
+re-points that same folder(s) at the new match (cover included), without
+deleting and re-adding the album.
 
 ## Vinyl
 

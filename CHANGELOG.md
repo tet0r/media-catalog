@@ -5,6 +5,27 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v11.4 — Multi-disc albums, and re-matching an album from its own page
+- A multi-disc release split across sibling folders ("Album CD1"/"Album
+  CD2", "Disc 1"/"Disc 2", etc.) is now recognized as **one** album, not
+  two — lib/albumScanner.js merges them (same idea, and the same regex, as
+  audiobookScanner.js's existing multi-part `.m4b` grouping, applied here
+  to whole album folders instead of individual files), combining their
+  tracks in disc order and stripping the disc marker from the guessed
+  album name before matching. A lone "Disc 1"-named folder with no sibling
+  is left alone, since that's genuinely just its name.
+- `albums`/`album_scan_pending`/`album_ignored` all gained a `disc_paths`
+  column tracking every folder a merged album's tracks came from — needed
+  so a later scan recognizes all of them as already accounted for, not
+  just the first, whether the album's already added, still pending, or
+  ignored.
+- Every album's own detail page gained a **Search Again** button —
+  search either Last.fm or MusicBrainz fresh and pick a different result
+  to fix a wrong match, without deleting and re-adding the album. Unlike
+  Refresh Metadata (re-fetches the same match), this re-points the album
+  at a completely different catalog entry, cover included — the same
+  folder(s) on disk just get relabeled.
+
 ## v11.3 — Last.fm is now the default album search source
 - Last.fm is now the default in Add Album/Needs Review's tab picker and
   the source folder scans auto-match against, with MusicBrainz as the

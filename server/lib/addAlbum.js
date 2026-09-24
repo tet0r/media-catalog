@@ -24,10 +24,10 @@ function extractMetadata(details) {
 }
 
 const INSERT_SQL = `INSERT INTO albums
-  (external_id, metadata_source, title, artist, year, genres, tracks, cover_file, file_path)
-  VALUES (@external_id,@metadata_source,@title,@artist,@year,@genres,@tracks,@cover_file,@file_path)`;
+  (external_id, metadata_source, title, artist, year, genres, tracks, cover_file, file_path, disc_paths)
+  VALUES (@external_id,@metadata_source,@title,@artist,@year,@genres,@tracks,@cover_file,@file_path,@disc_paths)`;
 
-async function addAlbumFromExternalId(source, externalId, { filePath = null } = {}) {
+async function addAlbumFromExternalId(source, externalId, { filePath = null, discPaths = null } = {}) {
   const details = await fetchDetails(source, externalId);
 
   // Unlike TMDB/Audible/Open Library, a cover URL here (MusicBrainz's
@@ -50,6 +50,7 @@ async function addAlbumFromExternalId(source, externalId, { filePath = null } = 
     metadata_source: source,
     cover_file: coverFile,
     file_path: filePath,
+    disc_paths: JSON.stringify(discPaths && discPaths.length ? discPaths : [filePath]),
   });
   return db.prepare('SELECT * FROM albums WHERE id = ?').get(info.lastInsertRowid);
 }
@@ -65,4 +66,31 @@ async function refreshAlbumMetadata(albumId, source, externalId) {
   return db.prepare('SELECT * FROM albums WHERE id = ?').get(albumId);
 }
 
-module.exports = { addAlbumFromExternalId, refreshAlbumMetadata, extractMetadata };
+// Unlike refreshAlbumMetadata (re-fetches from the SAME external_id, so
+// keeping the existing cover makes sense), this points an existing album
+// at a DIFFERENT catalog entry entirely — picked from a fresh search on
+// the album's own detail page, for when the original match was wrong. The
+// cover is replaced too, since the old one belongs to whatever the album
+// was previously matched to, not the new pick. file_path/disc_paths are
+// left alone: it's still the same folder(s) on disk, just re-pointed at
+// different metadata.
+async function rematchAlbum(albumId, source, externalId) {
+  const details = await fetchDetails(source, externalId);
+
+  let coverFile = null;
+  if (details.cover_url) {
+    try {
+      coverFile = await cacheImageFromUrl(DATA_DIR, details.cover_url);
+    } catch {
+      coverFile = null;
+    }
+  }
+
+  const meta = extractMetadata(details);
+  const fields = { ...meta, external_id: externalId, metadata_source: source, cover_file: coverFile };
+  const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
+  db.prepare(`UPDATE albums SET ${setClause} WHERE id = @id`).run({ ...fields, id: albumId });
+  return db.prepare('SELECT * FROM albums WHERE id = ?').get(albumId);
+}
+
+module.exports = { addAlbumFromExternalId, refreshAlbumMetadata, rematchAlbum, extractMetadata };

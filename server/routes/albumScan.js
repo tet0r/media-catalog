@@ -64,6 +64,24 @@ function toCandidateList(results) {
   }));
 }
 
+// Every path recorded across albums/album_scan_pending/album_ignored,
+// parsed from either the plural disc_paths column (when present) or just
+// the singular file_path (for rows from before that column existed, or a
+// normal non-multi-disc entry that never got one).
+function allKnownPaths(rows) {
+  const set = new Set();
+  for (const row of rows) {
+    if (row.disc_paths) {
+      try {
+        for (const p of JSON.parse(row.disc_paths)) set.add(p);
+        continue;
+      } catch { /* fall through to file_path below */ }
+    }
+    if (row.file_path) set.add(row.file_path);
+  }
+  return set;
+}
+
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0, errored: 0 });
   try {
@@ -84,21 +102,24 @@ async function runScan() {
         : `Found ${groups.length} albums. Matching against MusicBrainz (rate-limited to 1 request/second, so this can take a while)...`,
     });
 
-    const existingPaths = new Set(
-      db.prepare('SELECT file_path FROM albums WHERE file_path IS NOT NULL').all().map((r) => r.file_path)
+    const existingPaths = allKnownPaths(
+      db.prepare('SELECT file_path, disc_paths FROM albums WHERE file_path IS NOT NULL').all()
     );
-    const existingPending = new Set(
-      db.prepare('SELECT file_path FROM album_scan_pending').all().map((r) => r.file_path)
+    const existingPending = allKnownPaths(
+      db.prepare('SELECT file_path, disc_paths FROM album_scan_pending').all()
     );
-    const ignoredPaths = new Set(
-      db.prepare('SELECT file_path FROM album_ignored').all().map((r) => r.file_path)
+    const ignoredPaths = allKnownPaths(
+      db.prepare('SELECT file_path, disc_paths FROM album_ignored').all()
     );
 
     let matched = 0, pending = 0, skipped = 0, errored = 0;
     let lastError = null;
 
     for (const group of groups) {
-      if (existingPaths.has(group.path) || existingPending.has(group.path) || ignoredPaths.has(group.path)) {
+      // A merged multi-disc group is skipped if ANY of its constituent
+      // disc folders is already known — e.g. disc 1 alone was previously
+      // added/pending/ignored before disc 2 existed on disk.
+      if (group.paths.some((p) => existingPaths.has(p) || existingPending.has(p) || ignoredPaths.has(p))) {
         skipped++;
         setStatus({ matched, pending, skipped, errored });
         continue;
@@ -139,12 +160,12 @@ async function runScan() {
         });
 
         if (exact) {
-          await addAlbumFromExternalId(source, exact.key, { filePath: group.path });
+          await addAlbumFromExternalId(source, exact.key, { filePath: group.path, discPaths: group.paths });
           matched++;
         } else {
           db.prepare(
-            'INSERT OR IGNORE INTO album_scan_pending (file_path, guessed_artist, guessed_album, candidates, source) VALUES (?,?,?,?,?)'
-          ).run(group.path, artist, album, JSON.stringify(toCandidateList(candidates)), source);
+            'INSERT OR IGNORE INTO album_scan_pending (file_path, guessed_artist, guessed_album, candidates, source, disc_paths) VALUES (?,?,?,?,?,?)'
+          ).run(group.path, artist, album, JSON.stringify(toCandidateList(candidates)), source, JSON.stringify(group.paths));
           pending++;
         }
       } catch (err) {
@@ -191,7 +212,8 @@ router.post('/pending/:id/resolve', async (req, res) => {
     if (!pendingRow) return res.status(404).json({ error: 'Not found' });
     const { key, skip, source } = req.body;
     if (!skip && key) {
-      await addAlbumFromExternalId(source || 'musicbrainz', key, { filePath: pendingRow.file_path });
+      const discPaths = pendingRow.disc_paths ? JSON.parse(pendingRow.disc_paths) : [pendingRow.file_path];
+      await addAlbumFromExternalId(source || 'musicbrainz', key, { filePath: pendingRow.file_path, discPaths });
     }
     db.prepare('DELETE FROM album_scan_pending WHERE id = ?').run(req.params.id);
     res.json({ ok: true });
@@ -206,8 +228,8 @@ router.post('/pending/:id/resolve', async (req, res) => {
 router.post('/pending/:id/ignore', (req, res) => {
   const pendingRow = db.prepare('SELECT * FROM album_scan_pending WHERE id = ?').get(req.params.id);
   if (!pendingRow) return res.status(404).json({ error: 'Not found' });
-  db.prepare('INSERT OR IGNORE INTO album_ignored (file_path, guessed_artist, guessed_album) VALUES (?, ?, ?)')
-    .run(pendingRow.file_path, pendingRow.guessed_artist, pendingRow.guessed_album);
+  db.prepare('INSERT OR IGNORE INTO album_ignored (file_path, guessed_artist, guessed_album, disc_paths) VALUES (?, ?, ?, ?)')
+    .run(pendingRow.file_path, pendingRow.guessed_artist, pendingRow.guessed_album, pendingRow.disc_paths);
   db.prepare('DELETE FROM album_scan_pending WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -225,10 +247,10 @@ router.post('/pending/batch-skip', (req, res) => {
 });
 
 const batchIgnore = db.transaction((rows) => {
-  const insertIgnored = db.prepare('INSERT OR IGNORE INTO album_ignored (file_path, guessed_artist, guessed_album) VALUES (?, ?, ?)');
+  const insertIgnored = db.prepare('INSERT OR IGNORE INTO album_ignored (file_path, guessed_artist, guessed_album, disc_paths) VALUES (?, ?, ?, ?)');
   const deletePending = db.prepare('DELETE FROM album_scan_pending WHERE id = ?');
   for (const row of rows) {
-    insertIgnored.run(row.file_path, row.guessed_artist, row.guessed_album);
+    insertIgnored.run(row.file_path, row.guessed_artist, row.guessed_album, row.disc_paths);
     deletePending.run(row.id);
   }
 });

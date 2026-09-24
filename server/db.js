@@ -233,8 +233,17 @@ CREATE TABLE IF NOT EXISTS albums (
   tracks TEXT,
   cover_file TEXT,
   -- Like audiobooks, an album is identified by its FOLDER's path, not any
-  -- one track file's path — see lib/albumScanner.js.
+  -- one track file's path — see lib/albumScanner.js. For a multi-disc
+  -- release (sibling "Album CD1"/"Album CD2" folders merged into one
+  -- album), this is just the first disc's folder; disc_paths below lists
+  -- every disc folder, so a later scan recognizes all of them as already
+  -- accounted for, not just the first.
   file_path TEXT,
+  -- JSON array of every disc folder that makes up this album. For a
+  -- normal single-folder album this is just [file_path]; kept as its own
+  -- column rather than derived so scan dedup can check every constituent
+  -- folder even though only the first is file_path.
+  disc_paths TEXT,
   added_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -249,6 +258,10 @@ CREATE TABLE IF NOT EXISTS album_scan_pending (
   -- vary (Last.fm when a key is configured, else MusicBrainz), so the
   -- client needs this to know which tab to show those candidates under.
   source TEXT DEFAULT 'musicbrainz',
+  -- Same idea as albums.disc_paths — every disc folder a multi-disc
+  -- group's guess came from, so a later scan recognizes all of them as
+  -- already pending, not just the first.
+  disc_paths TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -258,6 +271,10 @@ CREATE TABLE IF NOT EXISTS album_ignored (
   file_path TEXT UNIQUE,
   guessed_artist TEXT,
   guessed_album TEXT,
+  -- Same idea as albums.disc_paths — every disc folder of a merged
+  -- multi-disc group, so all of them (not just the first) are recognized
+  -- as ignored on a later scan.
+  disc_paths TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -336,6 +353,9 @@ ensureColumn('movies', 'content_rating', 'TEXT');
 ensureColumn('audiobook_scan_status', 'errored', 'INTEGER DEFAULT 0');
 ensureColumn('audiobooks', 'metadata_source', "TEXT DEFAULT 'audible'");
 ensureColumn('albums', 'metadata_source', "TEXT DEFAULT 'musicbrainz'");
+ensureColumn('albums', 'disc_paths', 'TEXT');
+ensureColumn('album_scan_pending', 'disc_paths', 'TEXT');
+ensureColumn('album_ignored', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();

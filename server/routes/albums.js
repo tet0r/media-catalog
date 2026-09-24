@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addAlbumFromExternalId, refreshAlbumMetadata } = require('../lib/addAlbum');
+const { addAlbumFromExternalId, refreshAlbumMetadata, rematchAlbum } = require('../lib/addAlbum');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshAlbums');
 
@@ -14,6 +14,7 @@ function rowToAlbum(row) {
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
     tracks: row.tracks ? JSON.parse(row.tracks) : [],
+    disc_paths: row.disc_paths ? JSON.parse(row.disc_paths) : row.file_path ? [row.file_path] : [],
     cover_url: row.cover_file ? `/posters/${row.cover_file}` : null,
   };
 }
@@ -135,6 +136,23 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.external_id) return res.status(400).json({ error: 'This album has no external match to refresh from' });
     const row = await refreshAlbumMetadata(req.params.id, existing.metadata_source || 'musicbrainz', existing.external_id);
+    res.json(rowToAlbum(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Points this album at a completely different catalog entry — found via a
+// fresh search right on the album's own page, for when the original match
+// was wrong. Unlike /refresh (re-fetches the same external_id), this takes
+// a new external_id/source picked from that search.
+router.post('/:id/rematch', async (req, res) => {
+  try {
+    const { external_id, source } = req.body;
+    if (!external_id) return res.status(400).json({ error: 'external_id is required' });
+    const existing = db.prepare('SELECT id FROM albums WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const row = await rematchAlbum(req.params.id, source || 'musicbrainz', external_id);
     res.json(rowToAlbum(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import CoverImage from '../components/CoverImage.jsx';
 
 function lastfmUrl(externalId) {
   try {
@@ -17,6 +18,127 @@ function formatDuration(ms) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+const SOURCES = [
+  { key: 'lastfm', label: 'Last.fm', search: api.searchLastfm, lookupUrl: api.lookupLastfmUrl, urlPlaceholder: 'Paste a last.fm album URL' },
+  { key: 'musicbrainz', label: 'MusicBrainz', search: api.searchMusicBrainz, lookupUrl: api.lookupMusicBrainzUrl, urlPlaceholder: 'Paste a musicbrainz.org release-group URL' },
+];
+
+// Lets a wrong match be fixed without deleting and re-adding the album —
+// searches either source fresh, right here, and re-points this same
+// folder(s) at whichever result is picked.
+function SearchAgain({ albumId, onRematched }) {
+  const [open, setOpen] = useState(false);
+  const [activeKey, setActiveKey] = useState(SOURCES[0].key);
+  const [query, setQuery] = useState('');
+  const [resultsByKey, setResultsByKey] = useState({});
+  const [urlByKey, setUrlByKey] = useState({});
+  const [error, setError] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [applyingKey, setApplyingKey] = useState(null);
+
+  const active = SOURCES.find((s) => s.key === activeKey);
+  const results = resultsByKey[activeKey] || [];
+
+  async function search(e) {
+    e.preventDefault();
+    setSearching(true);
+    setError(null);
+    try {
+      const r = await active.search(query);
+      setResultsByKey((prev) => ({ ...prev, [activeKey]: r }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function lookupUrl(e) {
+    e.preventDefault();
+    setSearching(true);
+    setError(null);
+    try {
+      const result = await active.lookupUrl(urlByKey[activeKey] || '');
+      setResultsByKey((prev) => ({
+        ...prev,
+        [activeKey]: [result, ...(prev[activeKey] || []).filter((existing) => existing.key !== result.key)],
+      }));
+      setUrlByKey((prev) => ({ ...prev, [activeKey]: '' }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function apply(key) {
+    setApplyingKey(key);
+    setError(null);
+    try {
+      const updated = await api.rematchAlbum(albumId, { external_id: key, source: activeKey });
+      onRematched(updated);
+      setOpen(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="muted-btn" onClick={() => setOpen(true)}>Search Again</button>
+    );
+  }
+
+  return (
+    <div className="pending-item" style={{ marginTop: 14 }}>
+      <div className="picker-tabs" style={{ marginBottom: 10 }}>
+        {SOURCES.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`picker-tab${s.key === activeKey ? ' active' : ''}`}
+            onClick={() => setActiveKey(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={search} className="pending-search-row">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Album or artist" />
+        <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
+      </form>
+
+      <form onSubmit={lookupUrl} className="pending-search-row">
+        <input
+          value={urlByKey[activeKey] || ''}
+          onChange={(e) => setUrlByKey((prev) => ({ ...prev, [activeKey]: e.target.value }))}
+          placeholder={`Or ${active.urlPlaceholder.toLowerCase()}`}
+        />
+        <button type="submit" disabled={searching || !(urlByKey[activeKey] || '')}>Look up URL</button>
+      </form>
+
+      {error && <p className="error">{error}</p>}
+
+      <div className="candidates">
+        {results.length === 0 && <span className="muted">No {active.label} matches found.</span>}
+        {results.map((r) => (
+          <div key={r.key} className="candidate">
+            <CoverImage url={r.cover_url} alt={r.title} />
+            <span>{r.title} — {r.artist}{r.year ? ` (${r.year})` : ''}</span>
+            <button disabled={applyingKey === r.key} onClick={() => apply(r.key)}>
+              {applyingKey === r.key ? 'Applying...' : 'Use this'}
+            </button>
+          </div>
+        ))}
+        <button className="muted-btn" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </div>
+  );
 }
 
 export default function AlbumDetail() {
@@ -68,6 +190,8 @@ export default function AlbumDetail() {
     }
   }
 
+  const discPaths = album.disc_paths && album.disc_paths.length ? album.disc_paths : (album.file_path ? [album.file_path] : []);
+
   return (
     <div className="detail">
       <div className="detail-body">
@@ -117,10 +241,12 @@ export default function AlbumDetail() {
             </ol>
           )}
 
-          {album.file_path && (
+          {discPaths.length > 0 && (
             <div className="filepaths">
-              <strong>Source folder:</strong>
-              <div className="filepath-line">{album.file_path}</div>
+              <strong>Source folder{discPaths.length > 1 ? 's' : ''}:</strong>
+              {discPaths.map((p) => (
+                <div key={p} className="filepath-line">{p}</div>
+              ))}
             </div>
           )}
 
@@ -141,6 +267,7 @@ export default function AlbumDetail() {
             <button onClick={refreshMetadata} disabled={refreshing || !album.external_id}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
+            <SearchAgain albumId={id} onRematched={setAlbum} />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}
