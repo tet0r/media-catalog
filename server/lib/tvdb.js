@@ -77,13 +77,49 @@ async function tvdbFetch(db, path, params = {}) {
   return data.data;
 }
 
-async function searchSeries(db, query, year) {
-  const results = await tvdbFetch(db, '/search', { query, type: 'series', year });
-  return results || [];
+// TheTVDB's "name"/"overview" are the show's PRIMARY-language text, which
+// for anime and other non-English-native shows is the native title (e.g.
+// Naruto search results come back as "NARUTO－ナルト－") — not what anyone
+// scanning an English-named folder or searching by an English title wants.
+// A search result already carries every language's title/overview inline
+// (`translations`/`overviews`, language code -> text), so preferring the
+// English one here is free — no extra request — and every caller (search
+// results, the scan's exact-match against a folder name, Add Show) gets it
+// automatically.
+function preferEnglish(result) {
+  return {
+    ...result,
+    name: result.translations?.eng || result.name,
+    overview: result.overviews?.eng || result.overview,
+  };
 }
 
+async function searchSeries(db, query, year) {
+  const results = await tvdbFetch(db, '/search', { query, type: 'series', year });
+  return (results || []).map(preferEnglish);
+}
+
+// Unlike search results, the extended series record does NOT inline other
+// languages' text — only which languages HAVE a translation available
+// (nameTranslations/overviewTranslations, just language codes). Getting the
+// actual English text needs a second, dedicated call, made only when 'eng'
+// is actually listed there (skips the extra request for a show with no
+// English translation at all, rather than requesting and getting nothing).
 async function getSeriesDetails(db, tvdbId) {
-  return tvdbFetch(db, `/series/${tvdbId}/extended`);
+  const details = await tvdbFetch(db, `/series/${tvdbId}/extended`);
+  if ((details.nameTranslations || []).includes('eng')) {
+    try {
+      const translation = await tvdbFetch(db, `/series/${tvdbId}/translations/eng`);
+      if (translation) {
+        details.name = translation.name || details.name;
+        details.overview = translation.overview || details.overview;
+      }
+    } catch {
+      // Listed as available but the fetch failed for some reason —
+      // harmless to just keep the native name/overview.
+    }
+  }
+  return details;
 }
 
 async function getSeriesBySlug(db, slug) {

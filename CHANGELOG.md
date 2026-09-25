@@ -5,6 +5,24 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v13.1 — TV search/add now prefers English titles (anime, etc.)
+- TheTVDB's `name`/`overview` fields are the show's *primary*-language
+  text, which for anime and other non-English-native shows is the native
+  title — e.g. a Naruto search came back as "NARUTO－ナルト－", not
+  "Naruto". lib/tvdb.js now prefers the English translation everywhere:
+  search results carry every language inline already (free, no extra
+  request), while a series' full details need one extra call to
+  TheTVDB's per-language translations endpoint (skipped entirely for a
+  show with no English translation at all, rather than requesting one
+  and getting nothing back).
+- This wasn't just cosmetic — a scan's exact-match step compares the
+  guessed folder name against the search result's title, so a folder
+  named the normal English way (e.g. `Naruto/`) would never have matched
+  a candidate titled "NARUTO－ナルト－" and would always land in Needs
+  Review instead of auto-matching.
+- Verified live: searching/adding "Naruto" now returns "Naruto" (English
+  title + overview) instead of the native Japanese text.
+
 ## v13.0 — TV Shows, via TheTVDB
 - New "TV Shows" media type, built the same way as Movies: point it at a
   folder, scan, matches get added automatically, uncertain ones land in
