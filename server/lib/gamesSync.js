@@ -13,9 +13,13 @@ const updateSyncStatus = db.prepare(`UPDATE games_sync_status SET running=@runni
 const selectExisting = db.prepare('SELECT id, launchbox_id, cover_file FROM games');
 const deleteGame = db.prepare('DELETE FROM games WHERE id = ?');
 
-// Deliberately leaves cover_file out of the UPDATE clause — same rationale
-// as every other media type's metadata refresh: a manually-uploaded cover
-// shouldn't be silently overwritten by a routine sync.
+// cover_file IS included in the UPDATE clause, unlike every other media
+// type's metadata refresh — but the JS below only ever computes a
+// *different* cover_file when the existing one was empty, so an already-set
+// cover (auto-fetched or manually uploaded) is written right back
+// unchanged. This is what lets a routine sync backfill covers for games
+// that had none the first time (e.g. before a cover-matching bug was
+// fixed) without ever clobbering a deliberate pick.
 const upsertGame = db.prepare(`INSERT INTO games
   (launchbox_id, database_id, title, platform, developer, publisher, genres, release_date, overview, rating, version, cover_file, file_path)
   VALUES (@launchbox_id,@database_id,@title,@platform,@developer,@publisher,@genres,@release_date,@overview,@rating,@version,@cover_file,@file_path)
@@ -23,7 +27,7 @@ const upsertGame = db.prepare(`INSERT INTO games
     database_id=excluded.database_id, title=excluded.title, platform=excluded.platform,
     developer=excluded.developer, publisher=excluded.publisher, genres=excluded.genres,
     release_date=excluded.release_date, overview=excluded.overview, rating=excluded.rating,
-    version=excluded.version, file_path=excluded.file_path`);
+    version=excluded.version, file_path=excluded.file_path, cover_file=excluded.cover_file`);
 
 function setStatus(fields) {
   const cur = getSyncStatus.get();
@@ -55,7 +59,7 @@ async function runSync() {
       const isNew = !existing;
       try {
         let coverFile = existing?.cover_file || null;
-        if (isNew && game.cover_path) {
+        if (!coverFile && game.cover_path) {
           try {
             coverFile = cacheImageFromLocalFile(DATA_DIR, game.cover_path);
           } catch {

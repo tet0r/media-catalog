@@ -5,6 +5,20 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v12.2 — Games now backfills covers for already-synced games too
+- Metadata (title, platform, developer, genres, ...) already refreshed on
+  every sync for games already in the collection, but cover_file was only
+  ever set on first insert — a game synced before v12.1's cover-matching
+  fix (or before LaunchBox had art for it at all) would never pick up a
+  cover on a later sync, even though it now exists. lib/gamesSync.js now
+  backfills cover_file on every sync whenever it's currently empty, while
+  still never overwriting one that's already set — whether that's a cover
+  it auto-fetched earlier or one you uploaded manually.
+- Verified end-to-end: force-nulled every cover on a synced 936-game
+  library (simulating "already synced before the v12.1 fix"), planted a
+  fake manual cover on one game, re-ran sync, and confirmed all 935 empty
+  covers were backfilled while the manual one was written back unchanged.
+
 ## v12.1 — Games now finds nearly every cover LaunchBox itself shows
 - v12.0's cover lookup only checked "Box - Front", which is empty for most
   digital (Steam/GOG/Epic/...) titles — LaunchBox's own UI instead falls
