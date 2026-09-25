@@ -37,11 +37,12 @@ aren't versioned separately.
   folders (and only those — season subfolders and a folder with no video
   files were both correctly excluded); the "no API key configured" path
   fails a scan cleanly with a clear message, matching the other media
-  types' behavior. **Not yet verified against TheTVDB's live API** (search,
-  login, series details) — this needs a real API key, which this session
-  didn't have; the request/response shapes are implemented directly from
-  TheTVDB's own published v4 OpenAPI spec, but should be double-checked
-  against a real account before relying on it.
+  types' behavior. Also verified end-to-end against TheTVDB's real live
+  API with a real account's key: search, add, poster-gallery/backdrop
+  artwork-type discovery, thetvdb.com/imdb.com URL lookup, metadata
+  refresh, and a full folder scan (auto-match skipped for a year-less
+  folder name exactly like Movies would, landing correctly in Needs
+  Review with real candidates; skip/ignore both confirmed too).
 
 ## v12.2 — Games now backfills covers for already-synced games too
 - Metadata (title, platform, developer, genres, ...) already refreshed on
