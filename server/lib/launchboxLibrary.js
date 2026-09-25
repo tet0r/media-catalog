@@ -84,44 +84,93 @@ function listPlatformFiles(dataDir) {
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
 
-// LaunchBox names image files after the game title, but sanitizes it like
-// any Windows filename first — a colon in "Anno 1701: History Edition"
-// becomes "Anno 1701_ History Edition-01.jpg" on disk — so the same
-// substitution has to happen here before comparing, or every title
-// containing one of these characters silently never matches its cover.
-function sanitizeForFilename(title) {
-  return title.replace(/[\\/:*?"<>|]/g, '_');
+// LaunchBox image filenames are the game title with punctuation mangled
+// somehow — a colon in "Anno 1701: History Edition" becomes an underscore
+// ("Anno 1701_ History Edition-01.jpg"), but that's not even consistent:
+// "Mirror's Edge" (straight apostrophe) also became "Mirror_s Edge", while
+// another game's straight apostrophe in its <Title> shows up as a curly
+// '’' in its actual filename instead — evidently these were named by
+// different tools/contributors over the community database's history, not
+// one deterministic rule. Rather than chase every variant, strip all
+// punctuation from both sides before comparing — a comparison that
+// survives underscore/apostrophe-style/colon/whatever else shows up.
+function normalizeForMatch(str) {
+  return str.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
-// Box art lives at Images/<platform>/Box - Front/<region>/<title>-01.<ext>
-// — region subfolders vary (World, United States, North America, ...) and
-// aren't recorded per-game, so every region present has to be checked.
-function findCoverImage(dataDir, platform, title) {
-  const boxFrontDir = path.join(dataDir, 'Images', platform, 'Box - Front');
-  let regions = [];
+// LaunchBox doesn't only look in "Box - Front" for a game's cover — a
+// digital-only (Steam/GOG/Epic/...) title usually has no physical box scan
+// at all, so LaunchBox's own UI falls back through an ordered list of
+// image types (store poster art first, physical box art after) recorded in
+// Data/Settings.xml as FrontImageTypePriorities. Matching that same order
+// here is the difference between "most games have no cover" and "covers
+// look the same as they do inside LaunchBox itself".
+const DEFAULT_FRONT_IMAGE_PRIORITIES = [
+  'GOG Poster', 'Steam Poster', 'Epic Games Poster', 'Amazon Poster',
+  'Box - Front', 'Box - Front - Reconstructed', 'Advertisement Flyer - Front',
+  'Origin Poster', 'Uplay Thumbnail', 'Fanart - Box - Front', 'Poster',
+  'Square', 'Steam Banner',
+];
+
+function getFrontImagePriorities(dataDir) {
   try {
-    regions = fs.readdirSync(boxFrontDir, { withFileTypes: true })
+    const xml = fs.readFileSync(path.join(dataDir, 'Data', 'Settings.xml'), 'utf8');
+    const list = extractField(xml, 'FrontImageTypePriorities');
+    if (list) return list.split(',').map((s) => s.trim()).filter(Boolean);
+  } catch {
+    /* fall through to the default below */
+  }
+  return DEFAULT_FRONT_IMAGE_PRIORITIES;
+}
+
+function findTitleInDir(dir, wanted) {
+  let files = [];
+  try {
+    files = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  const match = files.find((f) => {
+    if (!f.isFile()) return false;
+    const ext = path.extname(f.name).toLowerCase();
+    if (!IMAGE_EXTENSIONS.has(ext)) return false;
+    const base = f.name.slice(0, -ext.length).replace(/-\d+$/, '');
+    return normalizeForMatch(base) === wanted;
+  });
+  return match ? path.join(dir, match.name) : null;
+}
+
+// A given image-type folder (e.g. "Steam Poster") can hold files directly
+// AND region subfolders (World, United States, ...) side by side — not
+// consistently one or the other — so both have to be checked.
+function findInImageTypeFolder(typeDir, wanted) {
+  const direct = findTitleInDir(typeDir, wanted);
+  if (direct) return direct;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(typeDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
   } catch {
     return null;
   }
-  const wanted = sanitizeForFilename(title).toLowerCase();
-  for (const region of regions) {
-    const regionDir = path.join(boxFrontDir, region);
-    let files = [];
-    try {
-      files = fs.readdirSync(regionDir);
-    } catch {
-      continue;
-    }
-    const match = files.find((f) => {
-      const ext = path.extname(f).toLowerCase();
-      if (!IMAGE_EXTENSIONS.has(ext)) return false;
-      const base = f.slice(0, -ext.length).replace(/-\d+$/, '');
-      return base.toLowerCase() === wanted;
-    });
-    if (match) return path.join(regionDir, match);
+  for (const region of entries) {
+    const found = findTitleInDir(path.join(typeDir, region), wanted);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Walks the same FrontImageTypePriorities order LaunchBox itself uses,
+// returning the first match across every image type — see above. Accepts
+// the already-read priorities list so a full sync (hundreds of games)
+// doesn't re-read and re-parse Settings.xml once per game.
+function findCoverImage(dataDir, platform, title, priorities = getFrontImagePriorities(dataDir)) {
+  const wanted = normalizeForMatch(title);
+  for (const imageType of priorities) {
+    const typeDir = path.join(dataDir, 'Images', platform, imageType);
+    const found = findInImageTypeFolder(typeDir, wanted);
+    if (found) return found;
   }
   return null;
 }
@@ -131,6 +180,7 @@ function findCoverImage(dataDir, platform, title) {
 // platform file that fails to parse (e.g. LaunchBox rewriting it mid-read)
 // rather than aborting the whole sync over one bad file.
 function listAllGames(dataDir) {
+  const priorities = getFrontImagePriorities(dataDir);
   const games = [];
   for (const file of listPlatformFiles(dataDir)) {
     let xml;
@@ -146,7 +196,7 @@ function listAllGames(dataDir) {
       continue;
     }
     for (const game of parsed) {
-      const coverPath = game.platform ? findCoverImage(dataDir, game.platform, game.title) : null;
+      const coverPath = game.platform ? findCoverImage(dataDir, game.platform, game.title, priorities) : null;
       games.push({ ...game, cover_path: coverPath });
     }
   }

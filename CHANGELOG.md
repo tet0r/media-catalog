@@ -5,6 +5,25 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v12.1 — Games now finds nearly every cover LaunchBox itself shows
+- v12.0's cover lookup only checked "Box - Front", which is empty for most
+  digital (Steam/GOG/Epic/...) titles — LaunchBox's own UI instead falls
+  back through an ordered list of image types (store poster art first,
+  physical box art after), recorded per-install in Data/Settings.xml as
+  `FrontImageTypePriorities`. lib/launchboxLibrary.js now reads and walks
+  that same list (falling back to LaunchBox's documented default order if
+  the setting's missing), so covers now match what you actually see inside
+  LaunchBox instead of just physical box scans.
+- Also switched the filename match itself from a fixed set of substituted
+  characters to comparing both sides with all punctuation stripped —
+  LaunchBox's own cached filenames turned out to be inconsistent about it
+  (a straight apostrophe in one game's title became `_`, "Mirror's Edge" →
+  "Mirror_s Edge", but showed up as a curly `'` in another's filename
+  outright), so no fixed substitution rule covers every case.
+- Verified against the same real 936-game LaunchBox install used to build
+  this feature: cover match rate went from 21% (196/936, all from Box -
+  Front alone) to 100% (936/936).
+
 ## v12.0 — Games, mirrored from a local LaunchBox installation
 - New "Games" media type. Unlike every scanned media type, it isn't matched
   against a public catalog at all — LaunchBox (launchbox-app.com) has no
