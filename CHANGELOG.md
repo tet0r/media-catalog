@@ -5,6 +5,22 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v13.2 — TV scan now actually auto-matches shows
+- The scan's auto-match required a year parsed from the show's *folder
+  name* before it would ever add anything automatically — copied directly
+  from Movies' scan logic, where that makes sense because "Title (Year)"
+  is the standard movie-folder convention. TV shows are almost never
+  named that way (just "Cheers", not "Cheers (1982)"), so that gate was
+  nearly unreachable — a first scan landed almost everything in Needs
+  Review regardless of how good the match was.
+- routes/tvScan.js now auto-matches on an unambiguous title match alone;
+  a folder-guessed year (when present) is only used to break a tie when
+  more than one candidate shares that exact title (e.g. a US/UK remake
+  pair) — never as a requirement.
+- Verified live: two year-less fixture folders ("Cheers", "Naruto") both
+  auto-matched on this scan logic where they previously would have
+  landed in Needs Review every time.
+
 ## v13.1 — TV search/add now prefers English titles (anime, etc.)
 - TheTVDB's `name`/`overview` fields are the show's *primary*-language
   text, which for anime and other non-English-native shows is the native

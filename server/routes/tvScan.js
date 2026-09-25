@@ -111,12 +111,26 @@ async function runScan() {
         return;
       }
 
-      const exact = candidates.find((c) => {
-        const cYear = c.year ? parseInt(c.year, 10) : null;
-        return normalizeForMatch(c.name) === normalizeForMatch(title) && (!year || !cYear || Math.abs(cYear - year) <= 1);
-      });
+      // Unlike movie folders, TV show folders are almost never named
+      // "Show (Year)" — just "Show" — so requiring a folder-guessed year
+      // to auto-match (the way Movies does) would mean nearly nothing
+      // ever auto-matches. Instead: a single unambiguous title match
+      // auto-adds regardless of year; a year is only needed to break a
+      // tie when more than one candidate shares that exact title (e.g. a
+      // US/UK remake pair), and only used that way, never as a gate.
+      const titleMatches = candidates.filter((c) => normalizeForMatch(c.name) === normalizeForMatch(title));
+      let exact = null;
+      if (titleMatches.length === 1) {
+        exact = titleMatches[0];
+      } else if (titleMatches.length > 1 && year) {
+        const yearMatches = titleMatches.filter((c) => {
+          const cYear = c.year ? parseInt(c.year, 10) : null;
+          return cYear && Math.abs(cYear - year) <= 1;
+        });
+        if (yearMatches.length === 1) exact = yearMatches[0];
+      }
 
-      if (exact && year) {
+      if (exact) {
         await addTvShowFromTvdbId(exact.tvdb_id, { filePath: file, format: 'File' });
         matched++;
       } else {
