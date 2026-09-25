@@ -31,7 +31,10 @@ code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; }
   border-radius: 20px; padding: 2px 10px; text-decoration: none;
 }
 .update-badge:hover { background: rgba(224, 138, 60, 0.25); }
-.topbar nav { display: flex; gap: 18px; }
+.topbar nav { display: flex; gap: 18px; align-items: center; }
+/* nav + the bell sit next to each other as one group, so adding the bell
+   doesn't get spread apart from nav by .topbar-row's space-between. */
+.topbar-row nav { margin-left: auto; margin-right: 14px; }
 .topbar nav a { color: var(--text-muted); padding: 6px 4px; border-bottom: 2px solid transparent; }
 .topbar nav a.active { color: var(--text); border-color: var(--accent); }
 
@@ -88,6 +91,46 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 }
 .sort-menu-list button:hover { background: var(--card); }
 .sort-menu-list button.active { color: var(--accent); font-weight: 600; }
+
+.notification-bell { position: relative; }
+.notification-bell-trigger {
+  position: relative; background: var(--card); color: var(--text); border: 1px solid var(--border);
+  font-size: 1.1rem; line-height: 1; padding: 6px 10px;
+}
+.notification-badge {
+  position: absolute; top: -6px; right: -6px; background: var(--accent); color: #1a1a1a;
+  font-size: 0.7rem; font-weight: 700; line-height: 1; border-radius: 10px; padding: 2px 6px;
+  min-width: 18px; text-align: center;
+}
+.notification-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: 320px; max-height: 420px;
+  overflow-y: auto; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+.notification-panel-header {
+  display: flex; align-items: center; justify-content: space-between; padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.notification-empty { padding: 16px 12px; text-align: center; }
+.notification-list { display: flex; flex-direction: column; }
+.notification-item {
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.notification-item:last-child { border-bottom: none; }
+.notification-item-link {
+  flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 8px 0; min-width: 0;
+}
+.notification-item-link:hover .notification-item-title { color: var(--accent); }
+.notification-item-type { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.notification-item-title {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.notification-item-clear {
+  background: none; border: none; color: var(--text-muted); font-size: 1.1rem; line-height: 1;
+  padding: 6px; flex-shrink: 0;
+}
+.notification-item-clear:hover { color: var(--text); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
 .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.15s; }

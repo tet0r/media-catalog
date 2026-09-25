@@ -158,6 +158,20 @@ CREATE TABLE IF NOT EXISTS tv_show_ignored (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- One row per item added to any media type, regardless of how it got
+-- added (a scan/sync auto-match or a manual Add) — surfaced as the
+-- notification bell in the top bar. media_type is one of the lib/
+-- notifications.js MEDIA_TYPE_PATHS keys; item_id can outlive its actual
+-- row (e.g. the user later removes the item), so a notification whose
+-- item no longer exists just isn't clickable rather than being an error.
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  media_type TEXT NOT NULL,
+  item_id INTEGER,
+  title TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- The catalog ID from whichever source metadata_source names — an

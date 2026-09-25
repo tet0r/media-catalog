@@ -3,6 +3,7 @@ const path = require('path');
 const db = require('../db');
 const launchbox = require('./launchboxLibrary');
 const { cacheImageFromLocalFile } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const LAUNCHBOX_DIR = process.env.LAUNCHBOX_DIR || '';
@@ -66,7 +67,7 @@ async function runSync() {
             coverFile = null;
           }
         }
-        upsertGame.run({
+        const result = upsertGame.run({
           launchbox_id: game.launchbox_id,
           database_id: game.database_id,
           title: game.title,
@@ -81,7 +82,12 @@ async function runSync() {
           cover_file: coverFile,
           file_path: game.file_path,
         });
-        if (isNew) added++; else updated++;
+        if (isNew) {
+          added++;
+          notifications.addNotification('game', result.lastInsertRowid, game.title);
+        } else {
+          updated++;
+        }
       } catch {
         errored++;
       }

@@ -5,6 +5,11 @@ const router = express.Router();
 
 const DEFAULT_AUTO_SCAN_INTERVAL_MINUTES = 60;
 
+// Every leaf media-type key the sidebar can show/hide independently —
+// kept as one list so a future media type only needs adding here, not in
+// both the GET and PUT handlers separately.
+const SIDEBAR_SECTION_KEYS = ['movies', 'audiobooks', 'ebooks', 'albums', 'vinyl', 'games', 'tv'];
+
 function upsert(key, value) {
   db.prepare(
     'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
@@ -49,6 +54,9 @@ router.get('/', (req, res) => {
     tv_auto_scan_enabled: map.tv_auto_scan_enabled === 'true',
     tv_auto_scan_interval_minutes: Number(map.tv_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     tv_auto_prune_missing: map.tv_auto_prune_missing === 'true',
+    ...Object.fromEntries(
+      SIDEBAR_SECTION_KEYS.map((key) => [`sidebar_hidden_${key}`, map[`sidebar_hidden_${key}`] === 'true'])
+    ),
   });
 });
 
@@ -67,6 +75,7 @@ router.put('/', (req, res) => {
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
     tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
+    sidebar_hidden,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -93,6 +102,11 @@ router.put('/', (req, res) => {
   if (typeof tv_auto_scan_enabled === 'boolean') upsert('tv_auto_scan_enabled', tv_auto_scan_enabled ? 'true' : 'false');
   if (typeof tv_auto_prune_missing === 'boolean') upsert('tv_auto_prune_missing', tv_auto_prune_missing ? 'true' : 'false');
   upsertInterval('tv_auto_scan_interval_minutes', tv_auto_scan_interval_minutes);
+  if (sidebar_hidden && typeof sidebar_hidden === 'object') {
+    for (const key of SIDEBAR_SECTION_KEYS) {
+      if (key in sidebar_hidden) upsert(`sidebar_hidden_${key}`, sidebar_hidden[key] ? 'true' : 'false');
+    }
+  }
   res.json({ ok: true });
 });
 

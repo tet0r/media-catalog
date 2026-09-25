@@ -35,6 +35,7 @@ app.use('/api/album-scan', albumScanRouter);
 app.use('/api/tv-scan', tvScanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/version-check', require('./routes/version'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));

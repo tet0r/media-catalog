@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, Link, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import Library from './pages/Library.jsx';
 import MovieDetail from './pages/MovieDetail.jsx';
@@ -27,6 +27,7 @@ import AddTvShow from './pages/AddTvShow.jsx';
 import ScanTv from './pages/ScanTv.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
+import NotificationBell from './components/NotificationBell.jsx';
 
 const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
@@ -39,6 +40,10 @@ const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 // all — so they need to stay visually and navigationally distinct rather
 // than being forced into one shared library view.
 const SECTIONS = [
+  { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
+  { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
+  { key: 'games', label: 'Games', path: '/games', icon: '🎮' },
+  { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
   {
     key: 'music',
     label: 'Music',
@@ -48,10 +53,6 @@ const SECTIONS = [
       { key: 'vinyl', label: 'Vinyl', path: '/music/vinyl' },
     ],
   },
-  { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
-  { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
-  { key: 'games', label: 'Games', path: '/games', icon: '🎮' },
-  { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
   { key: 'tv', label: 'TV Shows', path: '/tv', icon: '📺' },
 ];
 
@@ -63,9 +64,20 @@ const FLAT_SECTIONS = SECTIONS.flatMap((s) => s.children || [{ key: s.key, path:
 export default function App() {
   const [version, setVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
+  const [hiddenSections, setHiddenSections] = useState({});
   const location = useLocation();
 
   const activeSection = FLAT_SECTIONS.find((s) => location.pathname.startsWith(s.path));
+
+  // Where clicking the "Media Catalog" brand takes you — whichever media
+  // section you were last actually on. Doesn't move for non-section pages
+  // like Settings, so leaving Settings back to the brand still lands you
+  // on the last real section rather than nowhere.
+  const [lastSectionPath, setLastSectionPath] = useState('/movies');
+  useEffect(() => {
+    if (activeSection) setLastSectionPath(activeSection.path);
+  }, [activeSection]);
+
   const onMoviesLibrary = location.pathname === '/movies';
   const onAudiobooksLibrary = location.pathname === '/audiobooks';
   const onEbooksLibrary = location.pathname === '/ebooks';
@@ -125,12 +137,30 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Re-fetched on every navigation (cheap) rather than once, so toggling a
+  // section's visibility in Settings and navigating away updates the
+  // sidebar immediately instead of needing a full page reload.
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => {
+        const hidden = {};
+        for (const key of FLAT_SECTIONS.map((sec) => sec.key)) {
+          hidden[key] = !!s[`sidebar_hidden_${key}`];
+        }
+        setHiddenSections(hidden);
+      })
+      .catch(() => {});
+  }, [location.pathname]);
+
   return (
     <div className="app">
       <header className="topbar">
         <div className="topbar-row">
           <div className="brand">
-            🎬 Media Catalog
+            <Link to={lastSectionPath} className="brand-link" title="Back to your last media type">
+              🎬 Media Catalog
+            </Link>
             {version && <span className="version-tag">v{version}</span>}
             {updateInfo?.updateAvailable && (
               <a
@@ -188,6 +218,7 @@ export default function App() {
             )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
+          <NotificationBell />
         </div>
         {onMoviesLibrary && (
           <div className="toolbar">
@@ -300,30 +331,36 @@ export default function App() {
       </header>
       <div className="app-body">
         <nav className="sidebar" aria-label="Media type">
-          {SECTIONS.map((s) =>
-            s.children ? (
-              <div key={s.key} className="sidebar-group">
-                <div className="sidebar-group-label">
-                  <span className="sidebar-icon">{s.icon}</span>
-                  {s.label}
+          {SECTIONS.map((s) => {
+            if (s.children) {
+              const visibleChildren = s.children.filter((c) => !hiddenSections[c.key]);
+              if (visibleChildren.length === 0) return null;
+              return (
+                <div key={s.key} className="sidebar-group">
+                  <div className="sidebar-group-label">
+                    <span className="sidebar-icon">{s.icon}</span>
+                    {s.label}
+                  </div>
+                  {visibleChildren.map((c) => (
+                    <NavLink
+                      key={c.key}
+                      to={c.path}
+                      className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
+                    >
+                      {c.label}
+                    </NavLink>
+                  ))}
                 </div>
-                {s.children.map((c) => (
-                  <NavLink
-                    key={c.key}
-                    to={c.path}
-                    className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
-                  >
-                    {c.label}
-                  </NavLink>
-                ))}
-              </div>
-            ) : (
+              );
+            }
+            if (hiddenSections[s.key]) return null;
+            return (
               <NavLink key={s.key} to={s.path} className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
                 <span className="sidebar-icon">{s.icon}</span>
                 {s.label}
               </NavLink>
-            )
-          )}
+            );
+          })}
         </nav>
         <main className="content">
           <Routes>

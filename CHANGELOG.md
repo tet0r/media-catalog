@@ -5,6 +5,30 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v14.0 — Notifications, sidebar fixes
+- New notification bell in the top bar (next to the nav links, on every
+  page): every item added to any media type — a scan/sync auto-match or a
+  manual Add — shows up here, newest first, each one linking straight to
+  that item's detail page. Clear one individually or Clear All; capped at
+  the 300 most recent so a long-running install with frequent auto-scans
+  doesn't grow this forever. Polls every 10s so the badge updates without
+  needing to reload the page.
+- Settings has a new "Sidebar" section at the top with a toggle per media
+  type (Movies, Audiobooks, Ebooks, Albums, Vinyl, Games, TV Shows) to
+  show or hide it in the left sidebar — the "Music" group itself
+  disappears automatically if both Albums and Vinyl are hidden.
+- Fixed: Music was out of alphabetical order in the sidebar (sorted first
+  instead of between Movies and TV Shows).
+- Clicking "Media Catalog" in the top bar now takes you back to whichever
+  media type you were last actually on, instead of doing nothing — stays
+  put through a trip to Settings rather than resetting.
+- Verified live: a real Games sync generated one notification per newly
+  added game (936 in this case, correctly trimmed to the 300 cap);
+  clicking a notification opened the right item's detail page; per-item
+  clear and Clear All both confirmed; the sidebar toggle for TV Shows
+  hid/restored it live without a page reload; the brand link correctly
+  carried "last section" across a visit to Settings.
+
 ## v13.2 — TV scan now actually auto-matches shows
 - The scan's auto-match required a year parsed from the show's *folder
   name* before it would ever add anything automatically — copied directly

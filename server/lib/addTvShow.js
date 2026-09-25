@@ -2,6 +2,7 @@ const path = require('path');
 const db = require('../db');
 const tvdb = require('./tvdb');
 const { cacheImageFromUrl } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -76,7 +77,9 @@ async function addTvShowFromTvdbId(tvdbId, { filePath = null, format = null } = 
     file_path: filePath,
     format: format || (filePath ? 'File' : 'Digital'),
   });
-  return db.prepare('SELECT * FROM tv_shows WHERE id = ?').get(info.lastInsertRowid);
+  const row = db.prepare('SELECT * FROM tv_shows WHERE id = ?').get(info.lastInsertRowid);
+  notifications.addNotification('tv', row.id, row.title);
+  return row;
 }
 
 // Re-fetches an existing show's TheTVDB details and updates its metadata in

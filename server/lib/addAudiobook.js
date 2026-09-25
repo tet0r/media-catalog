@@ -3,6 +3,7 @@ const audible = require('./audible');
 const apple = require('./apple');
 const path = require('path');
 const { cacheImageFromUrl } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -109,7 +110,9 @@ async function addAudiobookFromExternalId(source, externalId, { filePath = null,
     file_parts: fileParts ? JSON.stringify(fileParts) : null,
     source_format: sourceFormat,
   });
-  return db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(info.lastInsertRowid);
+  const row = db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(info.lastInsertRowid);
+  notifications.addNotification('audiobook', row.id, row.title);
+  return row;
 }
 
 // Deliberately leaves cover_file untouched, same rationale as

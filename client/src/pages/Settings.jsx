@@ -11,6 +11,16 @@ const INTERVAL_OPTIONS = [
   { label: 'Every 24 hours', value: 1440 },
 ];
 
+const SIDEBAR_SECTIONS = [
+  { key: 'movies', label: 'Movies' },
+  { key: 'audiobooks', label: 'Audiobooks' },
+  { key: 'ebooks', label: 'Ebooks' },
+  { key: 'albums', label: 'Albums' },
+  { key: 'vinyl', label: 'Vinyl' },
+  { key: 'games', label: 'Games' },
+  { key: 'tv', label: 'TV Shows' },
+];
+
 function IntervalSelect({ value, onChange, disabled }) {
   return (
     <select value={value} onChange={(e) => onChange(Number(e.target.value))} disabled={disabled} className="auto-scan-interval">
@@ -52,6 +62,7 @@ export default function Settings() {
   const [tvAutoScanEnabled, setTvAutoScanEnabled] = useState(false);
   const [tvAutoScanInterval, setTvAutoScanInterval] = useState(60);
   const [tvAutoPruneMissing, setTvAutoPruneMissing] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -102,9 +113,16 @@ export default function Settings() {
         setTvAutoScanEnabled(!!s.tv_auto_scan_enabled);
         setTvAutoScanInterval(s.tv_auto_scan_interval_minutes || 60);
         setTvAutoPruneMissing(!!s.tv_auto_prune_missing);
+        setSidebarHidden(
+          Object.fromEntries(SIDEBAR_SECTIONS.map(({ key }) => [key, !!s[`sidebar_hidden_${key}`]]))
+        );
       })
       .catch((err) => setError(err.message));
   }, []);
+
+  function toggleSidebarSection(key) {
+    setSidebarHidden((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   const refreshBulkStatus = useCallback(() => {
     api.bulkRefreshStatus().then(setBulkStatus).catch(() => {});
@@ -304,6 +322,7 @@ export default function Settings() {
         tv_auto_scan_enabled: tvAutoScanEnabled,
         tv_auto_scan_interval_minutes: tvAutoScanInterval,
         tv_auto_prune_missing: tvAutoPruneMissing,
+        sidebar_hidden: sidebarHidden,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -316,6 +335,25 @@ export default function Settings() {
     <div>
       <h1>Settings</h1>
 
+      <h2>Sidebar</h2>
+      <p className="muted">Choose which media types show up in the left sidebar.</p>
+      <div className="auto-scan-row" style={{ gap: '12px 24px' }}>
+        {SIDEBAR_SECTIONS.map(({ key, label }) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={!sidebarHidden[key]}
+                onChange={() => toggleSidebarSection(key)}
+              />
+              <span className="toggle-slider" />
+            </label>
+            <span className="auto-scan-label">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <hr />
       <h2>Movies</h2>
       <div className="form-grid">
         <label>

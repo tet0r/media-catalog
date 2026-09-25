@@ -2,6 +2,7 @@ const db = require('../db');
 const openlibrary = require('./openlibrary');
 const path = require('path');
 const { cacheImageFromUrl } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -38,7 +39,9 @@ async function addEbookFromExternalId(externalId, { filePath = null, fileFormat 
     file_path: filePath,
     file_format: fileFormat,
   });
-  return db.prepare('SELECT * FROM ebooks WHERE id = ?').get(info.lastInsertRowid);
+  const row = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(info.lastInsertRowid);
+  notifications.addNotification('ebook', row.id, row.title);
+  return row;
 }
 
 // Deliberately leaves cover_file untouched, same rationale as

@@ -3,6 +3,7 @@ const path = require('path');
 const db = require('../db');
 const discogs = require('./discogs');
 const { cacheImageFromUrl } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -76,8 +77,13 @@ async function runSync() {
             coverFile = null;
           }
         }
-        upsertRecord.run({ ...item, cover_file: coverFile });
-        if (isNew) added++; else updated++;
+        const result = upsertRecord.run({ ...item, cover_file: coverFile });
+        if (isNew) {
+          added++;
+          notifications.addNotification('vinyl', result.lastInsertRowid, item.title);
+        } else {
+          updated++;
+        }
       } catch {
         errored++;
       }

@@ -404,4 +404,8 @@ export const api = {
   listIgnoredTvShows: () => fetch(`${BASE}/tv-scan/ignored`).then(handle),
   unignoreTvShow: (id) => fetch(`${BASE}/tv-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearTvLibrary: () => fetch(`${BASE}/tv/clear-all`, { method: 'POST' }).then(handle),
+
+  listNotifications: () => fetch(`${BASE}/notifications`).then(handle),
+  clearNotification: (id) => fetch(`${BASE}/notifications/${id}`, { method: 'DELETE' }).then(handle),
+  clearAllNotifications: () => fetch(`${BASE}/notifications`, { method: 'DELETE' }).then(handle),
 };

@@ -3,6 +3,7 @@ const musicbrainz = require('./musicbrainz');
 const lastfm = require('./lastfm');
 const path = require('path');
 const { cacheImageFromUrl } = require('./images');
+const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -52,7 +53,9 @@ async function addAlbumFromExternalId(source, externalId, { filePath = null, dis
     file_path: filePath,
     disc_paths: JSON.stringify(discPaths && discPaths.length ? discPaths : [filePath]),
   });
-  return db.prepare('SELECT * FROM albums WHERE id = ?').get(info.lastInsertRowid);
+  const row = db.prepare('SELECT * FROM albums WHERE id = ?').get(info.lastInsertRowid);
+  notifications.addNotification('album', row.id, row.title);
+  return row;
 }
 
 // Deliberately leaves cover_file untouched, same rationale as
