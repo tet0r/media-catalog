@@ -46,6 +46,12 @@ export default function Settings() {
   const [gamesAutoSyncEnabled, setGamesAutoSyncEnabled] = useState(false);
   const [gamesAutoSyncInterval, setGamesAutoSyncInterval] = useState(60);
   const [launchboxDirConfigured, setLaunchboxDirConfigured] = useState(false);
+  const [tvdbKey, setTvdbKey] = useState('');
+  const [tvdbSource, setTvdbSource] = useState('none');
+  const [tvdbPin, setTvdbPin] = useState('');
+  const [tvAutoScanEnabled, setTvAutoScanEnabled] = useState(false);
+  const [tvAutoScanInterval, setTvAutoScanInterval] = useState(60);
+  const [tvAutoPruneMissing, setTvAutoPruneMissing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -58,6 +64,8 @@ export default function Settings() {
   const [clearingAlbums, setClearingAlbums] = useState(false);
   const [clearingVinyl, setClearingVinyl] = useState(false);
   const [clearingGames, setClearingGames] = useState(false);
+  const [clearingTv, setClearingTv] = useState(false);
+  const [tvBulkStatus, setTvBulkStatus] = useState(null);
   const [clearMessage, setClearMessage] = useState(null);
 
   useEffect(() => {
@@ -88,6 +96,12 @@ export default function Settings() {
         setGamesAutoSyncEnabled(!!s.games_auto_sync_enabled);
         setGamesAutoSyncInterval(s.games_auto_sync_interval_minutes || 60);
         setLaunchboxDirConfigured(!!s.launchbox_dir_configured);
+        setTvdbKey(s.tvdb_api_key || '');
+        setTvdbSource(s.tvdb_api_key_source);
+        setTvdbPin(s.tvdb_pin || '');
+        setTvAutoScanEnabled(!!s.tv_auto_scan_enabled);
+        setTvAutoScanInterval(s.tv_auto_scan_interval_minutes || 60);
+        setTvAutoPruneMissing(!!s.tv_auto_prune_missing);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -97,6 +111,7 @@ export default function Settings() {
     api.bulkRefreshAudiobooksStatus().then(setAudiobookBulkStatus).catch(() => {});
     api.bulkRefreshEbooksStatus().then(setEbookBulkStatus).catch(() => {});
     api.bulkRefreshAlbumsStatus().then(setAlbumBulkStatus).catch(() => {});
+    api.bulkRefreshTvStatus().then(setTvBulkStatus).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -235,6 +250,31 @@ export default function Settings() {
     }
   }
 
+  async function startTvBulkRefresh() {
+    setError(null);
+    try {
+      await api.startBulkRefreshTv();
+      refreshBulkStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function clearTv() {
+    if (!confirm('Permanently delete every TV show in your collection? This cannot be undone.')) return;
+    setClearingTv(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearTvLibrary();
+      setClearMessage(`Removed ${count} show${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingTv(false);
+    }
+  }
+
   async function save() {
     setError(null);
     try {
@@ -259,6 +299,11 @@ export default function Settings() {
         vinyl_auto_sync_interval_minutes: vinylAutoSyncInterval,
         games_auto_sync_enabled: gamesAutoSyncEnabled,
         games_auto_sync_interval_minutes: gamesAutoSyncInterval,
+        tvdb_api_key: tvdbKey,
+        tvdb_pin: tvdbPin,
+        tv_auto_scan_enabled: tvAutoScanEnabled,
+        tv_auto_scan_interval_minutes: tvAutoScanInterval,
+        tv_auto_prune_missing: tvAutoPruneMissing,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -590,6 +635,70 @@ export default function Settings() {
       </p>
       <button className="danger" onClick={clearGames} disabled={clearingGames}>
         {clearingGames ? 'Clearing...' : 'Clear Local Games Copy'}
+      </button>
+
+      <hr />
+      <h2>TV Shows</h2>
+      <div className="form-grid">
+        <label>
+          TheTVDB API Key
+          <input value={tvdbKey} onChange={(e) => setTvdbKey(e.target.value)} placeholder="Get a free key from your TheTVDB dashboard" />
+        </label>
+        <label>
+          TheTVDB Subscriber PIN (optional)
+          <input value={tvdbPin} onChange={(e) => setTvdbPin(e.target.value)} placeholder="Only needed for a subscriber-supported key" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {tvdbSource === 'env'
+          ? 'environment variable (TVDB_API_KEY)'
+          : tvdbSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        . Create a free account and generate a key from your{' '}
+        <a href="https://www.thetvdb.com/dashboard/account/apikeys" target="_blank" rel="noreferrer">
+          TheTVDB dashboard
+        </a>
+        . Free for personal use — TheTVDB requires attribution, so this app credits them in its README.
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input type="checkbox" checked={tvAutoScanEnabled} onChange={(e) => setTvAutoScanEnabled(e.target.checked)} />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically scan for new TV shows</span>
+        <IntervalSelect value={tvAutoScanInterval} onChange={setTvAutoScanInterval} disabled={!tvAutoScanEnabled} />
+      </div>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input type="checkbox" checked={tvAutoPruneMissing} onChange={(e) => setTvAutoPruneMissing(e.target.checked)} />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Remove shows whose folder is no longer found</span>
+      </div>
+
+      <p className="muted">
+        Same safety net as the other media types: skipped for any share that returns zero show
+        folders that scan, so a briefly-disconnected network mount can't wipe out your collection.
+      </p>
+
+      <h3>Bulk Actions</h3>
+      <p className="muted">
+        Re-fetches every show's metadata from TheTVDB in place. Doesn't touch posters/backdrops,
+        so any custom pick is left alone.
+      </p>
+      <button onClick={startTvBulkRefresh} disabled={tvBulkStatus?.running}>
+        {tvBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
+      </button>
+      {tvBulkStatus && tvBulkStatus.message !== 'Idle' && <p className="muted"> {tvBulkStatus.message}</p>}
+
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every TV show in your collection, along with their cached posters/backdrops.</p>
+      <button className="danger" onClick={clearTv} disabled={clearingTv}>
+        {clearingTv ? 'Clearing...' : 'Clear TV Library'}
       </button>
 
       <hr />

@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const tmdb = require('../lib/tmdb');
+const tvdb = require('../lib/tvdb');
 const theposterdb = require('../lib/theposterdb');
 
 const router = express.Router();
@@ -86,6 +87,17 @@ router.get('/backdrops/:tmdbId', async (req, res) => {
       thumbnail_url: `${tmdb.IMG_BASE}/w300${b.file_path}`,
     }));
     res.json(backdrops);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Alternate posters via TheTVDB's own artwork list for this series.
+router.get('/tvdb-posters/:tvdbId', async (req, res) => {
+  try {
+    const details = await tvdb.getSeriesDetails(db, req.params.tvdbId);
+    const posters = await tvdb.getPosterOptions(db, details);
+    res.json(posters);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -5,6 +5,44 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v13.0 — TV Shows, via TheTVDB
+- New "TV Shows" media type, built the same way as Movies: point it at a
+  folder, scan, matches get added automatically, uncertain ones land in
+  Needs Review, `Add Show`/manual search, `Refresh Metadata`, bulk refresh,
+  Clear Library — same personal-collection fields too (format, location,
+  purchase info, personal rating, notes, loaned-to, watched, tags).
+- The one deliberate difference from Movies: **a show is identified by its
+  own top-level folder only.** lib/tvScanner.js never looks inside season
+  subfolders to decide what a show is — `TV/Cheers/Season 1/...` is never
+  scanned as anything separate from `TV/Cheers` itself, so a show with any
+  number of seasons/episodes underneath is still exactly one item. A
+  folder only counts if it (at any depth) contains an actual video file.
+- Metadata source is TheTVDB (lib/tvdb.js) rather than TMDB — its v4 API
+  needs a short-lived login exchange (API key [+ subscriber PIN if your key
+  is that kind] → a bearer token good for about a month) rather than a bare
+  key per request, handled transparently with automatic re-login on
+  expiry. Free for personal/non-commercial use with attribution (which
+  this README now includes) — see thetvdb.com/api-information.
+- Poster comes from TheTVDB's own resolved series image; a "Choose a
+  Poster" picker offers every poster-type artwork TheTVDB has for that
+  show, and a backdrop is picked from its background-type artwork — both
+  artwork *type IDs* are discovered from the live `/artwork/types`
+  endpoint and cached, not hardcoded, since TheTVDB doesn't document them.
+- `Add Show`/Needs Review's URL-paste fallback accepts a thetvdb.com series
+  URL (plain slug or short `/dereferrer/` link) or an imdb.com URL,
+  resolved via TheTVDB's own remote-id search the same way Movies resolves
+  an IMDb URL through TMDB's `/find` endpoint.
+- Verified: server boots clean with the new routes/tables; lib/tvScanner.js
+  confirmed against real fixture folders to find exactly the top-level show
+  folders (and only those — season subfolders and a folder with no video
+  files were both correctly excluded); the "no API key configured" path
+  fails a scan cleanly with a clear message, matching the other media
+  types' behavior. **Not yet verified against TheTVDB's live API** (search,
+  login, series details) — this needs a real API key, which this session
+  didn't have; the request/response shapes are implemented directly from
+  TheTVDB's own published v4 OpenAPI spec, but should be double-checked
+  against a real account before relying on it.
+
 ## v12.2 — Games now backfills covers for already-synced games too
 - Metadata (title, platform, developer, genres, ...) already refreshed on
   every sync for games already in the collection, but cover_file was only

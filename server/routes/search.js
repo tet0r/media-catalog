@@ -6,6 +6,7 @@ const apple = require('../lib/apple');
 const openlibrary = require('../lib/openlibrary');
 const musicbrainz = require('../lib/musicbrainz');
 const lastfm = require('../lib/lastfm');
+const tvdb = require('../lib/tvdb');
 
 const router = express.Router();
 
@@ -280,6 +281,65 @@ router.get('/lastfm-url', async (req, res) => {
       artist: details.artist,
       year: details.year,
       cover_url: details.cover_url,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/tvdb', async (req, res) => {
+  try {
+    const { q, year } = req.query;
+    if (!q) return res.json([]);
+    const results = await tvdb.searchSeries(db, q, year);
+    res.json(results.map((r) => ({
+      tvdb_id: r.tvdb_id,
+      title: r.name,
+      year: r.year || null,
+      overview: r.overview,
+      poster_url: r.image_url || null,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when title search doesn't surface the right show: paste a
+// thetvdb.com series URL (either the plain /series/<slug> or a short
+// /dereferrer/series/<id> link) OR an imdb.com URL instead. An IMDb URL is
+// resolved to a TVDB id via TheTVDB's own remote-id search first (imdb.com
+// has no public API of its own to hit directly, same as tmdb-url).
+router.get('/tvdb-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const dereferrerMatch = str.match(/thetvdb\.com\/dereferrer\/series\/(\d+)/i);
+    const slugMatch = str.match(/thetvdb\.com\/series\/([^/?]+)/i);
+    const imdbMatch = str.match(/imdb\.com\/title\/(tt\d+)/i);
+
+    let tvdbId;
+    if (dereferrerMatch) {
+      tvdbId = dereferrerMatch[1];
+    } else if (slugMatch) {
+      const bySlug = await tvdb.getSeriesBySlug(db, slugMatch[1]);
+      if (!bySlug) return res.status(404).json({ error: `No TheTVDB series found for slug ${slugMatch[1]}` });
+      tvdbId = bySlug.id;
+    } else if (imdbMatch) {
+      const found = await tvdb.findSeriesByImdbId(db, imdbMatch[1]);
+      if (!found) return res.status(404).json({ error: `No TheTVDB series found for IMDb ID ${imdbMatch[1]}` });
+      tvdbId = found.id;
+    } else {
+      return res.status(400).json({
+        error: 'Not a recognizable thetvdb.com or imdb.com series URL (expected .../series/<slug> or .../title/tt.../)',
+      });
+    }
+
+    const details = await tvdb.getSeriesDetails(db, tvdbId);
+    res.json({
+      tvdb_id: details.id,
+      title: details.name,
+      year: details.year || null,
+      overview: details.overview,
+      poster_url: details.image || null,
     });
   } catch (err) {
     res.status(400).json({ error: err.message });

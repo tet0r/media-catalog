@@ -16,6 +16,7 @@ const scanRouter = require('./routes/scan');
 const audiobookScanRouter = require('./routes/audiobookScan');
 const ebookScanRouter = require('./routes/ebookScan');
 const albumScanRouter = require('./routes/albumScan');
+const tvScanRouter = require('./routes/tvScan');
 const { runSync: runVinylSync } = require('./lib/vinylSync');
 const { runSync: runGamesSync } = require('./lib/gamesSync');
 
@@ -25,11 +26,13 @@ app.use('/api/ebooks', require('./routes/ebooks'));
 app.use('/api/albums', require('./routes/albums'));
 app.use('/api/vinyl', require('./routes/vinyl'));
 app.use('/api/games', require('./routes/games'));
+app.use('/api/tv', require('./routes/tvShows'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
 app.use('/api/audiobook-scan', audiobookScanRouter);
 app.use('/api/ebook-scan', ebookScanRouter);
 app.use('/api/album-scan', albumScanRouter);
+app.use('/api/tv-scan', tvScanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/version-check', require('./routes/version'));
@@ -72,6 +75,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'games_auto_sync_enabled',
     intervalKey: 'games_auto_sync_interval_minutes',
     statusTable: 'games_sync_status',
+  },
+  {
+    runScan: tvScanRouter.runScan,
+    enabledKey: 'tv_auto_scan_enabled',
+    intervalKey: 'tv_auto_scan_interval_minutes',
+    statusTable: 'tv_scan_status',
   },
 ]);
 

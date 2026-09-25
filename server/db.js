@@ -86,6 +86,78 @@ CREATE TABLE IF NOT EXISTS movie_ignored (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- TV mirrors Movies' whole shape (personal-collection fields included) but
+-- one row is a SHOW FOLDER, not an episode or a video file — a scan never
+-- looks past the top level of each TV root dir, so "Cheers" is one item
+-- regardless of how many Season NN subfolders/episodes live under it.
+-- Column set is trimmed to what TheTVDB's series-level API actually
+-- returns (no budget/revenue/homepage/tagline the way TMDB's movie API
+-- has), plus a couple of TV-specific fields (network, status) in their
+-- place.
+CREATE TABLE IF NOT EXISTS tv_shows (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tvdb_id INTEGER,
+  slug TEXT,
+  title TEXT NOT NULL,
+  year INTEGER,
+  overview TEXT,
+  first_aired TEXT,
+  last_aired TEXT,
+  status TEXT,
+  network TEXT,
+  runtime INTEGER,
+  genres TEXT,
+  cast TEXT,
+  poster_file TEXT,
+  backdrop_file TEXT,
+  tvdb_score REAL,
+  imdb_id TEXT,
+  original_language TEXT,
+  production_companies TEXT,
+  content_rating TEXT,
+  file_path TEXT,
+  format TEXT DEFAULT 'File',
+  location TEXT,
+  purchase_date TEXT,
+  purchase_price REAL,
+  purchase_store TEXT,
+  personal_rating INTEGER,
+  notes TEXT,
+  loaned_to TEXT,
+  watched INTEGER DEFAULT 0,
+  tags TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tv_scan_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  guessed_year INTEGER,
+  candidates TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tv_scan_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  files_found INTEGER DEFAULT 0,
+  matched INTEGER DEFAULT 0,
+  pending INTEGER DEFAULT 0,
+  skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tv_show_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_title TEXT,
+  guessed_year INTEGER,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- The catalog ID from whichever source metadata_source names — an
@@ -398,5 +470,6 @@ db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)'
 db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO tv_scan_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

@@ -15,6 +15,8 @@ services:
       - EBOOKS_DIR=/ebooks
       # Same idea for the music (album) library.
       - ALBUMS_DIR=/albums
+      # Same idea for the TV library.
+      - TV_DIR=/tv
       # Where your synced LaunchBox Data/ and Images/ folders land on this
       # Docker host — see "Games" in the README. Unlike the other _DIR vars,
       # this points at a plain local folder (bind-mounted below), not a
@@ -44,6 +46,8 @@ services:
       - ebooks1:/ebooks:ro
       # Music, same idea again — same share, different sub-path.
       - albums1:/albums:ro
+      # TV, same idea again — same share, different sub-path.
+      - tv1:/tv:ro
       # Your synced local copy of LaunchBox's Data/ and Images/ folders — a
       # plain bind mount (not a CIFS volume like the ones above) since this
       # is meant to be a local path on the Docker host itself, e.g.
@@ -89,3 +93,9 @@ volumes:
       type: cifs
       o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
       device: "//${SMB_HOST}/${SMB_SHARE_ALBUMS}"
+  tv1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_TV}"

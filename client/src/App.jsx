@@ -21,6 +21,10 @@ import VinylLibrary from './pages/VinylLibrary.jsx';
 import VinylDetail from './pages/VinylDetail.jsx';
 import GamesLibrary from './pages/GamesLibrary.jsx';
 import GameDetail from './pages/GameDetail.jsx';
+import TvLibrary from './pages/TvLibrary.jsx';
+import TvShowDetail from './pages/TvShowDetail.jsx';
+import AddTvShow from './pages/AddTvShow.jsx';
+import ScanTv from './pages/ScanTv.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 
@@ -48,6 +52,7 @@ const SECTIONS = [
   { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
   { key: 'games', label: 'Games', path: '/games', icon: '🎮' },
   { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
+  { key: 'tv', label: 'TV Shows', path: '/tv', icon: '📺' },
 ];
 
 // Flattened view of SECTIONS for path-matching — activeSection needs to
@@ -67,6 +72,7 @@ export default function App() {
   const onAlbumsLibrary = location.pathname === '/music/albums';
   const onVinylLibrary = location.pathname === '/music/vinyl';
   const onGamesLibrary = location.pathname === '/games';
+  const onTvLibrary = location.pathname === '/tv';
 
   // Lifted up from the library pages themselves: App never unmounts while
   // navigating between routes, so keeping this state here means it just
@@ -103,6 +109,10 @@ export default function App() {
   const [gamesSort, setGamesSort] = useState('title');
   const [gamesDir, setGamesDir] = useState('asc');
   const [gamesGroupByPlatform, setGamesGroupByPlatform] = useState(false);
+
+  const [tvQ, setTvQ] = useState('');
+  const [tvSort, setTvSort] = useState('title');
+  const [tvDir, setTvDir] = useState('asc');
 
   useEffect(() => {
     api.getHealth().then((h) => setVersion(h.version)).catch(() => {});
@@ -168,6 +178,13 @@ export default function App() {
             )}
             {activeSection?.key === 'games' && (
               <NavLink to="/games" end>Library</NavLink>
+            )}
+            {activeSection?.key === 'tv' && (
+              <>
+                <NavLink to="/tv" end>Library</NavLink>
+                <NavLink to="/tv/add">Add Show</NavLink>
+                <NavLink to="/tv/scan">Scan Library</NavLink>
+              </>
             )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
@@ -272,6 +289,12 @@ export default function App() {
               onChange={(s, d) => { setGamesSort(s); setGamesDir(d); }}
               options={GAME_SORT_OPTIONS}
             />
+          </div>
+        )}
+        {onTvLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search your collection..." value={tvQ} onChange={(e) => setTvQ(e.target.value)} />
+            <SortMenu sort={tvSort} dir={tvDir} onChange={(s, d) => { setTvSort(s); setTvDir(d); }} options={TV_SORT_OPTIONS} />
           </div>
         )}
       </header>
@@ -399,6 +422,21 @@ export default function App() {
             />
             <Route path="/games/:id" element={<GameDetail />} />
 
+            <Route
+              path="/tv"
+              element={
+                <TvLibrary
+                  q={tvQ}
+                  sort={tvSort}
+                  dir={tvDir}
+                  onSortChange={(s, d) => { setTvSort(s); setTvDir(d); }}
+                />
+              }
+            />
+            <Route path="/tv/:id" element={<TvShowDetail />} />
+            <Route path="/tv/add" element={<AddTvShow />} />
+            <Route path="/tv/scan" element={<ScanTv />} />
+
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
@@ -430,4 +468,11 @@ const GAME_SORT_OPTIONS = [
   { key: 'title', label: 'A-Z' },
   { key: 'platform', label: 'Platform' },
   { key: 'release_date', label: 'Release Date' },
+];
+
+const TV_SORT_OPTIONS = [
+  { key: 'title', label: 'A-Z' },
+  { key: 'year', label: 'Year' },
+  { key: 'personal_rating', label: 'My Rating' },
+  { key: 'tvdb_score', label: 'Score' },
 ];

@@ -43,6 +43,12 @@ router.get('/', (req, res) => {
     games_auto_sync_enabled: map.games_auto_sync_enabled === 'true',
     games_auto_sync_interval_minutes: Number(map.games_auto_sync_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     launchbox_dir_configured: !!process.env.LAUNCHBOX_DIR,
+    tvdb_api_key: map.tvdb_api_key || '',
+    tvdb_api_key_source: map.tvdb_api_key ? 'settings' : (process.env.TVDB_API_KEY ? 'env' : 'none'),
+    tvdb_pin: map.tvdb_pin || '',
+    tv_auto_scan_enabled: map.tv_auto_scan_enabled === 'true',
+    tv_auto_scan_interval_minutes: Number(map.tv_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
+    tv_auto_prune_missing: map.tv_auto_prune_missing === 'true',
   });
 });
 
@@ -60,6 +66,7 @@ router.put('/', (req, res) => {
     album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
+    tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -81,6 +88,11 @@ router.put('/', (req, res) => {
   if (typeof lastfm_api_key === 'string') upsert('lastfm_api_key', lastfm_api_key);
   if (typeof games_auto_sync_enabled === 'boolean') upsert('games_auto_sync_enabled', games_auto_sync_enabled ? 'true' : 'false');
   upsertInterval('games_auto_sync_interval_minutes', games_auto_sync_interval_minutes);
+  if (typeof tvdb_api_key === 'string') upsert('tvdb_api_key', tvdb_api_key);
+  if (typeof tvdb_pin === 'string') upsert('tvdb_pin', tvdb_pin);
+  if (typeof tv_auto_scan_enabled === 'boolean') upsert('tv_auto_scan_enabled', tv_auto_scan_enabled ? 'true' : 'false');
+  if (typeof tv_auto_prune_missing === 'boolean') upsert('tv_auto_prune_missing', tv_auto_prune_missing ? 'true' : 'false');
+  upsertInterval('tv_auto_scan_interval_minutes', tv_auto_scan_interval_minutes);
   res.json({ ok: true });
 });
 

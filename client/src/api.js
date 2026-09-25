@@ -339,4 +339,69 @@ export const api = {
   startGamesSync: () => fetch(`${BASE}/games/sync`, { method: 'POST' }).then(handle),
   gamesSyncStatus: () => fetch(`${BASE}/games/sync/status`).then(handle),
   clearGamesLibrary: () => fetch(`${BASE}/games/clear-all`, { method: 'POST' }).then(handle),
+
+  listTvShows: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/tv?${qs}`).then(handle);
+  },
+  getTvShow: (id) => fetch(`${BASE}/tv/${id}`).then(handle),
+  addTvShow: (payload) =>
+    fetch(`${BASE}/tv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  updateTvShow: (id, payload) =>
+    fetch(`${BASE}/tv/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  deleteTvShow: (id) => fetch(`${BASE}/tv/${id}`, { method: 'DELETE' }).then(handle),
+  refreshTvShow: (id) => fetch(`${BASE}/tv/${id}/refresh`, { method: 'POST' }).then(handle),
+  startBulkRefreshTv: () => fetch(`${BASE}/tv/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshTvStatus: () => fetch(`${BASE}/tv/refresh-all/status`).then(handle),
+  setTvShowPoster: (id, imageUrl) =>
+    fetch(`${BASE}/tv/${id}/poster`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadTvShowPoster: (id, file) =>
+    fetch(`${BASE}/tv/${id}/poster/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  searchTvdbPosters: (tvdbId) => fetch(`${BASE}/images/tvdb-posters/${tvdbId}`).then(handle),
+  searchTvdb: (q, year) =>
+    fetch(`${BASE}/search/tvdb?q=${encodeURIComponent(q)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
+  lookupTvdbUrl: (url) => fetch(`${BASE}/search/tvdb-url?url=${encodeURIComponent(url)}`).then(handle),
+  startTvScan: () => fetch(`${BASE}/tv-scan`, { method: 'POST' }).then(handle),
+  tvScanStatus: () => fetch(`${BASE}/tv-scan/status`).then(handle),
+  tvScanPending: () => fetch(`${BASE}/tv-scan/pending`).then(handle),
+  resolveTvPending: (id, payload) =>
+    fetch(`${BASE}/tv-scan/pending/${id}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  ignoreTvPending: (id) => fetch(`${BASE}/tv-scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipTvPending: (ids) =>
+    fetch(`${BASE}/tv-scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreTvPending: (ids) =>
+    fetch(`${BASE}/tv-scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredTvShows: () => fetch(`${BASE}/tv-scan/ignored`).then(handle),
+  unignoreTvShow: (id) => fetch(`${BASE}/tv-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+  clearTvLibrary: () => fetch(`${BASE}/tv/clear-all`, { method: 'POST' }).then(handle),
 };

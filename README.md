@@ -14,6 +14,8 @@ A self-hosted, Docker-deployable media collection cataloger, inspired by
   see **Vinyl** below.)
 - **Games** — cover, platform, developer/publisher, genres, overview, mirrored
   from a local LaunchBox installation; see **Games** below.
+- **TV Shows** — poster, network, cast, genres, overview, via TheTVDB; see
+  **TV** below.
 
 Each media type gets its own tab in the left sidebar, its own library-folder
 scanner, and its own section in Settings — more types can be added the same
@@ -174,19 +176,50 @@ game from the local copy in this app (or clearing the whole local copy in
 Settings) doesn't touch your actual LaunchBox library — it just comes back
 on the next sync.
 
+## TV
+
+Works just like Movies — point it at a folder, scan, and it matches what it
+finds against a metadata source, this time [TheTVDB](https://www.thetvdb.com)
+instead of TMDB. The one thing that's different: **a show is identified by
+its own top-level folder only.** A scan never looks inside season
+subfolders to decide what a show is — `TV/Cheers/Season 1/...` is never
+scanned as anything other than part of `TV/Cheers`, so "Cheers" shows up
+once in your collection no matter how many seasons or episodes are under
+it. A folder only counts as a show if it (or something inside it, at any
+depth) actually contains a video file — an empty folder or one with just
+NFOs/subtitles is skipped.
+
+1. Create a free account at [thetvdb.com](https://www.thetvdb.com), then
+   generate a v4 API key from your
+   [dashboard's API Keys page](https://www.thetvdb.com/dashboard/account/apikeys).
+   Paste it into Settings (or set `TVDB_API_KEY`). Free for personal/
+   non-commercial use — see
+   [TheTVDB's API and Data Licensing](https://www.thetvdb.com/api-information)
+   for the details of that tier. **Attribution**: TV metadata and images in
+   this app are provided by TheTVDB, but this app is not endorsed or
+   certified by TheTVDB or its affiliates.
+   - Only fill in the "TheTVDB Subscriber PIN" field in Settings if your key
+     specifically is the user-subscription-funded kind (TheTVDB tells you
+     this when you generate it) — leave it blank otherwise.
+2. Mount your TV folder the same way as Movies/Audiobooks/Ebooks/Albums —
+   `TV_DIR` env var + a share/mount in `docker-compose.yml` (`SMB_SHARE_TV`
+   if it's a network share; see **Network shares** below).
+3. Go to **Scan Library** under TV Shows to import, or **Add Show** to
+   search TheTVDB by title and add manually.
+
 ## Setup
 
 1. **Get a free TMDB API key**: sign up at themoviedb.org, then go to
    [Settings → API](https://www.themoviedb.org/settings/api) and request a
    free "Developer" API key (approved instantly for personal use).
 
-2. **Point it at your movie, audiobook, ebook and/or music folders.** If
+2. **Point it at your movie, audiobook, ebook, music and/or TV folders.** If
    they're on local disk, just bind mount them directly
    (`- /path/to/movies:/movies:ro`) and add `/movies` to the `MOVIES_DIR` env
-   var (same idea for audiobooks/`AUDIOBOOKS_DIR`, ebooks/`EBOOKS_DIR` and
-   music/`ALBUMS_DIR`). **If they're on a network share (NAS, another PC),
-   see Network shares below first** — plain bind-mounting a network path is
-   unreliable on Docker Desktop and needs a different setup.
+   var (same idea for audiobooks/`AUDIOBOOKS_DIR`, ebooks/`EBOOKS_DIR`,
+   music/`ALBUMS_DIR` and TV/`TV_DIR`). **If they're on a network share (NAS,
+   another PC), see Network shares below first** — plain bind-mounting a
+   network path is unreliable on Docker Desktop and needs a different setup.
 
    If a library is split across multiple shares/folders, give each one its
    own mount point (`/movies`, `/movies2`, `/movies3`, ...) **and** add it
@@ -247,6 +280,9 @@ directly into Portainer — no repo access from the Docker host needed.
      the same share as the movies, just a different sub-path)
    - `SMB_SHARE_EBOOKS` = the ebook folder's sub-path, same idea again
    - `SMB_SHARE_ALBUMS` = the music folder's sub-path, same idea again
+   - `SMB_SHARE_TV` = the TV folder's sub-path, same idea again
+   - `TVDB_API_KEY` = if using TV, your TheTVDB API key (or leave it blank
+     and paste it into Settings instead) — see **TV** above
    - `LAUNCHBOX_SYNC_PATH` = if using Games, a path *on the Docker host
      itself* (not a network share) with your synced LaunchBox `Data`/
      `Images` folders — see **Games** above
@@ -291,7 +327,7 @@ volumes:
 
 Note that none of your actual folder names/paths live in `docker-compose.yml`
 itself — they're all environment variables (`SMB_HOST`, `SMB_SHARE1/2/3`,
-`SMB_SHARE_AUDIOBOOKS`, `SMB_SHARE_EBOOKS`, `SMB_SHARE_ALBUMS`), so this file stays generic even
+`SMB_SHARE_AUDIOBOOKS`, `SMB_SHARE_EBOOKS`, `SMB_SHARE_ALBUMS`, `SMB_SHARE_TV`), so this file stays generic even
 if the repo is public. Your real values go in `.env`, which is gitignored, or
 in Portainer's stack environment variables (which aren't part of the compose
 file either).
@@ -314,6 +350,7 @@ To use it:
      the common case, since it's usually all one NAS).
    - `SMB_SHARE_EBOOKS` — the ebook folder's sub-path, same idea again.
    - `SMB_SHARE_ALBUMS` — the music folder's sub-path, same idea again.
+   - `SMB_SHARE_TV` — the TV folder's sub-path, same idea again.
 2. `docker compose up -d` (or redeploy the Portainer stack, with those same
    variables set under its Environment variables instead of `.env`). Docker
    creates the named volumes by mounting each CIFS share the first time
