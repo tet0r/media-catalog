@@ -5,6 +5,23 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.4 — Tabbed Settings instead of one long scrolling page
+- Settings is now tabbed: General (Sidebar + Backups — anything not tied
+  to one media type) plus one tab per media type (Movies, Audiobooks,
+  Ebooks, Albums, Vinyl, Games, TV Shows), instead of every section
+  stacked in one long scroll. Reuses the same `.picker-tabs` styling
+  already used for Needs Review/Ignored elsewhere in the app.
+- Always opens on General — Settings unmounts when you navigate away
+  (it's its own route) and remounts fresh each time you come back, so
+  that's just the tab state's initial value, no extra logic needed.
+- Save stays a single persistent action below the tabs regardless of
+  which one is showing — it still saves everything at once, same as
+  before; only the *display* is now split into tabs, not the save
+  behavior.
+- Verified live: each tab shows only its own section, switching between
+  them works, and Save/error/status messages remain visible at the
+  bottom regardless of the active tab.
+
 ## v15.3 — Fix backups failing when BACKUP_DIR is a network share
 - `Backup failed: ENOENT: no such file or directory, stat '/backups/library-....db'`
   when `BACKUP_DIR` is a CIFS/SMB share (exactly the kind of location the

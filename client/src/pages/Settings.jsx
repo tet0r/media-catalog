@@ -19,6 +19,20 @@ const BACKUP_INTERVAL_OPTIONS = [
   { label: 'Weekly', value: 10080 },
 ];
 
+// "General" first and default — anything not specific to one media type
+// (Sidebar, Backups) lives there; the rest mirror the sidebar's own media
+// types one-for-one.
+const SETTINGS_TABS = [
+  { key: 'general', label: 'General' },
+  { key: 'movies', label: 'Movies' },
+  { key: 'audiobooks', label: 'Audiobooks' },
+  { key: 'ebooks', label: 'Ebooks' },
+  { key: 'albums', label: 'Albums' },
+  { key: 'vinyl', label: 'Vinyl' },
+  { key: 'games', label: 'Games' },
+  { key: 'tv', label: 'TV Shows' },
+];
+
 const SIDEBAR_SECTIONS = [
   { key: 'movies', label: 'Movies' },
   { key: 'audiobooks', label: 'Audiobooks' },
@@ -40,6 +54,11 @@ function IntervalSelect({ value, onChange, disabled, options = INTERVAL_OPTIONS 
 }
 
 export default function Settings() {
+  // Always starts on "general" — Settings unmounts when you navigate away
+  // (it's a separate route) and remounts fresh with this initial value
+  // each time you come back, which is exactly what "always default there"
+  // means; no extra effect needed to force it.
+  const [activeTab, setActiveTab] = useState('general');
   const [key, setKey] = useState('');
   const [source, setSource] = useState('none');
   const [autoScanEnabled, setAutoScanEnabled] = useState(false);
@@ -448,6 +467,21 @@ export default function Settings() {
     <div>
       <h1>Settings</h1>
 
+      <div className="picker-tabs" style={{ margin: '16px 0', flexWrap: 'wrap' }}>
+        {SETTINGS_TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`picker-tab${activeTab === t.key ? ' active' : ''}`}
+            onClick={() => setActiveTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'general' && (
+        <>
       <h2>Sidebar</h2>
       <p className="muted">Choose which media types show up in the left sidebar.</p>
       <div className="auto-scan-row" style={{ gap: '12px 24px' }}>
@@ -542,8 +576,11 @@ export default function Settings() {
         </div>
       )}
 
-      <hr />
-      <h2>Movies</h2>
+        </>
+      )}
+
+      {activeTab === 'movies' && (
+        <>
       <div className="form-grid">
         <label>
           TMDB API Key
@@ -603,9 +640,11 @@ export default function Settings() {
         {clearingMovies ? 'Clearing...' : 'Clear Movie Library'}
       </button>
 
-      <hr />
-      <h2>Audiobooks</h2>
+        </>
+      )}
 
+      {activeTab === 'audiobooks' && (
+        <>
       <div className="auto-scan-row">
         <label className="toggle-switch">
           <input
@@ -652,9 +691,11 @@ export default function Settings() {
         {clearingAudiobooks ? 'Clearing...' : 'Clear Audiobook Library'}
       </button>
 
-      <hr />
-      <h2>Ebooks</h2>
+        </>
+      )}
 
+      {activeTab === 'ebooks' && (
+        <>
       <div className="auto-scan-row">
         <label className="toggle-switch">
           <input
@@ -701,7 +742,11 @@ export default function Settings() {
         {clearingEbooks ? 'Clearing...' : 'Clear Ebook Library'}
       </button>
 
-      <hr />
+        </>
+      )}
+
+      {activeTab === 'albums' && (
+        <>
       <h2>Music — Albums</h2>
 
       <div className="form-grid">
@@ -772,7 +817,11 @@ export default function Settings() {
         {clearingAlbums ? 'Clearing...' : 'Clear Album Library'}
       </button>
 
-      <hr />
+        </>
+      )}
+
+      {activeTab === 'vinyl' && (
+        <>
       <h2>Music — Vinyl</h2>
       <p className="muted">
         Vinyl is a direct mirror of your existing collection on{' '}
@@ -825,8 +874,11 @@ export default function Settings() {
         {clearingVinyl ? 'Clearing...' : 'Clear Local Vinyl Copy'}
       </button>
 
-      <hr />
-      <h2>Games</h2>
+        </>
+      )}
+
+      {activeTab === 'games' && (
+        <>
       <p className="muted">
         Games is a direct mirror of your local{' '}
         <a href="https://www.launchbox-app.com" target="_blank" rel="noreferrer">LaunchBox</a>{' '}
@@ -864,8 +916,11 @@ export default function Settings() {
         {clearingGames ? 'Clearing...' : 'Clear Local Games Copy'}
       </button>
 
-      <hr />
-      <h2>TV Shows</h2>
+        </>
+      )}
+
+      {activeTab === 'tv' && (
+        <>
       <div className="form-grid">
         <label>
           TheTVDB API Key
@@ -927,6 +982,9 @@ export default function Settings() {
       <button className="danger" onClick={clearTv} disabled={clearingTv}>
         {clearingTv ? 'Clearing...' : 'Clear TV Library'}
       </button>
+
+        </>
+      )}
 
       <hr />
       {clearMessage && <p className="muted">{clearMessage}</p>}
