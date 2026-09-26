@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addEbookFromExternalId, refreshEbookMetadata } = require('../lib/addEbook');
+const { addEbookFromExternalId, refreshEbookMetadata, rematchEbook } = require('../lib/addEbook');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshEbooks');
 
@@ -135,6 +135,23 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.external_id) return res.status(400).json({ error: 'This ebook has no external match to refresh from' });
     const row = await refreshEbookMetadata(req.params.id, existing.external_id);
+    res.json(rowToEbook(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Points this ebook at a completely different Open Library work — found
+// via a fresh search right on the ebook's own page, for when the original
+// match was wrong. Unlike /refresh (re-fetches the same external_id), this
+// takes a new one picked from that search.
+router.post('/:id/rematch', async (req, res) => {
+  try {
+    const { external_id } = req.body;
+    if (!external_id) return res.status(400).json({ error: 'external_id is required' });
+    const existing = db.prepare('SELECT id FROM ebooks WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const row = await rematchEbook(req.params.id, external_id);
     res.json(rowToEbook(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

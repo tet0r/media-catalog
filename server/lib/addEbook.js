@@ -55,4 +55,21 @@ async function refreshEbookMetadata(ebookId, externalId) {
   return db.prepare('SELECT * FROM ebooks WHERE id = ?').get(ebookId);
 }
 
-module.exports = { addEbookFromExternalId, refreshEbookMetadata, extractMetadata };
+// Unlike refreshEbookMetadata (re-fetches from the SAME external_id, so
+// keeping the existing cover makes sense), this points an existing ebook
+// at a DIFFERENT Open Library work entirely — picked from a fresh search
+// on the ebook's own detail page, for when the original match was wrong.
+// The cover is replaced too, since the old one belongs to whatever the
+// ebook was previously matched to. file_path/file_format are left alone:
+// it's still the same file on disk, just re-pointed at different metadata.
+async function rematchEbook(ebookId, externalId) {
+  const details = await openlibrary.getBookByKey(externalId);
+  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url) : null;
+  const meta = extractMetadata(details);
+  const fields = { ...meta, external_id: externalId, cover_file: coverFile };
+  const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
+  db.prepare(`UPDATE ebooks SET ${setClause} WHERE id = @id`).run({ ...fields, id: ebookId });
+  return db.prepare('SELECT * FROM ebooks WHERE id = ?').get(ebookId);
+}
+
+module.exports = { addEbookFromExternalId, refreshEbookMetadata, rematchEbook, extractMetadata };

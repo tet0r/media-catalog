@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addMovieFromTmdbId, refreshMovieMetadata } = require('../lib/addMovie');
+const { addMovieFromTmdbId, refreshMovieMetadata, rematchMovie } = require('../lib/addMovie');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefresh');
 const { IMG_BASE } = require('../lib/tmdb');
@@ -181,6 +181,23 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.tmdb_id) return res.status(400).json({ error: 'This movie has no TMDB match to refresh from' });
     const row = await refreshMovieMetadata(req.params.id, existing.tmdb_id);
+    res.json(rowToMovie(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Points this movie at a completely different TMDB entry — found via a
+// fresh search right on the movie's own page, for when the original match
+// was wrong. Unlike /refresh (re-fetches the same tmdb_id), this takes a
+// new tmdb_id picked from that search.
+router.post('/:id/rematch', async (req, res) => {
+  try {
+    const { tmdb_id } = req.body;
+    if (!tmdb_id) return res.status(400).json({ error: 'tmdb_id is required' });
+    const existing = db.prepare('SELECT id FROM movies WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const row = await rematchMovie(req.params.id, tmdb_id);
     res.json(rowToMovie(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -125,7 +125,25 @@ async function refreshAudiobookMetadata(audiobookId, source, externalId) {
   return db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(audiobookId);
 }
 
+// Unlike refreshAudiobookMetadata (re-fetches from the SAME source/id, so
+// keeping the existing cover makes sense), this points an existing
+// audiobook at a DIFFERENT catalog entry — possibly a different source
+// entirely (Audible vs. Apple Books) — picked from a fresh search on the
+// audiobook's own detail page, for when the original match was wrong. The
+// cover is replaced too, since the old one belongs to whatever the
+// audiobook was previously matched to. file_path/file_parts/source_format
+// are left alone: it's still the same file(s) on disk, just re-pointed at
+// different metadata.
+async function rematchAudiobook(audiobookId, source, externalId) {
+  const { meta, coverUrl, resolvedId } = await fetchAndExtract(source, externalId);
+  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl) : null;
+  const fields = { ...meta, asin: resolvedId, metadata_source: source, cover_file: coverFile };
+  const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
+  db.prepare(`UPDATE audiobooks SET ${setClause} WHERE id = @id`).run({ ...fields, id: audiobookId });
+  return db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(audiobookId);
+}
+
 module.exports = {
-  addAudiobookFromExternalId, refreshAudiobookMetadata,
+  addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook,
   extractMetadataFromAudnexus, extractMetadataFromApple, stripHtml,
 };

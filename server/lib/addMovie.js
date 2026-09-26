@@ -98,4 +98,22 @@ async function refreshMovieMetadata(movieId, tmdbId) {
   return db.prepare('SELECT * FROM movies WHERE id = ?').get(movieId);
 }
 
-module.exports = { addMovieFromTmdbId, refreshMovieMetadata };
+// Unlike refreshMovieMetadata (re-fetches from the SAME tmdb_id, so keeping
+// the existing poster/backdrop makes sense), this points an existing movie
+// at a DIFFERENT TMDB entry entirely — picked from a fresh search on the
+// movie's own detail page, for when the original match was wrong. The
+// poster/backdrop are replaced too, since the old ones belong to whatever
+// the movie was previously matched to. file_path/format are left alone:
+// it's still the same file on disk, just re-pointed at different metadata.
+async function rematchMovie(movieId, tmdbId) {
+  const details = await tmdb.getMovieDetails(db, tmdbId);
+  const posterFile = await cachePoster(DATA_DIR, details.poster_path);
+  const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path);
+  const meta = extractMetadata(details);
+  const fields = { ...meta, tmdb_id: details.id, poster_file: posterFile, backdrop_file: backdropFile };
+  const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
+  db.prepare(`UPDATE movies SET ${setClause} WHERE id = @id`).run({ ...fields, id: movieId });
+  return db.prepare('SELECT * FROM movies WHERE id = ?').get(movieId);
+}
+
+module.exports = { addMovieFromTmdbId, refreshMovieMetadata, rematchMovie };

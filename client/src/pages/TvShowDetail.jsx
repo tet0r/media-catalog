@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ImagePicker from '../components/ImagePicker.jsx';
+import SearchAgain from '../components/SearchAgain.jsx';
+
+const TVDB_SOURCES = [
+  { key: 'tvdb', label: 'TheTVDB', search: (q) => api.searchTvdb(q), lookupUrl: api.lookupTvdbUrl, urlPlaceholder: 'Paste a thetvdb.com or imdb.com series URL' },
+];
 
 export default function TvShowDetail() {
   const { id } = useParams();
@@ -125,6 +130,15 @@ export default function TvShowDetail() {
             <button onClick={refreshMetadata} disabled={refreshing || !show.tvdb_id}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
+            <SearchAgain
+              sources={TVDB_SOURCES}
+              queryPlaceholder="Show title"
+              idField="tvdb_id"
+              imageField="poster_url"
+              renderLabel={(c) => `${c.title} (${c.year})`}
+              rematch={(_source, tvdbId) => api.rematchTvShow(id, { tvdb_id: tvdbId })}
+              onRematched={setShow}
+            />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}

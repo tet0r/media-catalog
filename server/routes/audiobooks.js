@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addAudiobookFromExternalId, refreshAudiobookMetadata } = require('../lib/addAudiobook');
+const { addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook } = require('../lib/addAudiobook');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshAudiobooks');
 
@@ -138,6 +138,23 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.asin) return res.status(400).json({ error: 'This audiobook has no external match to refresh from' });
     const row = await refreshAudiobookMetadata(req.params.id, existing.metadata_source || 'audible', existing.asin);
+    res.json(rowToAudiobook(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Points this audiobook at a completely different catalog entry — found
+// via a fresh search right on the audiobook's own page, for when the
+// original match was wrong. Unlike /refresh (re-fetches the same source/
+// id), this takes a new source/external_id picked from that search.
+router.post('/:id/rematch', async (req, res) => {
+  try {
+    const { external_id, source } = req.body;
+    if (!external_id) return res.status(400).json({ error: 'external_id is required' });
+    const existing = db.prepare('SELECT id FROM audiobooks WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const row = await rematchAudiobook(req.params.id, source || 'audible', external_id);
     res.json(rowToAudiobook(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

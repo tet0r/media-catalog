@@ -94,4 +94,24 @@ async function refreshTvShowMetadata(showId, tvdbId) {
   return db.prepare('SELECT * FROM tv_shows WHERE id = ?').get(showId);
 }
 
-module.exports = { addTvShowFromTvdbId, refreshTvShowMetadata, extractMetadata };
+// Unlike refreshTvShowMetadata (re-fetches from the SAME tvdb_id, so
+// keeping the existing poster/backdrop makes sense), this points an
+// existing show at a DIFFERENT TheTVDB entry entirely — picked from a
+// fresh search on the show's own detail page, for when the original match
+// was wrong. The poster/backdrop are replaced too, since the old ones
+// belong to whatever the show was previously matched to. file_path/format
+// are left alone: it's still the same folder on disk, just re-pointed at
+// different metadata.
+async function rematchTvShow(showId, tvdbId) {
+  const details = await tvdb.getSeriesDetails(db, tvdbId);
+  const posterFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image).catch(() => null) : null;
+  const backdropUrl = await tvdb.getBackdropUrl(db, details).catch(() => null);
+  const backdropFile = backdropUrl ? await cacheImageFromUrl(DATA_DIR, backdropUrl).catch(() => null) : null;
+  const meta = extractMetadata(details);
+  const fields = { ...meta, tvdb_id: details.id, poster_file: posterFile, backdrop_file: backdropFile };
+  const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
+  db.prepare(`UPDATE tv_shows SET ${setClause} WHERE id = @id`).run({ ...fields, id: showId });
+  return db.prepare('SELECT * FROM tv_shows WHERE id = ?').get(showId);
+}
+
+module.exports = { addTvShowFromTvdbId, refreshTvShowMetadata, rematchTvShow, extractMetadata };

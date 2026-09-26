@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import SearchAgain from '../components/SearchAgain.jsx';
+
+const OPENLIBRARY_SOURCES = [
+  { key: 'openlibrary', label: 'Open Library', search: (q) => api.searchOpenLibrary(q), lookupUrl: api.lookupOpenLibraryUrl, urlPlaceholder: 'Paste an openlibrary.org work URL' },
+];
 
 export default function EbookDetail() {
   const { id } = useParams();
@@ -123,6 +128,15 @@ export default function EbookDetail() {
             <button onClick={refreshMetadata} disabled={refreshing || !book.external_id}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
+            <SearchAgain
+              sources={OPENLIBRARY_SOURCES}
+              queryPlaceholder="Book title or author"
+              idField="key"
+              imageField="cover_url"
+              renderLabel={(c) => `${c.title}${c.authors?.length ? ` — ${c.authors.join(', ')}` : ''}${c.year ? ` (${c.year})` : ''}`}
+              rematch={(_source, key) => api.rematchEbook(id, { external_id: key })}
+              onRematched={setBook}
+            />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}

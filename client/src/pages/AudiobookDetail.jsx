@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import SearchAgain from '../components/SearchAgain.jsx';
+
+const AUDIOBOOK_SOURCES = [
+  { key: 'audible', label: 'Audible', search: api.searchAudible, lookupUrl: api.lookupAudibleUrl, urlPlaceholder: 'Paste an audible.com product URL' },
+  { key: 'apple', label: 'Apple Books', search: api.searchApple, lookupUrl: api.lookupAppleUrl, urlPlaceholder: 'Paste a books.apple.com audiobook URL' },
+];
 
 function formatRuntime(minutes) {
   if (!minutes) return null;
@@ -146,6 +152,15 @@ export default function AudiobookDetail() {
             <button onClick={refreshMetadata} disabled={refreshing || !book.asin}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
+            <SearchAgain
+              sources={AUDIOBOOK_SOURCES}
+              queryPlaceholder="Audiobook title or author"
+              idField="asin"
+              imageField="cover_url"
+              renderLabel={(c) => `${c.title}${c.subtitle ? `: ${c.subtitle}` : ''}${c.authors?.length ? ` — ${c.authors.join(', ')}` : ''}${c.year ? ` (${c.year})` : ''}`}
+              rematch={(source, asin) => api.rematchAudiobook(id, { external_id: asin, source })}
+              onRematched={setBook}
+            />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}

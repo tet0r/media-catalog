@@ -5,6 +5,30 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.7 — "Search Again" for Movies, TV Shows, Audiobooks, and Ebooks
+- Albums already let you re-point an item at a different catalog entry
+  without deleting and re-adding it (for when the original scan matched
+  the wrong thing). That's now available from every scanned media
+  type's detail page: Movies (TMDB), TV Shows (TheTVDB), Audiobooks
+  (Audible or Apple Books), and Ebooks (Open Library).
+- "Search Again" is distinct from "Refresh Metadata": Refresh re-fetches
+  the *same* match and leaves the cover/poster alone (so a manually
+  picked image isn't clobbered); Search Again points the item at a
+  genuinely different match and replaces the cover/poster too, since
+  it's now a different item's identity. Either way, the file on disk
+  (`file_path`/`file_parts`) is untouched.
+- Built as one reusable `SearchAgain` component instead of copy-pasting
+  Albums' inline version four more times.
+- Games and Vinyl don't get this: both are sync-mirrors of a single
+  source of truth (your LaunchBox library / your own Discogs
+  collection) rather than a scan matched against a searchable catalog,
+  so there's no "different candidate" for either of them to search for.
+- Verified live: rematching worked end-to-end for Ebooks, TV Shows, and
+  Audiobooks (including switching source from Audible to Apple Books
+  mid-rematch), preserving each item's file path throughout. Movies
+  wasn't tested against the real TMDB API (no API key available while
+  testing) but uses the same pattern already proven for TV Shows.
+
 ## v15.6 — Fix scans/syncs getting stuck "running" forever
 - A scan/sync/backup always resets its own `running` flag back to 0 when
   it finishes, whether it succeeds or fails — but that code never runs

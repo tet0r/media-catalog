@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addTvShowFromTvdbId, refreshTvShowMetadata } = require('../lib/addTvShow');
+const { addTvShowFromTvdbId, refreshTvShowMetadata, rematchTvShow } = require('../lib/addTvShow');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefreshTv = require('../lib/bulkRefreshTv');
 
@@ -166,6 +166,23 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.tvdb_id) return res.status(400).json({ error: 'This show has no TheTVDB match to refresh from' });
     const row = await refreshTvShowMetadata(req.params.id, existing.tvdb_id);
+    res.json(rowToShow(row));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Points this show at a completely different TheTVDB entry — found via a
+// fresh search right on the show's own page, for when the original match
+// was wrong. Unlike /refresh (re-fetches the same tvdb_id), this takes a
+// new tvdb_id picked from that search.
+router.post('/:id/rematch', async (req, res) => {
+  try {
+    const { tvdb_id } = req.body;
+    if (!tvdb_id) return res.status(400).json({ error: 'tvdb_id is required' });
+    const existing = db.prepare('SELECT id FROM tv_shows WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const row = await rematchTvShow(req.params.id, tvdb_id);
     res.json(rowToShow(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

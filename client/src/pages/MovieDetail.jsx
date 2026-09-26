@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ImagePicker from '../components/ImagePicker.jsx';
+import SearchAgain from '../components/SearchAgain.jsx';
+
+const TMDB_SOURCES = [
+  { key: 'tmdb', label: 'TMDB', search: (q) => api.searchTmdb(q), lookupUrl: api.lookupTmdbUrl, urlPlaceholder: 'Paste a themoviedb.org or imdb.com movie URL' },
+];
 
 function formatMoney(n) {
   if (!n) return null;
@@ -177,6 +182,15 @@ export default function MovieDetail() {
             <button onClick={refreshMetadata} disabled={refreshing || !movie.tmdb_id}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
+            <SearchAgain
+              sources={TMDB_SOURCES}
+              queryPlaceholder="Movie title"
+              idField="tmdb_id"
+              imageField="poster_url"
+              renderLabel={(c) => `${c.title} (${c.year})`}
+              rematch={(_source, tmdbId) => api.rematchMovie(id, { tmdb_id: tmdbId })}
+              onRematched={setMovie}
+            />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}

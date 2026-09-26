@@ -33,6 +33,12 @@ export const api = {
     }).then(handle),
   deleteMovie: (id) => fetch(`${BASE}/movies/${id}`, { method: 'DELETE' }).then(handle),
   refreshMovie: (id) => fetch(`${BASE}/movies/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchMovie: (id, payload) =>
+    fetch(`${BASE}/movies/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
   startBulkRefresh: () => fetch(`${BASE}/movies/refresh-all`, { method: 'POST' }).then(handle),
   bulkRefreshStatus: () => fetch(`${BASE}/movies/refresh-all/status`).then(handle),
   setMoviePoster: (id, imageUrl) =>
@@ -115,6 +121,12 @@ export const api = {
     }).then(handle),
   deleteAudiobook: (id) => fetch(`${BASE}/audiobooks/${id}`, { method: 'DELETE' }).then(handle),
   refreshAudiobook: (id) => fetch(`${BASE}/audiobooks/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchAudiobook: (id, payload) =>
+    fetch(`${BASE}/audiobooks/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
   startBulkRefreshAudiobooks: () => fetch(`${BASE}/audiobooks/refresh-all`, { method: 'POST' }).then(handle),
   bulkRefreshAudiobooksStatus: () => fetch(`${BASE}/audiobooks/refresh-all/status`).then(handle),
   setAudiobookCover: (id, imageUrl) =>
@@ -179,6 +191,12 @@ export const api = {
     }).then(handle),
   deleteEbook: (id) => fetch(`${BASE}/ebooks/${id}`, { method: 'DELETE' }).then(handle),
   refreshEbook: (id) => fetch(`${BASE}/ebooks/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchEbook: (id, payload) =>
+    fetch(`${BASE}/ebooks/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
   startBulkRefreshEbooks: () => fetch(`${BASE}/ebooks/refresh-all`, { method: 'POST' }).then(handle),
   bulkRefreshEbooksStatus: () => fetch(`${BASE}/ebooks/refresh-all/status`).then(handle),
   setEbookCover: (id, imageUrl) =>
@@ -361,6 +379,12 @@ export const api = {
     }).then(handle),
   deleteTvShow: (id) => fetch(`${BASE}/tv/${id}`, { method: 'DELETE' }).then(handle),
   refreshTvShow: (id) => fetch(`${BASE}/tv/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchTvShow: (id, payload) =>
+    fetch(`${BASE}/tv/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
   startBulkRefreshTv: () => fetch(`${BASE}/tv/refresh-all`, { method: 'POST' }).then(handle),
   bulkRefreshTvStatus: () => fetch(`${BASE}/tv/refresh-all/status`).then(handle),
   setTvShowPoster: (id, imageUrl) =>
