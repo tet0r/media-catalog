@@ -5,6 +5,22 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.6 — Fix scans/syncs getting stuck "running" forever
+- A scan/sync/backup always resets its own `running` flag back to 0 when
+  it finishes, whether it succeeds or fails — but that code never runs
+  if the process itself dies mid-operation (a crash, an unclean
+  container restart, ...), leaving the button permanently disabled and
+  the status message stuck (e.g. Games showing "Reading your LaunchBox
+  library..." forever, with `running: 1` and `last_run: null`).
+- db.js now resets every scan/sync/backup status table's `running` flag
+  to 0 on every startup — a row still showing `running=1` at that point
+  is always stale, since nothing from a previous process (including its
+  database connection) survives a restart anyway. Covers every media
+  type's scan/sync status and Backups, not just Games.
+- Verified: seeded a stuck `running=1` row, confirmed a fresh process
+  start resets it (with a clear "Interrupted by a restart" message) and
+  that a normal, non-stuck status table is left untouched.
+
 ## v15.5 — Music nests as a collapsible dropdown in the sidebar
 - Albums/Vinyl under Music in the left sidebar now collapse behind the
   "Music" header instead of always being visible — click it to

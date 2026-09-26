@@ -497,4 +497,22 @@ db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)'
 db.prepare('INSERT OR IGNORE INTO tv_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO backup_status (id, running) VALUES (1, 0)').run();
 
+// A scan/sync/backup's own code always resets `running` back to 0 when it
+// finishes, whether it succeeds or fails — but that code never gets the
+// chance to run if the process itself dies mid-operation (a crash, an
+// unclean container restart, ...), leaving `running` stuck at 1 forever.
+// better-sqlite3's connection (and any actual in-progress work) never
+// survives a process restart anyway, so a `running=1` row still sitting
+// there at startup is always stale, never a real in-progress operation —
+// safe to reset unconditionally every time this module loads.
+const STATUS_TABLES = [
+  'scan_status', 'audiobook_scan_status', 'ebook_scan_status', 'album_scan_status',
+  'vinyl_sync_status', 'games_sync_status', 'tv_scan_status', 'backup_status',
+];
+for (const table of STATUS_TABLES) {
+  db.prepare(
+    `UPDATE ${table} SET running = 0, message = 'Interrupted by a restart — try again.' WHERE running != 0`
+  ).run();
+}
+
 module.exports = db;
