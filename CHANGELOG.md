@@ -5,6 +5,17 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.5 — Music nests as a collapsible dropdown in the sidebar
+- Albums/Vinyl under Music in the left sidebar now collapse behind the
+  "Music" header instead of always being visible — click it to
+  expand/collapse (▸/▾ chevron indicates state). A group containing the
+  page you're currently on always shows expanded regardless of the
+  manual toggle, so navigating into Albums/Vinyl never hides the link
+  you just used.
+- Verified live: starts collapsed on an unrelated page, expands on
+  click, and correctly shows Albums/Vinyl highlighted when landing on
+  either directly.
+
 ## v15.4 — Tabbed Settings instead of one long scrolling page
 - Settings is now tabbed: General (Sidebar + Backups — anything not tied
   to one media type) plus one tab per media type (Movies, Audiobooks,

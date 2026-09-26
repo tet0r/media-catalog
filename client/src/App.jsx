@@ -65,6 +65,10 @@ export default function App() {
   const [version, setVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [hiddenSections, setHiddenSections] = useState({});
+  // Which sidebar groups (Music, so far) are manually expanded — a group
+  // containing the active page is always shown regardless of this, so
+  // this only matters for collapsing/expanding while browsing elsewhere.
+  const [expandedGroups, setExpandedGroups] = useState({});
   const location = useLocation();
 
   const activeSection = FLAT_SECTIONS.find((s) => location.pathname.startsWith(s.path));
@@ -152,6 +156,10 @@ export default function App() {
       })
       .catch(() => {});
   }, [location.pathname]);
+
+  function toggleGroup(key) {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   return (
     <div className="app">
@@ -335,21 +343,35 @@ export default function App() {
             if (s.children) {
               const visibleChildren = s.children.filter((c) => !hiddenSections[c.key]);
               if (visibleChildren.length === 0) return null;
+              // A group containing the page you're actually on always
+              // shows expanded, regardless of the manual toggle — so
+              // navigating into Albums/Vinyl never hides the link you
+              // just used, and collapsing Music elsewhere never hides
+              // where you currently are.
+              const isActiveGroup = visibleChildren.some((c) => c.key === activeSection?.key);
+              const expanded = isActiveGroup || !!expandedGroups[s.key];
               return (
                 <div key={s.key} className="sidebar-group">
-                  <div className="sidebar-group-label">
+                  <button
+                    type="button"
+                    className={`sidebar-group-label${isActiveGroup ? ' active' : ''}`}
+                    onClick={() => toggleGroup(s.key)}
+                    aria-expanded={expanded}
+                  >
                     <span className="sidebar-icon">{s.icon}</span>
                     {s.label}
-                  </div>
-                  {visibleChildren.map((c) => (
-                    <NavLink
-                      key={c.key}
-                      to={c.path}
-                      className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
-                    >
-                      {c.label}
-                    </NavLink>
-                  ))}
+                    <span className="sidebar-group-chevron">{expanded ? '▾' : '▸'}</span>
+                  </button>
+                  {expanded &&
+                    visibleChildren.map((c) => (
+                      <NavLink
+                        key={c.key}
+                        to={c.path}
+                        className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? ' active' : ''}`}
+                      >
+                        {c.label}
+                      </NavLink>
+                    ))}
                 </div>
               );
             }
