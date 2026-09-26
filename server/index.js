@@ -19,6 +19,7 @@ const albumScanRouter = require('./routes/albumScan');
 const tvScanRouter = require('./routes/tvScan');
 const { runSync: runVinylSync } = require('./lib/vinylSync');
 const { runSync: runGamesSync } = require('./lib/gamesSync');
+const { runBackup } = require('./lib/backup');
 
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/audiobooks', require('./routes/audiobooks'));
@@ -36,6 +37,7 @@ app.use('/api/tv-scan', tvScanRouter);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/backups', require('./routes/backups'));
 app.use('/api/version-check', require('./routes/version'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
@@ -82,6 +84,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'tv_auto_scan_enabled',
     intervalKey: 'tv_auto_scan_interval_minutes',
     statusTable: 'tv_scan_status',
+  },
+  {
+    runScan: runBackup,
+    enabledKey: 'backup_auto_enabled',
+    intervalKey: 'backup_auto_interval_minutes',
+    statusTable: 'backup_status',
   },
 ]);
 

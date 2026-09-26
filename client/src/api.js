@@ -408,4 +408,10 @@ export const api = {
   listNotifications: () => fetch(`${BASE}/notifications`).then(handle),
   clearNotification: (id) => fetch(`${BASE}/notifications/${id}`, { method: 'DELETE' }).then(handle),
   clearAllNotifications: () => fetch(`${BASE}/notifications`, { method: 'DELETE' }).then(handle),
+
+  listBackups: () => fetch(`${BASE}/backups`).then(handle),
+  backupStatus: () => fetch(`${BASE}/backups/status`).then(handle),
+  startBackup: () => fetch(`${BASE}/backups`, { method: 'POST' }).then(handle),
+  backupDownloadUrl: (filename) => `${BASE}/backups/${encodeURIComponent(filename)}/download`,
+  deleteBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(handle),
 };

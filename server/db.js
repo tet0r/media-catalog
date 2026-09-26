@@ -172,6 +172,16 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Same shape as every scan/sync status table (running/last_run/message) so
+-- lib/backup.js's runBackup can plug directly into autoScanScheduler.js
+-- with no changes there.
+CREATE TABLE IF NOT EXISTS backup_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  message TEXT
+);
+
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- The catalog ID from whichever source metadata_source names — an
@@ -485,5 +495,6 @@ db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)'
 db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO tv_scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO backup_status (id, running) VALUES (1, 0)').run();
 
 module.exports = db;

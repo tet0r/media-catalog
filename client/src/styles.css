@@ -258,6 +258,13 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 textarea { font-family: inherit; resize: vertical; }
 .actions { display: flex; gap: 10px; margin-top: 10px; }
 
+.backup-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.backup-item {
+  display: flex; align-items: center; gap: 14px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px;
+}
+.backup-item-name { flex: 1; font-family: monospace; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .auto-scan-row {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;

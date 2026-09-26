@@ -1,9 +1,12 @@
 const express = require('express');
 const db = require('../db');
+const backupLib = require('../lib/backup');
 
 const router = express.Router();
 
 const DEFAULT_AUTO_SCAN_INTERVAL_MINUTES = 60;
+const DEFAULT_BACKUP_INTERVAL_MINUTES = 1440; // daily
+const DEFAULT_BACKUP_RETENTION_COUNT = 14;
 
 // Every leaf media-type key the sidebar can show/hide independently —
 // kept as one list so a future media type only needs adding here, not in
@@ -57,6 +60,11 @@ router.get('/', (req, res) => {
     ...Object.fromEntries(
       SIDEBAR_SECTION_KEYS.map((key) => [`sidebar_hidden_${key}`, map[`sidebar_hidden_${key}`] === 'true'])
     ),
+    backup_auto_enabled: map.backup_auto_enabled === 'true',
+    backup_auto_interval_minutes: Number(map.backup_auto_interval_minutes) || DEFAULT_BACKUP_INTERVAL_MINUTES,
+    backup_retention_count: Number(map.backup_retention_count) || DEFAULT_BACKUP_RETENTION_COUNT,
+    backup_dir_configured: !!process.env.BACKUP_DIR,
+    backup_dir: backupLib.BACKUP_DIR,
   });
 });
 
@@ -75,7 +83,7 @@ router.put('/', (req, res) => {
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
     tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
-    sidebar_hidden,
+    sidebar_hidden, backup_auto_enabled, backup_auto_interval_minutes, backup_retention_count,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -106,6 +114,12 @@ router.put('/', (req, res) => {
     for (const key of SIDEBAR_SECTION_KEYS) {
       if (key in sidebar_hidden) upsert(`sidebar_hidden_${key}`, sidebar_hidden[key] ? 'true' : 'false');
     }
+  }
+  if (typeof backup_auto_enabled === 'boolean') upsert('backup_auto_enabled', backup_auto_enabled ? 'true' : 'false');
+  upsertInterval('backup_auto_interval_minutes', backup_auto_interval_minutes);
+  if (backup_retention_count !== undefined && backup_retention_count !== null && backup_retention_count !== '') {
+    const count = Number(backup_retention_count);
+    if (Number.isFinite(count) && count > 0) upsert('backup_retention_count', String(Math.round(count)));
   }
   res.json({ ok: true });
 });

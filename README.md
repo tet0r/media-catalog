@@ -286,6 +286,9 @@ directly into Portainer — no repo access from the Docker host needed.
    - `LAUNCHBOX_SYNC_PATH` = if using Games, a path *on the Docker host
      itself* (not a network share) with your synced LaunchBox `Data`/
      `Images` folders — see **Games** above
+   - `BACKUP_SYNC_PATH` = a path *on the Docker host itself*, genuinely
+     independent of wherever `./data` lands, to store database backups —
+     see **Backups** above
 
 4. Click **Deploy the stack**. Portainer pulls
    `ghcr.io/tet0r/media-catalog:latest` and starts the container — no
@@ -366,8 +369,57 @@ comma (the option string is comma-delimited) — change the password if so.
 ## Data & persistence
 
 Everything (the SQLite database and cached poster/cover images) lives under
-`./data` next to `docker-compose.yml`, via the `/data` volume. Back that
-folder up if you want to preserve your collection.
+`./data` next to `docker-compose.yml`, via the `/data` volume.
+
+**If you're deploying via Portainer's web editor, read this carefully.** A
+relative path like `./data` resolves to a folder Portainer manages for
+you — on Windows with Docker Desktop, typically somewhere under Docker
+Desktop's own internal WSL2 storage, not a location you'd normally browse
+to. Some stack changes (adding/removing a top-level `volumes:` entry, for
+example) can cause Portainer/Compose to recreate that folder from scratch
+rather than reusing the existing one — silently starting you over with an
+empty database while the old one (with your whole collection in it) is
+abandoned in a now-orphaned folder that eventually gets garbage-collected.
+Nothing in the app or in Docker warns you when this happens; the container
+just starts up fine with a fresh, empty `/data`.
+
+This isn't hypothetical — it's exactly what **Backups** (below) exists to
+protect against. If you want stronger protection than a backup rotation
+alone, consider pointing `./data` at an explicit host path you control
+(e.g. a folder on a NAS share) instead of a relative one, so its identity
+doesn't depend on Portainer's own internal bookkeeping.
+
+## Backups
+
+Settings has a Backups section: a manual "Back Up Now" button, and an
+optional automatic schedule (every 6/12 hours, daily, every 3 days, or
+weekly), with a configurable retention count (oldest backups beyond that,
+manual and automatic together, get deleted after each new one).
+
+Only the database gets backed up — your collection, matches, personal
+ratings/notes/tags — not cached posters/covers, which are cheap to
+re-fetch on a metadata refresh (aside from a manually-uploaded custom
+cover, a smaller edge case). Each backup uses SQLite's own online backup
+mechanism rather than a plain file copy, so it's always a complete,
+consistent snapshot regardless of what's been checkpointed to disk yet —
+in particular, a raw copy of just `library.db` while the app is running in
+WAL mode can miss recent writes still sitting in `library.db-wal`; this
+doesn't have that problem.
+
+**Set `BACKUP_DIR`/`BACKUP_SYNC_PATH` to somewhere genuinely independent of
+`./data`** — a different share, a different disk, anywhere that wouldn't be
+affected by the exact scenario described in **Data & persistence** above.
+A backup that lives inside the same managed folder as the database it's
+backing up doesn't protect against that folder itself being reset. Backups
+are downloadable from the Settings page too, so you can pull a copy
+somewhere off this host entirely (a genuine off-site copy) whenever you like.
+
+To restore from a backup: stop the container, replace `library.db` (and
+delete any `library.db-wal`/`library.db-shm` sitting next to it) in your
+data folder with the backup file, then start the container again. There's
+no one-click restore in the app itself — restoring is a deliberate,
+infrequent action, and doing it by hand avoids needing to trust an
+in-app "overwrite my current database" button.
 
 ## Local development (without Docker)
 

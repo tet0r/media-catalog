@@ -25,9 +25,27 @@ services:
       # somewhere on this machine (e.g. via a scheduled robocopy/rsync/
       # Syncthing job) rather than mounting the other PC's share live.
       - LAUNCHBOX_DIR=/launchbox
+      # Where scheduled/manual backups of the database land — see
+      # "Backups" in the README. Deliberately a SEPARATE bind mount from
+      # ./data below: if this pointed inside /data instead, a stack
+      # recreation that abandons the old ./data folder (see the warning on
+      # that volume below) would take the backups with it too, defeating
+      # the whole point.
+      - BACKUP_DIR=/backups
     volumes:
       # App data: the SQLite database + cached posters/covers. Keep this on
       # a persistent path so your collection survives container rebuilds.
+      # WARNING if deploying via Portainer's web editor: a relative path
+      # like "./data" resolves to a folder Portainer manages for you
+      # (typically somewhere under Docker Desktop's own internal storage on
+      # Windows), and some stack changes cause Portainer/Compose to
+      # recreate that folder from scratch rather than reusing the old one
+      # — silently starting you over with an empty database, with the old
+      # data abandoned (and eventually garbage-collected) in the old
+      # folder. This is exactly what Backups (see README) protects
+      # against, since BACKUP_DIR above is a separate mount. Consider
+      # pointing this at an explicit host path you control instead of a
+      # relative one if you want stronger protection than that alone.
       - ./data:/data
       # Your movie library, split across three network shares. These are
       # named volumes (defined below) backed by the CIFS/SMB driver, NOT
@@ -54,6 +72,14 @@ services:
       # C:\LaunchBoxSync if you've synced it there. Change the host side
       # (left of the colon) to wherever you keep that synced copy.
       - ${LAUNCHBOX_SYNC_PATH:-./launchbox}:/launchbox:ro
+      # Where backups actually land — set BACKUP_SYNC_PATH to a location
+      # genuinely independent of ./data above (a different share, a
+      # different disk, anywhere that wouldn't be wiped out by the same
+      # event that could reset ./data). Defaults to a local ./backups
+      # folder if unset, which is better than nothing but doesn't protect
+      # against the Portainer stack-recreation scenario described above,
+      # since it's just as "managed" as ./data is.
+      - ${BACKUP_SYNC_PATH:-./backups}:/backups
     restart: unless-stopped
 
 volumes:

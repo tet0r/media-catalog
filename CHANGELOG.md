@@ -5,6 +5,35 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.0 — Scheduled and manual database backups
+- New Backups section in Settings: a manual "Back Up Now" button and an
+  optional schedule (every 6/12 hours, daily, every 3 days, or weekly),
+  with a configurable retention count that prunes the oldest backups
+  (manual and automatic together) after each new one. Backups are listed
+  with size/date, downloadable individually, and deletable.
+- Only the database is backed up, not cached posters/covers (cheap to
+  re-fetch on a metadata refresh) — lib/backup.js uses better-sqlite3's
+  own online backup API rather than a plain file copy, since a raw copy
+  of `library.db` alone can miss recent writes still sitting in
+  `library.db-wal` under WAL mode.
+- New `BACKUP_DIR`/`BACKUP_SYNC_PATH` env vars (mirroring the
+  `LAUNCHBOX_DIR`/`LAUNCHBOX_SYNC_PATH` pattern) — deliberately a
+  *separate* mount from `./data`, since the whole point is surviving a
+  scenario where `./data` itself gets reset. README's "Data & persistence"
+  section now documents that scenario directly: a Portainer stack update
+  can cause Compose to recreate a relative bind-mount path like `./data`
+  from scratch, silently abandoning the old (populated) folder — this
+  isn't hypothetical, it's a real failure mode this project hit.
+- Restoring is documented as a manual process (stop the container, swap
+  in the backup file, restart) rather than a one-click in-app action,
+  deliberately — a destructive "overwrite the live database" button is a
+  bigger risk than the inconvenience of doing it by hand.
+- Verified: manual backup creation, listing, download (content-length
+  matches file size), deletion, and path-traversal safety on the
+  filename parameter all confirmed directly against a running server;
+  the Settings UI confirmed live (backup created and listed correctly,
+  settings persistence round-tripped).
+
 ## v14.0 — Notifications, sidebar fixes
 - New notification bell in the top bar (next to the nav links, on every
   page): every item added to any media type — a scan/sync auto-match or a

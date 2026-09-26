@@ -11,6 +11,14 @@ const INTERVAL_OPTIONS = [
   { label: 'Every 24 hours', value: 1440 },
 ];
 
+const BACKUP_INTERVAL_OPTIONS = [
+  { label: 'Every 6 hours', value: 360 },
+  { label: 'Every 12 hours', value: 720 },
+  { label: 'Daily', value: 1440 },
+  { label: 'Every 3 days', value: 4320 },
+  { label: 'Weekly', value: 10080 },
+];
+
 const SIDEBAR_SECTIONS = [
   { key: 'movies', label: 'Movies' },
   { key: 'audiobooks', label: 'Audiobooks' },
@@ -21,10 +29,10 @@ const SIDEBAR_SECTIONS = [
   { key: 'tv', label: 'TV Shows' },
 ];
 
-function IntervalSelect({ value, onChange, disabled }) {
+function IntervalSelect({ value, onChange, disabled, options = INTERVAL_OPTIONS }) {
   return (
     <select value={value} onChange={(e) => onChange(Number(e.target.value))} disabled={disabled} className="auto-scan-interval">
-      {INTERVAL_OPTIONS.map((o) => (
+      {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
@@ -63,6 +71,14 @@ export default function Settings() {
   const [tvAutoScanInterval, setTvAutoScanInterval] = useState(60);
   const [tvAutoPruneMissing, setTvAutoPruneMissing] = useState(false);
   const [sidebarHidden, setSidebarHidden] = useState({});
+  const [backupAutoEnabled, setBackupAutoEnabled] = useState(false);
+  const [backupAutoInterval, setBackupAutoInterval] = useState(1440);
+  const [backupRetentionCount, setBackupRetentionCount] = useState(14);
+  const [backupDirConfigured, setBackupDirConfigured] = useState(false);
+  const [backupDir, setBackupDir] = useState('');
+  const [backups, setBackups] = useState([]);
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [backingUp, setBackingUp] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -116,12 +132,59 @@ export default function Settings() {
         setSidebarHidden(
           Object.fromEntries(SIDEBAR_SECTIONS.map(({ key }) => [key, !!s[`sidebar_hidden_${key}`]]))
         );
+        setBackupAutoEnabled(!!s.backup_auto_enabled);
+        setBackupAutoInterval(s.backup_auto_interval_minutes || 1440);
+        setBackupRetentionCount(s.backup_retention_count || 14);
+        setBackupDirConfigured(!!s.backup_dir_configured);
+        setBackupDir(s.backup_dir || '');
       })
       .catch((err) => setError(err.message));
   }, []);
 
   function toggleSidebarSection(key) {
     setSidebarHidden((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  const refreshBackups = useCallback(() => {
+    api.listBackups().then(setBackups).catch(() => {});
+    api.backupStatus().then(setBackupStatus).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshBackups();
+    const interval = setInterval(refreshBackups, 5000);
+    return () => clearInterval(interval);
+  }, [refreshBackups]);
+
+  async function backUpNow() {
+    setBackingUp(true);
+    setError(null);
+    try {
+      await api.startBackup();
+      // Poll briefly until it finishes rather than waiting for the next
+      // 5s tick, so the list/status update as soon as it's actually done.
+      for (let i = 0; i < 30; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const s = await api.backupStatus();
+        setBackupStatus(s);
+        if (!s.running) break;
+      }
+      refreshBackups();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBackingUp(false);
+    }
+  }
+
+  async function removeBackup(filename) {
+    if (!confirm(`Delete backup "${filename}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteBackup(filename);
+      setBackups((list) => list.filter((b) => b.filename !== filename));
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   const refreshBulkStatus = useCallback(() => {
@@ -323,6 +386,9 @@ export default function Settings() {
         tv_auto_scan_interval_minutes: tvAutoScanInterval,
         tv_auto_prune_missing: tvAutoPruneMissing,
         sidebar_hidden: sidebarHidden,
+        backup_auto_enabled: backupAutoEnabled,
+        backup_auto_interval_minutes: backupAutoInterval,
+        backup_retention_count: backupRetentionCount,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -352,6 +418,75 @@ export default function Settings() {
           </div>
         ))}
       </div>
+
+      <hr />
+      <h2>Backups</h2>
+      <p className="muted">
+        Backs up just the database (your collection, matches, ratings, notes, tags — not cached
+        posters/covers, which are cheap to re-fetch on a metadata refresh). Uses SQLite's own
+        online backup mechanism, so it's always a complete, consistent snapshot regardless of
+        what's been checkpointed to disk yet.
+      </p>
+      <p className="muted">
+        <strong>Point <code>BACKUP_DIR</code> at a location that doesn't depend on this stack's own
+        data folder</strong> — ideally a different share or disk entirely. A Docker/Portainer stack
+        recreation (e.g. after changing which folders are mounted) can silently start a brand-new,
+        empty data folder and abandon the old one; a backup living inside that same folder wouldn't
+        survive that either.
+      </p>
+      <p className="muted">
+        Current backup location: <code>{backupDir || '...'}</code>
+        {' — '}
+        {backupDirConfigured ? 'configured via BACKUP_DIR' : 'using the default (inside this stack\'s own data folder — see above)'}.
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input type="checkbox" checked={backupAutoEnabled} onChange={(e) => setBackupAutoEnabled(e.target.checked)} />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically back up</span>
+        <IntervalSelect value={backupAutoInterval} onChange={setBackupAutoInterval} disabled={!backupAutoEnabled} options={BACKUP_INTERVAL_OPTIONS} />
+      </div>
+
+      <div className="form-grid">
+        <label>
+          Keep this many backups
+          <input
+            type="number"
+            min="1"
+            value={backupRetentionCount}
+            onChange={(e) => setBackupRetentionCount(Number(e.target.value) || 1)}
+            style={{ width: 100 }}
+          />
+        </label>
+      </div>
+      <p className="muted">Oldest backups beyond this count (manual and automatic together) are deleted after each new one.</p>
+
+      <button onClick={backUpNow} disabled={backingUp || backupStatus?.running}>
+        {backingUp || backupStatus?.running ? 'Backing up...' : 'Back Up Now'}
+      </button>
+      {backupStatus?.message && <p className="muted"> {backupStatus.message}</p>}
+
+      {backups.length === 0 ? (
+        <p className="muted">No backups yet.</p>
+      ) : (
+        <div className="backup-list">
+          {backups.map((b) => (
+            <div key={b.filename} className="backup-item">
+              <span className="backup-item-name">{b.filename}</span>
+              <span className="muted">{new Date(b.created_at).toLocaleString()}</span>
+              <span className="muted">{(b.size / 1024).toFixed(0)} KB</span>
+              <a className="muted-btn" href={api.backupDownloadUrl(b.filename)} download>
+                Download
+              </a>
+              <button className="muted-btn" onClick={() => removeBackup(b.filename)}>
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <hr />
       <h2>Movies</h2>
