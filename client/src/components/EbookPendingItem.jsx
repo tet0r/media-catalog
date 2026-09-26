@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import ZoomableImage from './ZoomableImage.jsx';
 
 export default function EbookPendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
   const [query, setQuery] = useState(item.guessed_title || '');
@@ -79,7 +80,7 @@ export default function EbookPendingItem({ item, busy, onResolve, onIgnore, sele
         {candidates.length === 0 && <span className="muted">No Open Library matches found.</span>}
         {candidates.map((c) => (
           <div key={c.key} className="candidate">
-            {c.cover_url ? <img src={c.cover_url} alt={c.title} /> : null}
+            {c.cover_url ? <ZoomableImage src={c.cover_url} alt={c.title} /> : null}
             <span>{c.title} — {(c.authors || []).join(', ')}{c.year ? ` (${c.year})` : ''}</span>
             <button disabled={busy} onClick={() => onResolve(c.key, false)}>
               Use this

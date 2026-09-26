@@ -5,6 +5,27 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.1 — Click a Needs Review thumbnail to enlarge it
+- Every media type's Needs Review candidate list (Movies, Audiobooks,
+  Ebooks, Albums, TV) now lets you click a candidate's small poster/cover
+  thumbnail to see it full-size in an overlay — useful when two
+  candidates' thumbnails look too similar/small to tell apart. Click
+  anywhere else to dismiss it; clicking the enlarged image itself doesn't
+  close it. New shared components/ZoomableImage.jsx, used directly by
+  four of the five pending-item components and folded into
+  components/CoverImage.jsx for Albums (which also picks up the same
+  behavior in Add Album and AlbumDetail's "Search Again", both already
+  built on CoverImage).
+- The enlarged image renders via a React portal straight to
+  `document.body` rather than in place — several ancestors (`.candidate`,
+  `.poster`, `.cast-member`, ...) already have their own `img { width:
+  ...; height: ... }` rules sized for a small thumbnail, which would
+  otherwise have clamped the enlarged copy down to thumbnail size too as
+  a DOM descendant of the same container.
+- Verified live: enlarging a candidate thumbnail on Movies' Needs Review
+  page renders it full-size; clicking elsewhere dismisses it; clicking
+  the enlarged image itself does not.
+
 ## v15.0 — Scheduled and manual database backups
 - New Backups section in Settings: a manual "Back Up Now" button and an
   optional schedule (every 6/12 hours, daily, every 3 days, or weekly),

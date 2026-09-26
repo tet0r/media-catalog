@@ -227,6 +227,11 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
   display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
 }
+.image-zoom-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); cursor: zoom-out;
+  display: flex; align-items: center; justify-content: center; z-index: 60; padding: 24px;
+}
+.image-zoom-large { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 6px; cursor: default; }
 .modal {
   background: var(--bg-alt); border: 1px solid var(--border); border-radius: 10px;
   padding: 20px; max-width: 800px; max-height: 85vh; overflow-y: auto; width: 100%;

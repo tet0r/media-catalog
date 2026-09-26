@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import ZoomableImage from './ZoomableImage.jsx';
 
 const SOURCES = [
   { key: 'audible', label: 'Audible', search: api.searchAudible, lookupUrl: api.lookupAudibleUrl, urlPlaceholder: 'Paste an audible.com product URL' },
@@ -110,7 +111,7 @@ export default function AudiobookPendingItem({ item, busy, onResolve, onIgnore, 
         {candidates.length === 0 && <span className="muted">No {active.label} matches found.</span>}
         {candidates.map((c) => (
           <div key={c.asin} className="candidate">
-            {c.cover_url ? <img src={c.cover_url} alt={c.title} /> : null}
+            {c.cover_url ? <ZoomableImage src={c.cover_url} alt={c.title} /> : null}
             <span>{c.title} — {(c.authors || []).join(', ')}</span>
             <button disabled={busy} onClick={() => onResolve(c.asin, false, activeKey)}>
               Use this

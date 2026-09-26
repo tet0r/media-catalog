@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import ZoomableImage from './ZoomableImage.jsx';
 
 export default function TvPendingItem({ item, busy, onResolve, onIgnore, selected, onToggleSelect }) {
   const [query, setQuery] = useState(item.guessed_title || '');
@@ -83,7 +84,7 @@ export default function TvPendingItem({ item, busy, onResolve, onIgnore, selecte
         {candidates.length === 0 && <span className="muted">No TheTVDB matches found.</span>}
         {candidates.map((c) => (
           <div key={c.tvdb_id} className="candidate">
-            {c.poster_url ? <img src={c.poster_url} alt={c.title} /> : null}
+            {c.poster_url ? <ZoomableImage src={c.poster_url} alt={c.title} /> : null}
             <span>{c.title} ({c.year})</span>
             <button disabled={busy} onClick={() => onResolve(c.tvdb_id, false)}>
               Use this

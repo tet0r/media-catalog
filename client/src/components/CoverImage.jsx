@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ZoomableImage from './ZoomableImage.jsx';
 
 // Unlike TMDB/Audible/Open Library, MusicBrainz's search results don't
 // confirm the Cover Art Archive actually has an image for a given
@@ -13,5 +14,5 @@ export default function CoverImage({ url, alt }) {
   if (!url || failed) {
     return <div className="no-poster">{alt}</div>;
   }
-  return <img src={url} alt={alt} onError={() => setFailed(true)} />;
+  return <ZoomableImage src={url} alt={alt} onError={() => setFailed(true)} />;
 }
