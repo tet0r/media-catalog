@@ -71,12 +71,34 @@ function pruneOldBackups() {
 // library.db-wal. This is exactly the failure mode this whole feature
 // exists to protect against: a snapshot taken this way is always a
 // complete, consistent copy regardless of what's checkpointed yet.
+//
+// SQLite's backup API opens its *destination* as a real database too,
+// subject to the same file-locking primitives as any other — and network
+// filesystems (CIFS/SMB/NFS) are notoriously unreliable at supporting
+// those, which is why SQLite's own docs warn against putting a database
+// on one at all. If BACKUP_DIR is a network share (as it often will be,
+// deliberately, per the README), backing up straight into it can fail
+// silently or outright. So the SQLite-level step always happens on local,
+// reliable storage first (a scratch file next to the live database),
+// and only the finished, already-closed file gets copied onto BACKUP_DIR
+// — an ordinary byte copy needs none of SQLite's locking, so a network
+// share is fine for that part even though it isn't for the first part.
 async function createBackup() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `library-${stamp}.db`;
   const dest = path.join(BACKUP_DIR, filename);
-  await db.backup(dest);
+
+  const scratchDir = path.join(DATA_DIR, '.backup-scratch');
+  fs.mkdirSync(scratchDir, { recursive: true });
+  const scratchFile = path.join(scratchDir, filename);
+  try {
+    await db.backup(scratchFile);
+    fs.copyFileSync(scratchFile, dest);
+  } finally {
+    try { fs.unlinkSync(scratchFile); } catch { /* best-effort cleanup */ }
+  }
+
   pruneOldBackups();
   const stat = fs.statSync(dest);
   return { filename, size: stat.size, created_at: stat.mtime.toISOString() };

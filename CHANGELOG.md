@@ -5,6 +5,24 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.3 — Fix backups failing when BACKUP_DIR is a network share
+- `Backup failed: ENOENT: no such file or directory, stat '/backups/library-....db'`
+  when `BACKUP_DIR` is a CIFS/SMB share (exactly the kind of location the
+  README recommends pointing it at). SQLite's online backup API opens its
+  *destination* as a real database too, subject to the same file-locking
+  primitives as any other — network filesystems are notoriously unreliable
+  at supporting those, which is why SQLite's own docs warn against putting
+  a database on one at all.
+- lib/backup.js now always does the actual SQLite-level backup on local,
+  reliable storage first (a scratch file next to the live database,
+  cleaned up afterward), then copies the finished, already-closed file
+  onto `BACKUP_DIR` with an ordinary byte copy — which needs none of
+  SQLite's locking, so a network share is fine for that part even though
+  it isn't for the SQLite-level part.
+- Verified against a local filesystem (can't reproduce the real CIFS
+  failure directly, but confirmed the refactor doesn't change behavior
+  there): backup completes, correct size, scratch file cleaned up after.
+
 ## v15.2 — One-click Restore for backups
 - Each backup in Settings now has a Restore button — no more manually
   swapping files on the Docker host. Confirms first (this replaces your
