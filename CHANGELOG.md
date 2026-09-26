@@ -5,6 +5,32 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v15.2 — One-click Restore for backups
+- Each backup in Settings now has a Restore button — no more manually
+  swapping files on the Docker host. Confirms first (this replaces your
+  current collection with whatever's in that backup), then automatically
+  takes a safety snapshot of the current state before restoring, so
+  restoring the wrong one by mistake is itself recoverable.
+- Restoring closes the app's database connection and exits the process —
+  there's no cheap way to hot-swap the dozens of modules that each hold
+  their own `require('../db')` reference to the live connection, so this
+  leans on the platform's restart policy (`restart: unless-stopped`,
+  already the compose file's default) to bring it back up fresh against
+  the restored file. The Settings page polls for it to come back and
+  reloads automatically; if it's not running under a restart policy,
+  you'd need to start it again by hand (documented in the README).
+- The risky I/O (copying the backup into place) happens *before* the
+  live connection is closed, and the final swap is an atomic rename —
+  if the copy fails, the running app hasn't been touched at all and the
+  error is still reportable normally.
+- Verified: a two-process test (since restoring necessarily ends the
+  process making the request) confirmed a changed value was correctly
+  reverted after restore+restart, that the automatic pre-restore safety
+  snapshot appeared in the backup list, and that the app came back up
+  healthy. Also verified live in the browser: clicking Restore shows a
+  "Restarting..." message, and the page auto-reloads once the restarted
+  server responds again.
+
 ## v15.1 — Click a Needs Review thumbnail to enlarge it
 - Every media type's Needs Review candidate list (Movies, Audiobooks,
   Ebooks, Albums, TV) now lets you click a candidate's small poster/cover

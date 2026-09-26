@@ -39,4 +39,19 @@ router.delete('/:filename', (req, res) => {
   }
 });
 
+// Restoring closes this process's only database connection (see
+// lib/backup.js), so nothing else in this process can serve another
+// request correctly afterward — the response has to go out first, then
+// the process exits and relies on the platform's restart policy
+// (docker-compose's `restart: unless-stopped`) to come back up fresh.
+router.post('/:filename/restore', async (req, res) => {
+  try {
+    await backup.restoreBackup(req.params.filename);
+    res.json({ ok: true, restarting: true });
+    setTimeout(() => process.exit(0), 300);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

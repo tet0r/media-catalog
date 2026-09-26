@@ -79,6 +79,8 @@ export default function Settings() {
   const [backups, setBackups] = useState([]);
   const [backupStatus, setBackupStatus] = useState(null);
   const [backingUp, setBackingUp] = useState(false);
+  const [restoringFilename, setRestoringFilename] = useState(null);
+  const [restoreWaitMessage, setRestoreWaitMessage] = useState(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -185,6 +187,51 @@ export default function Settings() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  async function restoreFromBackup(filename) {
+    if (
+      !confirm(
+        `Restore "${filename}"? This replaces your CURRENT collection with what's in this backup — ` +
+          `anything added or changed since won't be there anymore. A safety snapshot of the current ` +
+          `state is taken automatically first, so that's recoverable if this was a mistake. The app ` +
+          `will restart itself right after.`
+      )
+    ) {
+      return;
+    }
+    setRestoringFilename(filename);
+    setError(null);
+    try {
+      await api.restoreBackup(filename);
+    } catch (err) {
+      setError(err.message);
+      setRestoringFilename(null);
+      return;
+    }
+    // The server closes its database connection and exits right after
+    // responding, relying on the platform's restart policy (docker-
+    // compose's `restart: unless-stopped`) to bring a fresh process back
+    // up — poll for it to come back rather than assuming a fixed delay.
+    setRestoreWaitMessage('Restarting...');
+    const start = Date.now();
+    const timeoutMs = 60000;
+    while (Date.now() - start < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          window.location.reload();
+          return;
+        }
+      } catch {
+        // Not back up yet — expected while the process restarts.
+      }
+    }
+    setRestoreWaitMessage(
+      "The app hasn't come back after a minute. If it's not running under a restart policy " +
+        '(e.g. docker-compose\'s `restart: unless-stopped`), you may need to start it manually.'
+    );
   }
 
   const refreshBulkStatus = useCallback(() => {
@@ -463,10 +510,14 @@ export default function Settings() {
       </div>
       <p className="muted">Oldest backups beyond this count (manual and automatic together) are deleted after each new one.</p>
 
-      <button onClick={backUpNow} disabled={backingUp || backupStatus?.running}>
+      <button onClick={backUpNow} disabled={backingUp || backupStatus?.running || !!restoringFilename}>
         {backingUp || backupStatus?.running ? 'Backing up...' : 'Back Up Now'}
       </button>
       {backupStatus?.message && <p className="muted"> {backupStatus.message}</p>}
+
+      {restoreWaitMessage && (
+        <p className="warning">⚠ {restoreWaitMessage}</p>
+      )}
 
       {backups.length === 0 ? (
         <p className="muted">No backups yet.</p>
@@ -480,7 +531,10 @@ export default function Settings() {
               <a className="muted-btn" href={api.backupDownloadUrl(b.filename)} download>
                 Download
               </a>
-              <button className="muted-btn" onClick={() => removeBackup(b.filename)}>
+              <button className="muted-btn" disabled={!!restoringFilename} onClick={() => restoreFromBackup(b.filename)}>
+                {restoringFilename === b.filename ? 'Restoring...' : 'Restore'}
+              </button>
+              <button className="muted-btn" disabled={!!restoringFilename} onClick={() => removeBackup(b.filename)}>
                 Delete
               </button>
             </div>

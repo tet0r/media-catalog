@@ -414,4 +414,5 @@ export const api = {
   startBackup: () => fetch(`${BASE}/backups`, { method: 'POST' }).then(handle),
   backupDownloadUrl: (filename) => `${BASE}/backups/${encodeURIComponent(filename)}/download`,
   deleteBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(handle),
+  restoreBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}/restore`, { method: 'POST' }).then(handle),
 };

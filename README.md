@@ -414,12 +414,23 @@ backing up doesn't protect against that folder itself being reset. Backups
 are downloadable from the Settings page too, so you can pull a copy
 somewhere off this host entirely (a genuine off-site copy) whenever you like.
 
-To restore from a backup: stop the container, replace `library.db` (and
-delete any `library.db-wal`/`library.db-shm` sitting next to it) in your
-data folder with the backup file, then start the container again. There's
-no one-click restore in the app itself — restoring is a deliberate,
-infrequent action, and doing it by hand avoids needing to trust an
-in-app "overwrite my current database" button.
+Each backup also has a **Restore** button. This is a genuinely
+destructive action — it replaces your current collection with whatever
+was in that backup, so anything added or changed since is gone — so it
+asks you to confirm first, and automatically takes a safety snapshot of
+the current state right before restoring (so restoring the wrong one by
+mistake is itself recoverable: just restore that safety snapshot back).
+Restoring closes the app's database connection and exits the process,
+relying on the platform's restart policy (`restart: unless-stopped` in
+`docker-compose.yml`, already the default) to bring it back up fresh
+against the restored file — the Settings page waits for it to come back
+and reloads automatically. If you're running this without a process
+manager that restarts it for you, you'll need to start it again by hand.
+
+You can also restore entirely by hand if you'd rather not use the button:
+stop the container, replace `library.db` (and delete any
+`library.db-wal`/`library.db-shm` sitting next to it) in your data folder
+with the backup file, then start the container again.
 
 ## Local development (without Docker)
 

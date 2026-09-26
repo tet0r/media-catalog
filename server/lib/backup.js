@@ -108,4 +108,41 @@ function deleteBackup(filename) {
   fs.unlinkSync(safeBackupPath(filename));
 }
 
-module.exports = { createBackup, runBackup, listBackups, deleteBackup, safeBackupPath, BACKUP_DIR };
+// Restoring means replacing the file this process's live `db` connection
+// already has open — better-sqlite3 doesn't expect its underlying file to
+// be swapped out for a different database while a connection is open, so
+// this closes that connection first. Every other module holds its own
+// `require('../db')` reference to the now-closed instance, and there's no
+// cheap way to hot-swap that everywhere it's cached — so rather than try,
+// this closes the process down (see routes/backups.js) and relies on the
+// platform's restart policy (docker-compose's `restart: unless-stopped`)
+// to bring it back up fresh against the restored file. That means this is
+// a genuinely rare, deliberate action, not a background one.
+async function restoreBackup(filename) {
+  const src = safeBackupPath(filename);
+  if (!fs.existsSync(src)) throw new Error('Backup not found');
+
+  // Safety net: snapshot whatever's live right now, before it's
+  // overwritten — restoring the wrong file by mistake is itself
+  // recoverable this way. Best-effort: a failure here (e.g. disk full)
+  // shouldn't block a restore the user deliberately asked for.
+  try { await createBackup(); } catch { /* see above */ }
+
+  const dbPath = path.join(DATA_DIR, 'library.db');
+  const tmpPath = `${dbPath}.restoring`;
+  // Copy to a temp file BEFORE touching the live db or closing the
+  // connection — if this fails (disk full, permissions), the running app
+  // hasn't been disturbed at all, and the error above is still reportable.
+  fs.copyFileSync(src, tmpPath);
+
+  db.close();
+  // Drop the current WAL/SHM sidecar files, if any — otherwise SQLite
+  // would try to replay leftover WAL frames from the PREVIOUS database
+  // against the newly-restored one on next open.
+  for (const suffix of ['-wal', '-shm']) {
+    try { fs.unlinkSync(dbPath + suffix); } catch { /* fine if missing */ }
+  }
+  fs.renameSync(tmpPath, dbPath); // atomic on the same filesystem
+}
+
+module.exports = { createBackup, runBackup, listBackups, deleteBackup, restoreBackup, safeBackupPath, BACKUP_DIR };
