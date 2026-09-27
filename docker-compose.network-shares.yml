@@ -1,0 +1,99 @@
+
+# Use THIS file instead of docker-compose.yml if your media library lives
+# on a different machine than the one running Docker (a NAS, another PC)
+# and you want to mount its SMB/CIFS shares directly, rather than syncing
+# a local copy. See "Network shares" in the README for the full setup —
+# in short: Docker Desktop's WSL2 backend is unreliable with a plain
+# "//server/share" bind mount, so this mounts each share as a named
+# volume backed by the Linux VM's own CIFS client instead, which works
+# reliably. None of your actual folder names/paths live in this file —
+# they're all environment variables (SMB_HOST, SMB_SHARE1/2/3, etc.), set
+# in .env or in Portainer's stack environment variables.
+services:
+  media-catalog:
+    image: ghcr.io/tet0r/media-catalog:latest
+    container_name: media-catalog
+    ports:
+      - "8080:8080"
+    environment:
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      # MOVIES_DIR must list every movie mount point below (comma-separated,
+      # no spaces) — each volume only gets scanned if it's named here too.
+      - MOVIES_DIR=/movies,/movies2,/movies3
+      - AUDIOBOOKS_DIR=/audiobooks
+      - EBOOKS_DIR=/ebooks
+      - ALBUMS_DIR=/albums
+      - TV_DIR=/tv
+      # Local sync target for LaunchBox's Data/Images folders — see "Games"
+      # in the README. Unlike the other _DIR vars, this is a plain local
+      # folder (bind-mounted below), not a network share.
+      - LAUNCHBOX_DIR=/launchbox
+      - BACKUP_DIR=/backups
+    volumes:
+      # App data: the SQLite database + cached posters/covers.
+      # WARNING if deploying via Portainer's web editor: a relative path
+      # like "./data" resolves to a folder Portainer manages for you, and
+      # some stack changes can cause it to get recreated from scratch —
+      # see "Data & persistence" in the README.
+      - ./data:/data
+      # Your movie library, split across up to three network shares —
+      # named volumes (defined below) backed by the CIFS/SMB driver, NOT
+      # plain bind mounts. Drop movies2/movies3 above and below if you
+      # only need one.
+      - movies1:/movies:ro
+      - movies2:/movies2:ro
+      - movies3:/movies3:ro
+      - audiobooks1:/audiobooks:ro
+      - ebooks1:/ebooks:ro
+      - albums1:/albums:ro
+      - tv1:/tv:ro
+      # Synced local copy of LaunchBox's Data/Images folders — a plain
+      # bind mount, since this is meant to live on this Docker host itself.
+      - ${LAUNCHBOX_SYNC_PATH:-./launchbox}:/launchbox:ro
+      # Backups — point BACKUP_SYNC_PATH somewhere independent of ./data.
+      - ${BACKUP_SYNC_PATH:-./backups}:/backups
+    restart: unless-stopped
+
+volumes:
+  movies1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE1}"
+  movies2:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE2}"
+  movies3:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE3}"
+  audiobooks1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_AUDIOBOOKS}"
+  ebooks1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_EBOOKS}"
+  albums1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_ALBUMS}"
+  tv1:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=${SMB_USER},password=${SMB_PASS},vers=3.0,ro,file_mode=0444,dir_mode=0555"
+      device: "//${SMB_HOST}/${SMB_SHARE_TV}"
