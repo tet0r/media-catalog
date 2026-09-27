@@ -82,13 +82,6 @@ export const api = {
     }).then(handle),
   removeMovieFromCollection: (id, movieId) =>
     fetch(`${BASE}/collections/${id}/movies/${movieId}`, { method: 'DELETE' }).then(handle),
-  listStudioCandidates: () => fetch(`${BASE}/collections/studio-candidates`).then(handle),
-  enableStudioCollection: (company) =>
-    fetch(`${BASE}/collections/studio`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company }),
-    }).then(handle),
   searchTpdbPosters: (title, year) =>
     fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
   searchTmdbPosters: (tmdbId) => fetch(`${BASE}/images/posters/${tmdbId}`).then(handle),

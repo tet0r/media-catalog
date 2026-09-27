@@ -5,6 +5,28 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.4 — "Add to Collection" on every movie, tidier auto-collections
+- Every movie's own page now has an "+ Add to Collection" button: pick an
+  existing manual collection from a dropdown, or type a name to create a
+  new one and add the movie to it in one step. Franchise collections
+  aren't offered here since their membership is automatic — there's
+  nothing to manually add a movie to.
+- A franchise collection (Star Wars, Toy Story, ...) now only shows up —
+  on the Collections tab and on a movie's own "Part of:" line — once 2+
+  movies actually belong to it. A single automatic match wasn't really a
+  "collection" worth surfacing; it still gets created behind the scenes
+  the moment you own a match, so it appears on its own the moment a
+  second one shows up.
+- Removed "Studio Collections" from Settings > Movies — curating which
+  studios (Marvel, Ghibli, ...) got their own collection was more clutter
+  than it was worth. Manual collections cover the same need directly:
+  add whichever movies you want grouped together, whenever you want.
+- Verified live: created a manual collection from a movie's page via both
+  the "create new" and "add to existing" paths, confirmed a single-movie
+  franchise collection stays hidden until a second matching movie is
+  added, and confirmed Settings no longer shows or exposes studio
+  collections anywhere.
+
 ## v16.3 — Images in backups, take two (plain copy, no zip) + timing
 - Backups now include cached posters/covers again — but this time as a
   plain recursive copy (`images-<timestamp>/`, via Node's built-in

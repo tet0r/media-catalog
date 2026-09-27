@@ -462,12 +462,12 @@ CREATE TABLE IF NOT EXISTS games_sync_status (
 -- Movie collections. 'franchise' rows are auto-created the moment you own a
 -- movie belonging to a TMDB collection (Star Wars Collection, ...) and their
 -- membership is just "every movie with this tmdb_collection_id" — never
--- stored explicitly. 'studio' rows are opt-in via Settings (any production
--- company would otherwise create a collection, which is mostly noise) and
--- their membership is "every movie whose production_companies includes this
--- company" — also computed, not stored. Only 'manual' collections need
--- collection_movies at all, since their membership is arbitrary and has no
--- rule to compute it from.
+-- stored explicitly. Only 'manual' collections need collection_movies at
+-- all, since their membership is arbitrary and has no rule to compute it
+-- from. (There used to also be an opt-in 'studio' type grouping movies by
+-- production company, removed for being more Settings clutter than it was
+-- worth — company_match is what it used to key off of, kept rather than
+-- migrated away since nothing reads it now that no code writes it either.)
 CREATE TABLE IF NOT EXISTS collections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,

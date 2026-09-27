@@ -20,7 +20,6 @@ function rowToCollection(row, { includeAllMovies = false } = {}) {
     id: row.id,
     name: row.name,
     type: row.type,
-    company_match: row.company_match,
     poster_url: row.poster_file ? `/posters/${row.poster_file}` : null,
     movie_count: movies.length,
     movies: includeAllMovies ? movies : movies.slice(0, 4),
@@ -29,47 +28,18 @@ function rowToCollection(row, { includeAllMovies = false } = {}) {
 
 router.get('/', (req, res) => {
   const rows = db.prepare('SELECT * FROM collections ORDER BY name COLLATE NOCASE').all();
-  // Auto (franchise/studio) collections hide themselves once nothing
-  // currently matches — the row stays around so a later matching movie
-  // makes them reappear without redoing any setup. Manual collections
-  // always show, even empty, since the user made them on purpose.
-  const result = rows.map((r) => rowToCollection(r)).filter((c) => c.type === 'manual' || c.movie_count > 0);
+  // Franchise collections only surface once 2+ movies actually belong to
+  // them — a single automatic match isn't really a "collection", and the
+  // row stays around either way so a later matching movie makes it
+  // reappear without redoing any setup. Manual collections always show,
+  // even with just one movie (or none), since the user made them and put
+  // things in them on purpose.
+  const result = rows.map((r) => rowToCollection(r)).filter((c) => c.type === 'manual' || c.movie_count > 1);
   res.json(result);
 });
 
-// Defined ahead of the /:id routes below so these literal paths are never
+// Defined ahead of the /:id route below so this literal path is never
 // shadowed by the param route.
-router.get('/studio-candidates', (req, res) => {
-  const movies = db.prepare('SELECT production_companies FROM movies').all();
-  const counts = new Map();
-  for (const m of movies) {
-    const companies = m.production_companies ? JSON.parse(m.production_companies) : [];
-    for (const c of companies) counts.set(c, (counts.get(c) || 0) + 1);
-  }
-  const enabled = db.prepare("SELECT id, company_match FROM collections WHERE type = 'studio'").all();
-  const enabledMap = new Map(enabled.map((c) => [c.company_match, c.id]));
-  const list = [...counts.entries()]
-    .map(([company, movie_count]) => ({
-      company,
-      movie_count,
-      enabled: enabledMap.has(company),
-      collection_id: enabledMap.get(company) || null,
-    }))
-    .sort((a, b) => b.movie_count - a.movie_count || a.company.localeCompare(b.company));
-  res.json(list);
-});
-
-router.post('/studio', (req, res) => {
-  const { company } = req.body;
-  if (!company) return res.status(400).json({ error: 'company is required' });
-  let row = db.prepare("SELECT * FROM collections WHERE type = 'studio' AND company_match = ?").get(company);
-  if (!row) {
-    const info = db.prepare("INSERT INTO collections (name, type, company_match) VALUES (?, 'studio', ?)").run(company, company);
-    row = db.prepare('SELECT * FROM collections WHERE id = ?').get(info.lastInsertRowid);
-  }
-  res.status(201).json(rowToCollection(row));
-});
-
 router.post('/', (req, res) => {
   const { name } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });

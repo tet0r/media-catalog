@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ImagePicker from '../components/ImagePicker.jsx';
 import SearchAgain from '../components/SearchAgain.jsx';
+import AddToCollectionMenu from '../components/AddToCollectionMenu.jsx';
 
 const TMDB_SOURCES = [
   { key: 'tmdb', label: 'TMDB', search: (q) => api.searchTmdb(q), lookupUrl: api.lookupTmdbUrl, urlPlaceholder: 'Paste a themoviedb.org or imdb.com movie URL' },
@@ -65,6 +66,10 @@ export default function MovieDetail() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  function addedToCollection(collection) {
+    setMovie((m) => ({ ...m, collections: [...(m.collections || []), { id: collection.id, name: collection.name }] }));
   }
 
   const crewByJob = groupCrewByJob(movie.crew);
@@ -202,6 +207,7 @@ export default function MovieDetail() {
               rematch={(_source, tmdbId) => api.rematchMovie(id, { tmdb_id: tmdbId })}
               onRematched={setMovie}
             />
+            <AddToCollectionMenu movie={movie} onAdded={addedToCollection} />
             <button className="danger" onClick={remove}>Remove from Collection</button>
           </div>
           {error && <p className="error">{error}</p>}

@@ -1,6 +1,6 @@
-// Franchise collections have a real TMDB poster (poster_url). Studio and
-// manual collections don't, so they fall back to a collage of up to 4
-// member posters instead of needing their own image entirely.
+// Franchise collections have a real TMDB poster (poster_url). Manual
+// collections don't, so they fall back to a collage of up to 4 member
+// posters instead of needing their own image entirely.
 export default function CollectionCard({ collection }) {
   const collage = !collection.poster_url && collection.movies.length > 0;
   return (

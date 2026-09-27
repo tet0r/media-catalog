@@ -129,8 +129,6 @@ export default function Settings() {
   const [clearingTv, setClearingTv] = useState(false);
   const [tvBulkStatus, setTvBulkStatus] = useState(null);
   const [clearMessage, setClearMessage] = useState(null);
-  const [studioCandidates, setStudioCandidates] = useState([]);
-  const [studioBusy, setStudioBusy] = useState(null);
 
   useEffect(() => {
     api
@@ -180,31 +178,6 @@ export default function Settings() {
 
   function toggleSidebarSection(key) {
     setSidebarHidden((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  const refreshStudioCandidates = useCallback(() => {
-    api.listStudioCandidates().then(setStudioCandidates).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    refreshStudioCandidates();
-  }, [refreshStudioCandidates]);
-
-  async function toggleStudioCollection(candidate) {
-    setStudioBusy(candidate.company);
-    setError(null);
-    try {
-      if (candidate.enabled) {
-        await api.deleteCollection(candidate.collection_id);
-      } else {
-        await api.enableStudioCollection(candidate.company);
-      }
-      refreshStudioCandidates();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setStudioBusy(null);
-    }
   }
 
   const refreshBackups = useCallback(() => {
@@ -683,36 +656,6 @@ export default function Settings() {
         {bulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
       </button>
       {bulkStatus && bulkStatus.message !== 'Idle' && <p className="muted"> {bulkStatus.message}</p>}
-
-      <h3>Studio Collections</h3>
-      <p className="muted">
-        Franchise collections (Star Wars, Toy Story, ...) show up on the Collections tab automatically,
-        straight from TMDB. A studio isn't a TMDB collection though, and nearly every movie has one, so
-        pick which studios in your library should get their own collection too — Marvel Studios, Studio
-        Ghibli, and so on. Membership stays live: any future movie from an enabled studio joins on its own.
-      </p>
-      {studioCandidates.length === 0 ? (
-        <p className="muted">No studios found yet — add some movies first.</p>
-      ) : (
-        <div className="backup-list">
-          {studioCandidates.map((c) => (
-            <div key={c.company} className="backup-item">
-              <span className="backup-item-name" style={{ fontFamily: 'inherit' }}>
-                {c.company} <span className="muted">({c.movie_count} movie{c.movie_count === 1 ? '' : 's'})</span>
-              </span>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={c.enabled}
-                  disabled={studioBusy === c.company}
-                  onChange={() => toggleStudioCollection(c)}
-                />
-                <span className="toggle-slider" />
-              </label>
-            </div>
-          ))}
-        </div>
-      )}
 
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every movie in your collection, along with their cached posters/backdrops.</p>

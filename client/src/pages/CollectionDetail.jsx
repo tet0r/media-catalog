@@ -5,7 +5,6 @@ import MovieCard from '../components/MovieCard.jsx';
 
 const TYPE_BLURB = {
   franchise: 'Franchise collection — membership follows TMDB automatically. Any movie you own from this franchise joins on its own.',
-  studio: 'Studio collection — membership follows this studio automatically. Enabled/disabled in Settings > Movies.',
   manual: 'Manual collection — add or remove movies below.',
 };
 
