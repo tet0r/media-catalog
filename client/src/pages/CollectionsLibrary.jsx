@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import CollectionCard from '../components/CollectionCard.jsx';
+
+// Same module-level scroll-position trick as the other library pages —
+// see Library.jsx for why this needs to live outside component state.
+let savedScrollY = 0;
 
 export default function CollectionsLibrary() {
   const navigate = useNavigate();
@@ -10,10 +14,25 @@ export default function CollectionsLibrary() {
   const [error, setError] = useState(null);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const hasRestoredScroll = useRef(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      savedScrollY = window.scrollY;
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     api.listCollections().then(setCollections).catch((err) => setError(err.message)).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (loading || hasRestoredScroll.current) return;
+    hasRestoredScroll.current = true;
+    if (savedScrollY > 0) window.scrollTo(0, savedScrollY);
+  }, [loading]);
 
   async function createCollection(e) {
     e.preventDefault();

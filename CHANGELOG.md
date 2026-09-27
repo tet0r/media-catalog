@@ -5,6 +5,19 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v17.2 — Collections: scroll restoration + sort inside a collection
+- Leaving the Collections tab or a collection's own page (to a movie, or
+  back to the list) and returning now picks up right where you left off,
+  scroll position included — the same restoration every other library
+  page already had, just missing here since Collections was added later.
+- A collection's own page now has a sort control (A-Z / Year, with the
+  usual click-again-to-flip-direction) for the movies inside it, same as
+  every library list already has.
+- Verified live: scrolled down on both the Collections list and inside a
+  collection, navigated away and back via real link clicks (not a full
+  reload), and confirmed the scroll position came back exactly. Confirmed
+  sorting by title and by year, both directions, reorders correctly.
+
 ## v17.1 — Franchise collections can be edited too
 - Franchise collections (Star Wars, Toy Story, ...) used to be read-only:
   membership followed TMDB automatically and nothing else could touch it.

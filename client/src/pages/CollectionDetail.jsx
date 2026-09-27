@@ -1,12 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
+import SortMenu from '../components/SortMenu.jsx';
 
 const TYPE_BLURB = {
   franchise: 'Franchise collection — membership follows TMDB automatically, and you can also add other movies to it by hand below.',
   manual: 'Manual collection — add or remove movies below.',
 };
+
+const SORT_OPTIONS = [
+  { key: 'title', label: 'A-Z' },
+  { key: 'year', label: 'Year' },
+];
+
+// Same module-level scroll-position trick as the other library pages —
+// see Library.jsx for why this needs to live outside component state.
+let savedScrollY = 0;
 
 export default function CollectionDetail() {
   const { id } = useParams();
@@ -21,10 +31,27 @@ export default function CollectionDetail() {
   const [searching, setSearching] = useState(false);
   const [addingId, setAddingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [sort, setSort] = useState('title');
+  const [dir, setDir] = useState('asc');
+  const hasRestoredScroll = useRef(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      savedScrollY = window.scrollY;
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     api.getCollection(id).then(setCollection).catch((err) => setError(err.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!collection || hasRestoredScroll.current) return;
+    hasRestoredScroll.current = true;
+    if (savedScrollY > 0) window.scrollTo(0, savedScrollY);
+  }, [collection]);
 
   if (error) return <p className="error">{error}</p>;
   if (!collection) return <p>Loading...</p>;
@@ -91,6 +118,16 @@ export default function CollectionDetail() {
     }
   }
 
+  const sortedMovies = [...collection.movies].sort((a, b) => {
+    let cmp;
+    if (sort === 'year') {
+      cmp = (a.year || 0) - (b.year || 0);
+    } else {
+      cmp = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+    }
+    return dir === 'desc' ? -cmp : cmp;
+  });
+
   return (
     <div className="library-page">
       <div className="collection-header">
@@ -116,26 +153,31 @@ export default function CollectionDetail() {
       {collection.movies.length === 0 ? (
         <p className="empty">No movies in this collection yet.</p>
       ) : (
-        <div className="grid">
-          {collection.movies.map((m) => (
-            <div key={m.id} className="collection-movie-tile">
-              <Link to={`/movies/${m.id}`}>
-                <MovieCard movie={m} />
-              </Link>
-              {m.removable && (
-                <button
-                  type="button"
-                  className="collection-remove-btn"
-                  title="Remove from collection"
-                  disabled={removingId === m.id}
-                  onClick={() => removeMovie(m.id)}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="toolbar" style={{ marginBottom: 14 }}>
+            <SortMenu sort={sort} dir={dir} onChange={(s, d) => { setSort(s); setDir(d); }} options={SORT_OPTIONS} />
+          </div>
+          <div className="grid">
+            {sortedMovies.map((m) => (
+              <div key={m.id} className="collection-movie-tile">
+                <Link to={`/movies/${m.id}`}>
+                  <MovieCard movie={m} />
+                </Link>
+                {m.removable && (
+                  <button
+                    type="button"
+                    className="collection-remove-btn"
+                    title="Remove from collection"
+                    disabled={removingId === m.id}
+                    onClick={() => removeMovie(m.id)}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
       <p className="count">{collection.movies.length} movie{collection.movies.length === 1 ? '' : 's'}</p>
 
