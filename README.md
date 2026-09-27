@@ -1,10 +1,8 @@
-# Media Catalog (self-hosted CLZ Movies / CLZ Music alternative)
+# Media Catalog
 
-A self-hosted, Docker-deployable media collection cataloger, inspired by
-[CLZ Movies](https://clz.com/movies) and its siblings. Currently covers:
+A self-hosted, Docker-deployable media collection cataloger. Currently covers:
 
-- **Movies** — posters, cast/crew, plot, ratings; see "How it differs from
-  CLZ Movies" below.
+- **Movies** — posters, cast/crew, plot, ratings.
 - **Audiobooks** — cover, author/narrator, series, description, via Audible/
   Audnexus; see **Audiobooks** below.
 - **Ebooks** — cover, author(s), description, genres, via Open Library; see
@@ -26,27 +24,22 @@ The running app's version is shown next to its name in the nav bar (from the
 Portainer redeploy actually picked up a new image. See
 [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
-## How it differs from CLZ Movies
+## How movie matching works
 
-CLZ Movies is a paid app with an official (licensed) IMDb data feed and
-barcode-database lookups. Neither is available for free/self-hosting, so this
-app uses:
-
-- **[TMDB](https://www.themoviedb.org/)** (free API) instead of the licensed
-  IMDb feed, for posters, cast/crew, plot, runtime and ratings.
-- **Library folder scanning** instead of barcode scanning: point the app at
-  the folder(s) where your movie files live, and it walks the folder, guesses
-  each movie's title/year from the filename or folder name (the same way
-  Radarr/Jellyfin do), and matches it against TMDB. Confident matches are
-  added automatically; anything ambiguous goes into a "Needs Review" queue
-  where you pick the right match (or skip it).
+- **[TMDB](https://www.themoviedb.org/)** (free API) provides posters,
+  cast/crew, plot, runtime and ratings.
+- **Library folder scanning**: point the app at the folder(s) where your
+  movie files live, and it walks the folder, guesses each movie's title/year
+  from the filename or folder name (the same way Radarr/Jellyfin do), and
+  matches it against TMDB. Confident matches are added automatically;
+  anything ambiguous goes into a "Needs Review" queue where you pick the
+  right match (or skip it).
 - **Single user, no login** — this is meant to run on your own network for
   your own use, like a personal Homebox/Jellyfin instance.
 
-Everything else — manual title search & add, editable personal fields
-(format, location, purchase date/price/store, your own 1-5 rating, notes,
-loaned-to, watched flag), grid browsing with search/sort/filter — works the
-same way.
+You can also add movies by hand: manual title search & add, editable personal
+fields (format, location, purchase date/price/store, your own 1-5 rating,
+notes, loaned-to, watched flag), and grid browsing with search/sort/filter.
 
 ## Audiobooks
 
