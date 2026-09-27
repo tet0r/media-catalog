@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import VinylCard from '../components/VinylCard.jsx';
+import useBulkSelection from '../hooks/useBulkSelection.js';
+import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -42,6 +44,9 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
   const [status, setStatus] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
+  const sel = useBulkSelection();
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
 
   const refreshList = useCallback(() => {
     setLoading(true);
@@ -121,14 +126,70 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Sequential, not Promise.all — a burst of concurrent requests against
+  // the same sqlite connection is worth avoiding regardless of count.
+  async function bulkDelete() {
+    const ids = [...sel.selectedIds];
+    if (!confirm(`Delete ${ids.length} record${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    for (let i = 0; i < ids.length; i++) {
+      setBulkProgress({ done: i, total: ids.length, label: 'Deleting' });
+      try { await api.deleteVinylRecord(ids[i]); } catch { /* keep going for the rest */ }
+    }
+    setBulkProgress(null);
+    setBulkBusy(false);
+    sel.exitSelectMode();
+    refreshList();
+  }
+
   const groups = groupByArtist ? groupByArtistName(records) : null;
   const availableLetters = new Set(
     groupByArtist ? groups.map((g) => g.letter) : records.map((r) => letterFor(r.title))
   );
   const seenLetters = new Set();
 
+  function renderCard(r, anchorId) {
+    if (sel.selectMode) {
+      return (
+        <VinylCard
+          key={r.id}
+          id={anchorId}
+          record={r}
+          selectMode
+          selected={sel.selectedIds.has(r.id)}
+          onToggleSelect={() => sel.toggle(r.id)}
+        />
+      );
+    }
+    return (
+      <Link key={r.id} to={`/music/vinyl/${r.id}`} id={anchorId}>
+        <VinylCard record={r} />
+      </Link>
+    );
+  }
+
   return (
     <div className="library-page">
+      <sel.Portal>
+        <button
+          type="button"
+          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+        >
+          Select
+        </button>
+        {sel.selectMode && sel.selectedIds.size > 0 && (
+          <BulkActionsMenu
+            count={sel.selectedIds.size}
+            disabled={bulkBusy}
+            actions={[{ key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true }]}
+          />
+        )}
+      </sel.Portal>
+
+      {bulkProgress && (
+        <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
+      )}
       <p>
         Mirrors your vinyl collection from <a href="https://www.discogs.com" target="_blank" rel="noreferrer">Discogs</a> —
         add a username and personal access token in Settings, then sync. Discogs stays the source of truth: edit your
@@ -166,13 +227,7 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
             return (
               <div key={g.artist} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
                 <h2>{g.artist}</h2>
-                <div className="grid">
-                  {g.items.map((r) => (
-                    <Link key={r.id} to={`/music/vinyl/${r.id}`}>
-                      <VinylCard record={r} />
-                    </Link>
-                  ))}
-                </div>
+                <div className="grid">{g.items.map((r) => renderCard(r, undefined))}</div>
               </div>
             );
           })}
@@ -183,11 +238,7 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
             const letter = letterFor(r.title);
             const isFirst = !seenLetters.has(letter);
             if (isFirst) seenLetters.add(letter);
-            return (
-              <Link key={r.id} to={`/music/vinyl/${r.id}`} id={isFirst ? `letter-${letter}` : undefined}>
-                <VinylCard record={r} />
-              </Link>
-            );
+            return renderCard(r, isFirst ? `letter-${letter}` : undefined);
           })}
         </div>
       )}

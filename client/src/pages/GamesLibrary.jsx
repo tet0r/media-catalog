@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import GameCard from '../components/GameCard.jsx';
+import useBulkSelection from '../hooks/useBulkSelection.js';
+import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -42,6 +44,9 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
   const [status, setStatus] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
+  const sel = useBulkSelection();
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
 
   const refreshList = useCallback(() => {
     setLoading(true);
@@ -121,14 +126,70 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Sequential, not Promise.all — a burst of concurrent requests against
+  // the same sqlite connection is worth avoiding regardless of count.
+  async function bulkDelete() {
+    const ids = [...sel.selectedIds];
+    if (!confirm(`Delete ${ids.length} game${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    for (let i = 0; i < ids.length; i++) {
+      setBulkProgress({ done: i, total: ids.length, label: 'Deleting' });
+      try { await api.deleteGame(ids[i]); } catch { /* keep going for the rest */ }
+    }
+    setBulkProgress(null);
+    setBulkBusy(false);
+    sel.exitSelectMode();
+    refreshList();
+  }
+
   const groups = groupByPlatform ? groupByPlatformName(games) : null;
   const availableLetters = new Set(
     groupByPlatform ? groups.map((g) => g.letter) : games.map((g) => letterFor(g.title))
   );
   const seenLetters = new Set();
 
+  function renderCard(game, anchorId) {
+    if (sel.selectMode) {
+      return (
+        <GameCard
+          key={game.id}
+          id={anchorId}
+          game={game}
+          selectMode
+          selected={sel.selectedIds.has(game.id)}
+          onToggleSelect={() => sel.toggle(game.id)}
+        />
+      );
+    }
+    return (
+      <Link key={game.id} to={`/games/${game.id}`} id={anchorId}>
+        <GameCard game={game} />
+      </Link>
+    );
+  }
+
   return (
     <div className="library-page">
+      <sel.Portal>
+        <button
+          type="button"
+          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+        >
+          Select
+        </button>
+        {sel.selectMode && sel.selectedIds.size > 0 && (
+          <BulkActionsMenu
+            count={sel.selectedIds.size}
+            disabled={bulkBusy}
+            actions={[{ key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true }]}
+          />
+        )}
+      </sel.Portal>
+
+      {bulkProgress && (
+        <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
+      )}
       <p>
         Mirrors your game library from a local <a href="https://www.launchbox-app.com" target="_blank" rel="noreferrer">LaunchBox</a>{' '}
         installation — point <code>LAUNCHBOX_DIR</code> at your LaunchBox folder (see README), then sync. LaunchBox stays
@@ -166,13 +227,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
             return (
               <div key={g.platform} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
                 <h2>{g.platform}</h2>
-                <div className="grid">
-                  {g.items.map((game) => (
-                    <Link key={game.id} to={`/games/${game.id}`}>
-                      <GameCard game={game} />
-                    </Link>
-                  ))}
-                </div>
+                <div className="grid">{g.items.map((game) => renderCard(game, undefined))}</div>
               </div>
             );
           })}
@@ -183,11 +238,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
             const letter = letterFor(game.title);
             const isFirst = !seenLetters.has(letter);
             if (isFirst) seenLetters.add(letter);
-            return (
-              <Link key={game.id} to={`/games/${game.id}`} id={isFirst ? `letter-${letter}` : undefined}>
-                <GameCard game={game} />
-              </Link>
-            );
+            return renderCard(game, isFirst ? `letter-${letter}` : undefined);
           })}
         </div>
       )}

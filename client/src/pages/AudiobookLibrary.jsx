@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import AudiobookCard from '../components/AudiobookCard.jsx';
+import useBulkSelection from '../hooks/useBulkSelection.js';
+import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -51,6 +53,18 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
+  const sel = useBulkSelection();
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
+
+  const refreshAudiobooks = useCallback(() => {
+    setLoading(true);
+    api
+      .listAudiobooks({ q, sort, dir })
+      .then(setAudiobooks)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [q, sort, dir]);
 
   useEffect(() => {
     function handleScroll() {
@@ -61,13 +75,8 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    api
-      .listAudiobooks({ q, sort, dir })
-      .then(setAudiobooks)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [q, sort, dir]);
+    refreshAudiobooks();
+  }, [refreshAudiobooks]);
 
   useEffect(() => {
     if (loading) return;
@@ -99,14 +108,81 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Sequential, not Promise.all — a burst of concurrent requests against
+  // the same sqlite connection is worth avoiding regardless of count.
+  async function runBulk(ids, actionFn, label) {
+    setBulkBusy(true);
+    for (let i = 0; i < ids.length; i++) {
+      setBulkProgress({ done: i, total: ids.length, label });
+      try { await actionFn(ids[i]); } catch { /* keep going for the rest */ }
+    }
+    setBulkProgress(null);
+    setBulkBusy(false);
+    sel.exitSelectMode();
+    refreshAudiobooks();
+  }
+
+  function bulkDelete() {
+    const ids = [...sel.selectedIds];
+    if (!confirm(`Delete ${ids.length} audiobook${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    runBulk(ids, api.deleteAudiobook, 'Deleting');
+  }
+
+  function bulkRefresh() {
+    runBulk([...sel.selectedIds], api.refreshAudiobook, 'Refreshing');
+  }
+
   const groups = groupByAuthor ? groupByAuthorName(audiobooks) : null;
   const availableLetters = new Set(
     groupByAuthor ? groups.map((g) => g.letter) : audiobooks.map((a) => letterFor(a.title))
   );
   const seenLetters = new Set();
 
+  function renderCard(a, anchorId) {
+    if (sel.selectMode) {
+      return (
+        <AudiobookCard
+          key={a.id}
+          id={anchorId}
+          audiobook={a}
+          selectMode
+          selected={sel.selectedIds.has(a.id)}
+          onToggleSelect={() => sel.toggle(a.id)}
+        />
+      );
+    }
+    return (
+      <Link key={a.id} to={`/audiobooks/${a.id}`} id={anchorId}>
+        <AudiobookCard audiobook={a} />
+      </Link>
+    );
+  }
+
   return (
     <div className="library-page">
+      <sel.Portal>
+        <button
+          type="button"
+          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+        >
+          Select
+        </button>
+        {sel.selectMode && sel.selectedIds.size > 0 && (
+          <BulkActionsMenu
+            count={sel.selectedIds.size}
+            disabled={bulkBusy}
+            actions={[
+              { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
+              { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
+            ]}
+          />
+        )}
+      </sel.Portal>
+
+      {bulkProgress && (
+        <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
+      )}
       {error && <p className="error">{error}</p>}
       {loading ? (
         <p>Loading...</p>
@@ -122,13 +198,7 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
             return (
               <div key={g.author} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
                 <h2>{g.author}</h2>
-                <div className="grid">
-                  {g.books.map((a) => (
-                    <Link key={a.id} to={`/audiobooks/${a.id}`}>
-                      <AudiobookCard audiobook={a} />
-                    </Link>
-                  ))}
-                </div>
+                <div className="grid">{g.books.map((a) => renderCard(a, undefined))}</div>
               </div>
             );
           })}
@@ -139,11 +209,7 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
             const letter = letterFor(a.title);
             const isFirst = !seenLetters.has(letter);
             if (isFirst) seenLetters.add(letter);
-            return (
-              <Link key={a.id} to={`/audiobooks/${a.id}`} id={isFirst ? `letter-${letter}` : undefined}>
-                <AudiobookCard audiobook={a} />
-              </Link>
-            );
+            return renderCard(a, isFirst ? `letter-${letter}` : undefined);
           })}
         </div>
       )}

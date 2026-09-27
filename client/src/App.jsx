@@ -251,6 +251,7 @@ export default function App() {
                   ))}
                 </select>
                 <SortMenu sort={movieSort} dir={movieDir} onChange={(s, d) => { setMovieSort(s); setMovieDir(d); }} />
+                <div id="bulk-actions-slot" />
               </>
             )}
           </div>
@@ -271,6 +272,7 @@ export default function App() {
               onChange={(s, d) => { setBookSort(s); setBookDir(d); }}
               options={AUDIOBOOK_SORT_OPTIONS}
             />
+            <div id="bulk-actions-slot" />
           </div>
         )}
         {onEbooksLibrary && (
@@ -289,6 +291,7 @@ export default function App() {
               onChange={(s, d) => { setEbookSort(s); setEbookDir(d); }}
               options={EBOOK_SORT_OPTIONS}
             />
+            <div id="bulk-actions-slot" />
           </div>
         )}
         {onAlbumsLibrary && (
@@ -307,6 +310,7 @@ export default function App() {
               onChange={(s, d) => { setAlbumSort(s); setAlbumDir(d); }}
               options={ALBUM_SORT_OPTIONS}
             />
+            <div id="bulk-actions-slot" />
           </div>
         )}
         {onVinylLibrary && (
@@ -325,6 +329,7 @@ export default function App() {
               onChange={(s, d) => { setVinylSort(s); setVinylDir(d); }}
               options={ALBUM_SORT_OPTIONS}
             />
+            <div id="bulk-actions-slot" />
           </div>
         )}
         {onGamesLibrary && (
@@ -343,12 +348,14 @@ export default function App() {
               onChange={(s, d) => { setGamesSort(s); setGamesDir(d); }}
               options={GAME_SORT_OPTIONS}
             />
+            <div id="bulk-actions-slot" />
           </div>
         )}
         {onTvLibrary && (
           <div className="toolbar">
             <input placeholder="Search your collection..." value={tvQ} onChange={(e) => setTvQ(e.target.value)} />
             <SortMenu sort={tvSort} dir={tvDir} onChange={(s, d) => { setTvSort(s); setTvDir(d); }} options={TV_SORT_OPTIONS} />
+            <div id="bulk-actions-slot" />
           </div>
         )}
       </header>

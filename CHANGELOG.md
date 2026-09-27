@@ -5,6 +5,43 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v17.0 — Bulk selection and actions on every library
+- Every media type's library page (Movies, Audiobooks, Ebooks, Albums,
+  Vinyl, Games, TV Shows) now has a "Select" toggle in the top toolbar,
+  right next to the sort menu. While active, each item shows a checkbox
+  (click the checkbox or anywhere else on the card to toggle it — no more
+  clicking through to a detail page while selecting) and a "N selected ▾"
+  menu appears in that same toolbar spot with the available bulk actions:
+  - **Delete Selected** — every media type.
+  - **Refresh Metadata** — every type that has one at all (Movies,
+    Audiobooks, Ebooks, Albums, TV Shows). Vinyl and Games don't get this:
+    they mirror Discogs/LaunchBox directly and have no per-item metadata
+    to refresh, same reasoning as why they don't have "Search Again".
+  - **Add to Collection** — Movies only, since Collections is a
+    Movies-only feature. Pick an existing collection or create a new one,
+    same as the single-movie version, just applied to every selected
+    movie in one step.
+  - Actions run one item at a time (not all at once) rather than firing a
+    burst of concurrent requests — partly for simplicity, partly because
+    hammering the database with concurrent requests is exactly the kind
+    of load this session already found could crash the server on some
+    platforms. A failure on one item doesn't stop the rest.
+- Selection is per-visit, not persisted — leaving a library page (even to
+  a detail page and back) always starts fresh, so a stale selection can
+  never linger into a later visit.
+- Built as one shared hook (`useBulkSelection`) + a generic dropdown
+  component reused across all 7 pages, rather than 7 separate
+  implementations — the Select button and "N selected" menu are rendered
+  by each page but appear in the toolbar via a portal, since the toolbar
+  itself lives in a different component (App.jsx) than the library pages
+  do.
+- Verified live across every media type: selection + bulk delete inside
+  Albums' "Group by Artist" grouped view, confirmed Vinyl/Games only
+  offer Delete (no Refresh Metadata section shown at all), confirmed
+  TV Shows offers both, and confirmed Movies' full set including a real
+  create-collection-and-bulk-add. Also caught and fixed a bad test-seed
+  script along the way (unrelated to the app itself).
+
 ## v16.5 — Drop images folder from backups (kept the timing display)
 - Backups are back to database-only — no more `images-<timestamp>/`
   folder alongside each one. It was cluttering the backup location badly

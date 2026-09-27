@@ -95,6 +95,14 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 }
 .sort-menu-list button:hover { background: var(--card); }
 .sort-menu-list button.active { color: var(--accent); font-weight: 600; }
+.sort-menu-list button.danger-text { color: var(--danger); }
+
+.card-select {
+  position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; margin: 0;
+  cursor: pointer; accent-color: var(--accent); z-index: 2;
+}
+.card.selectable { cursor: pointer; }
+.card.selected { outline: 2px solid var(--accent); outline-offset: -1px; }
 
 .notification-bell { position: relative; }
 .notification-bell-trigger {

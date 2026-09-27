@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import EbookCard from '../components/EbookCard.jsx';
+import useBulkSelection from '../hooks/useBulkSelection.js';
+import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -47,6 +49,18 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   const [error, setError] = useState(null);
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
+  const sel = useBulkSelection();
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
+
+  const refreshEbooks = useCallback(() => {
+    setLoading(true);
+    api
+      .listEbooks({ q, sort, dir })
+      .then(setEbooks)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [q, sort, dir]);
 
   useEffect(() => {
     function handleScroll() {
@@ -57,13 +71,8 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    api
-      .listEbooks({ q, sort, dir })
-      .then(setEbooks)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [q, sort, dir]);
+    refreshEbooks();
+  }, [refreshEbooks]);
 
   useEffect(() => {
     if (loading) return;
@@ -91,14 +100,81 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Sequential, not Promise.all — a burst of concurrent requests against
+  // the same sqlite connection is worth avoiding regardless of count.
+  async function runBulk(ids, actionFn, label) {
+    setBulkBusy(true);
+    for (let i = 0; i < ids.length; i++) {
+      setBulkProgress({ done: i, total: ids.length, label });
+      try { await actionFn(ids[i]); } catch { /* keep going for the rest */ }
+    }
+    setBulkProgress(null);
+    setBulkBusy(false);
+    sel.exitSelectMode();
+    refreshEbooks();
+  }
+
+  function bulkDelete() {
+    const ids = [...sel.selectedIds];
+    if (!confirm(`Delete ${ids.length} ebook${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    runBulk(ids, api.deleteEbook, 'Deleting');
+  }
+
+  function bulkRefresh() {
+    runBulk([...sel.selectedIds], api.refreshEbook, 'Refreshing');
+  }
+
   const groups = groupByAuthor ? groupByAuthorName(ebooks) : null;
   const availableLetters = new Set(
     groupByAuthor ? groups.map((g) => g.letter) : ebooks.map((e) => letterFor(e.title))
   );
   const seenLetters = new Set();
 
+  function renderCard(e, anchorId) {
+    if (sel.selectMode) {
+      return (
+        <EbookCard
+          key={e.id}
+          id={anchorId}
+          ebook={e}
+          selectMode
+          selected={sel.selectedIds.has(e.id)}
+          onToggleSelect={() => sel.toggle(e.id)}
+        />
+      );
+    }
+    return (
+      <Link key={e.id} to={`/ebooks/${e.id}`} id={anchorId}>
+        <EbookCard ebook={e} />
+      </Link>
+    );
+  }
+
   return (
     <div className="library-page">
+      <sel.Portal>
+        <button
+          type="button"
+          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+        >
+          Select
+        </button>
+        {sel.selectMode && sel.selectedIds.size > 0 && (
+          <BulkActionsMenu
+            count={sel.selectedIds.size}
+            disabled={bulkBusy}
+            actions={[
+              { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
+              { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
+            ]}
+          />
+        )}
+      </sel.Portal>
+
+      {bulkProgress && (
+        <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
+      )}
       {error && <p className="error">{error}</p>}
       {loading ? (
         <p>Loading...</p>
@@ -114,13 +190,7 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
             return (
               <div key={g.author} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
                 <h2>{g.author}</h2>
-                <div className="grid">
-                  {g.books.map((e) => (
-                    <Link key={e.id} to={`/ebooks/${e.id}`}>
-                      <EbookCard ebook={e} />
-                    </Link>
-                  ))}
-                </div>
+                <div className="grid">{g.books.map((e) => renderCard(e, undefined))}</div>
               </div>
             );
           })}
@@ -131,11 +201,7 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
             const letter = letterFor(e.title);
             const isFirst = !seenLetters.has(letter);
             if (isFirst) seenLetters.add(letter);
-            return (
-              <Link key={e.id} to={`/ebooks/${e.id}`} id={isFirst ? `letter-${letter}` : undefined}>
-                <EbookCard ebook={e} />
-              </Link>
-            );
+            return renderCard(e, isFirst ? `letter-${letter}` : undefined);
           })}
         </div>
       )}
