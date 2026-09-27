@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const AdmZip = require('adm-zip');
 const db = require('../db');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const IMAGES_DIR = path.join(DATA_DIR, 'posters');
 
 // Deliberately NOT inside DATA_DIR by default's own logic — well, it falls
 // back to a subfolder of it for zero-config convenience, but the whole
@@ -26,21 +28,34 @@ function setStatus(fields) {
   db.prepare('UPDATE backup_status SET running=@running, last_run=@last_run, message=@message WHERE id = 1').run(merged);
 }
 
-// Only the database — not cached posters/covers. The database is the
-// irreplaceable part (personal ratings/notes/tags, and which catalog entry
-// each library item is already matched to), while posters are cheap to
-// re-fetch from their source APIs on a metadata refresh (aside from a
-// manually-uploaded custom cover, a smaller edge case). Backing up
-// thousands of poster files too would make this much slower and heavier
-// for comparatively little protection.
+// The database (library-<stamp>.db) is the irreplaceable part — personal
+// ratings/notes/tags, and which catalog entry each library item is already
+// matched to. Cached posters/covers (images-<stamp>.zip) are paired with it
+// by sharing that same <stamp>: mostly re-fetchable from their source APIs
+// on a metadata refresh, but a manually-uploaded custom cover isn't, so
+// they're backed up too rather than treated as disposable.
+function imagesFilenameFor(dbFilename) {
+  return dbFilename.replace(/^library-/, 'images-').replace(/\.db$/, '.zip');
+}
+
 function listBackups() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  return fs
-    .readdirSync(BACKUP_DIR)
+  const files = fs.readdirSync(BACKUP_DIR);
+  const imageFiles = new Set(files.filter((f) => f.startsWith('images-') && f.endsWith('.zip')));
+  return files
     .filter((f) => f.startsWith('library-') && f.endsWith('.db'))
     .map((f) => {
       const stat = fs.statSync(path.join(BACKUP_DIR, f));
-      return { filename: f, size: stat.size, created_at: stat.mtime.toISOString() };
+      const imagesFilename = imagesFilenameFor(f);
+      const hasImages = imageFiles.has(imagesFilename);
+      const imagesStat = hasImages ? fs.statSync(path.join(BACKUP_DIR, imagesFilename)) : null;
+      return {
+        filename: f,
+        size: stat.size,
+        created_at: stat.mtime.toISOString(),
+        images_filename: hasImages ? imagesFilename : null,
+        images_size: imagesStat ? imagesStat.size : null,
+      };
     })
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
@@ -48,11 +63,19 @@ function listBackups() {
 // Resolves a client-supplied filename (list/delete/download all take a
 // bare filename back) to a path guaranteed to stay inside BACKUP_DIR —
 // guards against path traversal (e.g. "../../../etc/passwd") from ever
-// reaching fs.unlinkSync/res.download.
+// reaching fs.unlinkSync/res.download. Accepts either half of a pair
+// (library-*.db or images-*.zip), since download/delete act on each file
+// individually.
 function safeBackupPath(filename) {
   const base = path.basename(String(filename || ''));
-  const full = path.join(BACKUP_DIR, base);
-  if (!base || path.dirname(full) !== path.resolve(BACKUP_DIR)) {
+  // Resolve BACKUP_DIR to an absolute path before joining/comparing — if
+  // it's relative (e.g. a relative DATA_DIR in local dev), comparing a
+  // relative dirname against path.resolve()'s always-absolute result would
+  // never match, rejecting every filename as "invalid" even with no
+  // traversal involved.
+  const resolvedBackupDir = path.resolve(BACKUP_DIR);
+  const full = path.join(resolvedBackupDir, base);
+  if (!base || path.dirname(full) !== resolvedBackupDir) {
     throw new Error('Invalid backup filename');
   }
   return full;
@@ -62,6 +85,9 @@ function pruneOldBackups() {
   const retention = Number(getSetting('backup_retention_count')) || DEFAULT_RETENTION;
   for (const b of listBackups().slice(retention)) {
     try { fs.unlinkSync(path.join(BACKUP_DIR, b.filename)); } catch { /* already gone, fine */ }
+    if (b.images_filename) {
+      try { fs.unlinkSync(path.join(BACKUP_DIR, b.images_filename)); } catch { /* already gone, fine */ }
+    }
   }
 }
 
@@ -87,21 +113,43 @@ async function createBackup() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `library-${stamp}.db`;
+  const imagesFilename = imagesFilenameFor(filename);
   const dest = path.join(BACKUP_DIR, filename);
+  const imagesDest = path.join(BACKUP_DIR, imagesFilename);
 
   const scratchDir = path.join(DATA_DIR, '.backup-scratch');
   fs.mkdirSync(scratchDir, { recursive: true });
   const scratchFile = path.join(scratchDir, filename);
+  const imagesScratchFile = path.join(scratchDir, imagesFilename);
   try {
     await db.backup(scratchFile);
     fs.copyFileSync(scratchFile, dest);
+
+    // Same local-scratch-then-copy pattern as the database above, and for
+    // the same reason: BACKUP_DIR may be a network share, and building the
+    // zip there directly risks a slow or partial write over CIFS/SMB.
+    // Building it locally first means the only thing that ever touches the
+    // network share is a single finished-file copy.
+    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    const zip = new AdmZip();
+    zip.addLocalFolder(IMAGES_DIR);
+    zip.writeZip(imagesScratchFile);
+    fs.copyFileSync(imagesScratchFile, imagesDest);
   } finally {
     try { fs.unlinkSync(scratchFile); } catch { /* best-effort cleanup */ }
+    try { fs.unlinkSync(imagesScratchFile); } catch { /* best-effort cleanup */ }
   }
 
   pruneOldBackups();
   const stat = fs.statSync(dest);
-  return { filename, size: stat.size, created_at: stat.mtime.toISOString() };
+  const imagesStat = fs.statSync(imagesDest);
+  return {
+    filename,
+    size: stat.size,
+    created_at: stat.mtime.toISOString(),
+    images_filename: imagesFilename,
+    images_size: imagesStat.size,
+  };
 }
 
 // Named runBackup (not runScheduledBackup) to match the runScan/runSync
@@ -119,7 +167,7 @@ async function runBackup() {
     setStatus({
       running: 0,
       last_run: new Date().toISOString(),
-      message: `Backup complete — ${result.filename} (${(result.size / 1024).toFixed(0)} KB).`,
+      message: `Backup complete — ${result.filename} (${(result.size / 1024).toFixed(0)} KB) + images (${(result.images_size / 1024).toFixed(0)} KB).`,
     });
   } catch (err) {
     setStatus({ running: 0, message: `Backup failed: ${err.message}` });
@@ -128,6 +176,9 @@ async function runBackup() {
 
 function deleteBackup(filename) {
   fs.unlinkSync(safeBackupPath(filename));
+  // Best-effort: older backups made before images were included have no
+  // paired zip to delete, which is fine.
+  try { fs.unlinkSync(safeBackupPath(imagesFilenameFor(filename))); } catch { /* no paired images file */ }
 }
 
 // Restoring means replacing the file this process's live `db` connection
@@ -157,6 +208,18 @@ async function restoreBackup(filename) {
   // hasn't been disturbed at all, and the error above is still reportable.
   fs.copyFileSync(src, tmpPath);
 
+  // Images are additive (every cached file is named deterministically from
+  // its source, whether that's a TMDB path or a hash of a custom upload),
+  // so extracting on top of what's already there is safe — no need to wipe
+  // IMAGES_DIR first. A backup made before this feature existed has no
+  // paired zip; that's fine, restoring the database alone still works, just
+  // without bringing any old posters back with it.
+  const imagesSrc = safeBackupPath(imagesFilenameFor(filename));
+  if (fs.existsSync(imagesSrc)) {
+    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    new AdmZip(imagesSrc).extractAllTo(IMAGES_DIR, true);
+  }
+
   db.close();
   // Drop the current WAL/SHM sidecar files, if any — otherwise SQLite
   // would try to replay leftover WAL frames from the PREVIOUS database
@@ -167,4 +230,4 @@ async function restoreBackup(filename) {
   fs.renameSync(tmpPath, dbPath); // atomic on the same filesystem
 }
 
-module.exports = { createBackup, runBackup, listBackups, deleteBackup, restoreBackup, safeBackupPath, BACKUP_DIR };
+module.exports = { createBackup, runBackup, listBackups, deleteBackup, restoreBackup, safeBackupPath, imagesFilenameFor, BACKUP_DIR };

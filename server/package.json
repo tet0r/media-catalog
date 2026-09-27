@@ -1,13 +1,14 @@
 {
   "name": "media-catalog-server",
-  "version": "16.0.0",
+  "version": "16.1.0",
   "private": true,
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "adm-zip": "^0.6.1",
+    "better-sqlite3": "^13.0.3",
     "express": "^4.19.2"
   }
 }

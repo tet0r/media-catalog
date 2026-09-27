@@ -5,6 +5,35 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.1 — Backups now include cached posters/covers
+- Every backup is now a pair of files sharing the same timestamp: the
+  database (as before) and a new `images-*.zip` of everything in the
+  posters folder. Mainly for manually-uploaded custom covers, which — unlike
+  a normal poster — can't just be re-fetched from a source API on a
+  metadata refresh, so losing the cache meant losing them for good.
+- Retention, delete, and download all treat the pair as one unit; Restore
+  extracts the images zip back on top of what's there (additive, since
+  every cached filename is already deterministic — nothing gets wiped) in
+  addition to restoring the database as before. An older backup made
+  before this existed has no images zip, and restoring it still works
+  fine, just without bringing old posters back.
+- Along the way: fixed a pre-existing bug in the path-traversal guard that
+  rejected every backup filename as "invalid" whenever `BACKUP_DIR`
+  resolved to a relative path — masked in normal use since `DATA_DIR`
+  is always absolute in the Docker image, but caught by testing locally.
+- Also upgraded `better-sqlite3` (11 → 13): the previously-pinned version's
+  prebuilt binary crashes on startup on newer Node versions once any
+  second moderately-complex dependency is loaded alongside it (found while
+  testing this feature locally, on Node 24 — the shipped Docker image
+  pins Node 20, where 11.x already works fine, but this removes the
+  landmine for good rather than just avoiding it).
+- Verified live: created a real backup with a seeded poster file, confirmed
+  the zip's contents byte-for-byte, deleted the poster to simulate loss,
+  restored, and confirmed it came back — along with confirming an
+  unrelated newer file added after the backup was untouched. Also
+  verified core collection/settings endpoints still behave correctly
+  after the better-sqlite3 upgrade.
+
 ## v16.0 — Movie Collections
 - A new "Collections" tab sits next to the Movies tab in the top bar. Three
   kinds of collections:
