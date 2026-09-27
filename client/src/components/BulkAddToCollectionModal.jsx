@@ -3,9 +3,12 @@ import { api } from '../api.js';
 
 // Same create-or-pick-existing flow as AddToCollectionMenu, but for many
 // movies at once instead of one — used by the bulk actions menu on the
-// Movies library page. addMovieToCollection is INSERT OR IGNORE on the
-// server, so re-adding a movie that's already a member is a safe no-op,
-// no need to pre-filter per movie the way the single-movie menu does.
+// Movies library page. Every collection is offered, including franchise
+// ones (adding layers a manual addition on top of TMDB's automatic
+// match — see server/lib/collections.js's getMemberMovies).
+// addMovieToCollection is INSERT OR IGNORE on the server, so re-adding a
+// movie that's already a member is a safe no-op, no need to pre-filter
+// per movie the way the single-movie menu does.
 export default function BulkAddToCollectionModal({ movieIds, onDone, onClose }) {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +20,7 @@ export default function BulkAddToCollectionModal({ movieIds, onDone, onClose }) 
   useEffect(() => {
     api
       .listCollections()
-      .then((cs) => setCollections(cs.filter((c) => c.type === 'manual')))
+      .then(setCollections)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -80,7 +83,7 @@ export default function BulkAddToCollectionModal({ movieIds, onDone, onClose }) 
                 <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
                   <option value="">Choose a collection...</option>
                   {collections.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.name}{c.type === 'franchise' ? ' (franchise)' : ''}</option>
                   ))}
                 </select>
                 <button type="submit" disabled={busy || !selectedId}>Add</button>

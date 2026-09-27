@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 
-// Only manual collections are offered here — franchise membership
-// is computed automatically (see server/lib/collections.js), so there's
-// nothing to "add" a movie to for those; the server already rejects it
-// with a 400 if asked.
+// Every collection is offered here, including franchise ones — adding a
+// movie to a franchise collection layers a manual addition on top of
+// whatever TMDB already matches automatically (see
+// server/lib/collections.js's getMemberMovies), for a movie TMDB doesn't
+// officially list in that collection but belongs there anyway.
 export default function AddToCollectionMenu({ movie, onAdded }) {
   const [open, setOpen] = useState(false);
   const [collections, setCollections] = useState([]);
@@ -22,7 +23,7 @@ export default function AddToCollectionMenu({ movie, onAdded }) {
   }, [open]);
 
   const memberIds = new Set((movie.collections || []).map((c) => c.id));
-  const available = collections.filter((c) => c.type === 'manual' && !memberIds.has(c.id));
+  const available = collections.filter((c) => !memberIds.has(c.id));
 
   async function addToExisting(e) {
     e.preventDefault();
@@ -75,7 +76,7 @@ export default function AddToCollectionMenu({ movie, onAdded }) {
               <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
                 <option value="">Choose a collection...</option>
                 {available.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>{c.name}{c.type === 'franchise' ? ' (franchise)' : ''}</option>
                 ))}
               </select>
               <button type="submit" disabled={busy || !selectedId}>Add</button>

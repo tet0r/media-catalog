@@ -5,6 +5,26 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v17.1 — Franchise collections can be edited too
+- Franchise collections (Star Wars, Toy Story, ...) used to be read-only:
+  membership followed TMDB automatically and nothing else could touch it.
+  Now you can also rename a franchise collection and manually add movies
+  to it — for a movie TMDB doesn't officially list in that collection but
+  belongs there anyway. Both the single-movie "Add to Collection" menu and
+  the bulk version now list franchise collections too (tagged
+  "(franchise)"), not just ones you created yourself.
+- A movie added this way can also be removed again from the collection's
+  own page — but a movie that's there because TMDB matches it doesn't get
+  a remove button at all, since removing it there wouldn't do anything
+  (it'd still show up next time metadata syncs). The server tags each
+  member movie as removable or not so the UI knows which to show.
+- Verified live: seeded a franchise collection with 2 automatic matches
+  plus an unrelated movie, manually added the unrelated one, confirmed
+  only it (not the automatic matches) showed a remove button, confirmed
+  renaming the collection propagates to a movie's "Part of:" line, and
+  confirmed removing an automatic match via the API is a harmless no-op
+  rather than an error.
+
 ## v17.0 — Bulk selection and actions on every library
 - Every media type's library page (Movies, Audiobooks, Ebooks, Albums,
   Vinyl, Games, TV Shows) now has a "Select" toggle in the top toolbar,

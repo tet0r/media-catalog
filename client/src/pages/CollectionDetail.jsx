@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import MovieCard from '../components/MovieCard.jsx';
 
 const TYPE_BLURB = {
-  franchise: 'Franchise collection — membership follows TMDB automatically. Any movie you own from this franchise joins on its own.',
+  franchise: 'Franchise collection — membership follows TMDB automatically, and you can also add other movies to it by hand below.',
   manual: 'Manual collection — add or remove movies below.',
 };
 
@@ -103,11 +103,9 @@ export default function CollectionDetail() {
         ) : (
           <h1>
             {collection.name}{' '}
-            {collection.type === 'manual' && (
-              <button type="button" className="muted-btn" onClick={() => { setNameDraft(collection.name); setRenaming(true); }}>
-                Rename
-              </button>
-            )}
+            <button type="button" className="muted-btn" onClick={() => { setNameDraft(collection.name); setRenaming(true); }}>
+              Rename
+            </button>
           </h1>
         )}
         <p className="muted">{TYPE_BLURB[collection.type]}</p>
@@ -124,7 +122,7 @@ export default function CollectionDetail() {
               <Link to={`/movies/${m.id}`}>
                 <MovieCard movie={m} />
               </Link>
-              {collection.type === 'manual' && (
+              {m.removable && (
                 <button
                   type="button"
                   className="collection-remove-btn"
@@ -141,28 +139,26 @@ export default function CollectionDetail() {
       )}
       <p className="count">{collection.movies.length} movie{collection.movies.length === 1 ? '' : 's'}</p>
 
-      {collection.type === 'manual' && (
-        <div className="pending-item" style={{ marginTop: 20 }}>
-          <strong>Add Movies</strong>
-          <form onSubmit={search} className="pending-search-row" style={{ marginTop: 10 }}>
-            <input placeholder="Search your movie library..." value={query} onChange={(e) => setQuery(e.target.value)} />
-            <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
-          </form>
-          {results.length > 0 && (
-            <div className="candidates">
-              {results.map((m) => (
-                <div key={m.id} className="candidate">
-                  {m.poster_url ? <img src={m.poster_url} alt="" /> : null}
-                  <span>{m.title} {m.year ? `(${m.year})` : ''}</span>
-                  <button disabled={addingId === m.id} onClick={() => addMovie(m.id)}>
-                    {addingId === m.id ? 'Adding...' : 'Add'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="pending-item" style={{ marginTop: 20 }}>
+        <strong>Add Movies</strong>
+        <form onSubmit={search} className="pending-search-row" style={{ marginTop: 10 }}>
+          <input placeholder="Search your movie library..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
+        </form>
+        {results.length > 0 && (
+          <div className="candidates">
+            {results.map((m) => (
+              <div key={m.id} className="candidate">
+                {m.poster_url ? <img src={m.poster_url} alt="" /> : null}
+                <span>{m.title} {m.year ? `(${m.year})` : ''}</span>
+                <button disabled={addingId === m.id} onClick={() => addMovie(m.id)}>
+                  {addingId === m.id ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <button className="danger" style={{ marginTop: 20 }} onClick={removeCollection}>
         Delete Collection
