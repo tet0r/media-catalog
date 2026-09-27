@@ -53,6 +53,20 @@ function IntervalSelect({ value, onChange, disabled, options = INTERVAL_OPTIONS 
   );
 }
 
+// Ticks locally off the server-provided start time rather than polling for
+// it every second — works just as well for a scheduled/automatic backup
+// the user didn't click a button to start as for a manual one.
+function ElapsedTimer({ startedAt }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  if (!startedAt) return null;
+  const seconds = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
+  return <span> ({seconds}s)</span>;
+}
+
 export default function Settings() {
   // Always starts on "general" — Settings unmounts when you navigate away
   // (it's a separate route) and remounts fresh with this initial value
@@ -530,10 +544,11 @@ export default function Settings() {
       <hr />
       <h2>Backups</h2>
       <p className="muted">
-        Backs up just the database (your collection, matches, ratings, notes, tags — not cached
-        posters/covers, which are cheap to re-fetch on a metadata refresh). Uses SQLite's own
+        Backs up the database (your collection, matches, ratings, notes, tags) using SQLite's own
         online backup mechanism, so it's always a complete, consistent snapshot regardless of
-        what's been checkpointed to disk yet.
+        what's been checkpointed to disk yet — plus a plain copy of every cached poster/cover
+        alongside it, so a manually-uploaded custom image isn't lost even though it can't be
+        re-fetched from a source API the way a normal poster can.
       </p>
       <p className="muted">
         <strong>Point <code>BACKUP_DIR</code> at a location that doesn't depend on this stack's own
@@ -574,7 +589,12 @@ export default function Settings() {
       <button onClick={backUpNow} disabled={backingUp || backupStatus?.running || !!restoringFilename}>
         {backingUp || backupStatus?.running ? 'Backing up...' : 'Back Up Now'}
       </button>
-      {backupStatus?.message && <p className="muted"> {backupStatus.message}</p>}
+      {backupStatus?.message && (
+        <p className="muted">
+          {' '}{backupStatus.message}
+          {!!backupStatus.running && <ElapsedTimer startedAt={backupStatus.started_at} />}
+        </p>
+      )}
 
       {restoreWaitMessage && (
         <p className="warning">⚠ {restoreWaitMessage}</p>
@@ -588,7 +608,10 @@ export default function Settings() {
             <div key={b.filename} className="backup-item">
               <span className="backup-item-name">{b.filename}</span>
               <span className="muted">{new Date(b.created_at).toLocaleString()}</span>
-              <span className="muted">{(b.size / 1024).toFixed(0)} KB</span>
+              <span className="muted">
+                {(b.size / 1024).toFixed(0)} KB
+                {b.images_dir && ` + ${(b.images_size / 1024).toFixed(0)} KB images`}
+              </span>
               <a className="muted-btn" href={api.backupDownloadUrl(b.filename)} download>
                 Download
               </a>

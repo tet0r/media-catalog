@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS backup_status (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   running INTEGER DEFAULT 0,
   last_run TEXT,
+  started_at TEXT,
   message TEXT
 );
 
@@ -514,6 +515,7 @@ ensureColumn('album_scan_pending', 'disc_paths', 'TEXT');
 ensureColumn('album_ignored', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
 ensureColumn('movies', 'tmdb_collection_id', 'INTEGER');
+ensureColumn('backup_status', 'started_at', 'TEXT');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

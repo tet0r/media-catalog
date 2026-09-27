@@ -5,6 +5,29 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.3 — Images in backups, take two (plain copy, no zip) + timing
+- Backups now include cached posters/covers again — but this time as a
+  plain recursive copy (`images-<timestamp>/`, via Node's built-in
+  `fs.cpSync`) instead of a zip. No new dependency at all, so there's
+  nothing that can conflict with better-sqlite3 the way v16.1's zip
+  library did. Retention/delete/restore all treat the pair the same way
+  v16.1 did — restore copies images back on top of what's there
+  (additive, nothing gets wiped).
+- "Back Up Now" (and the status line for a scheduled backup) now shows
+  how long it's taking while it runs, and how long it took once done —
+  e.g. "Backing up... (4s)" while in progress, "...in 3.8s." once
+  finished. The backup's start time is stored server-side, so this works
+  correctly for an automatic scheduled backup too, not just one triggered
+  by clicking the button.
+- Verified live end-to-end: created a real backup with a seeded poster,
+  deleted the poster to simulate loss, restored, and confirmed it came
+  back (with an unrelated newer file left untouched); confirmed
+  retention/delete remove both halves of a pair. Also caught and fixed a
+  real bug while testing in the browser — `backupStatus.running` is a raw
+  SQLite `0`/`1`, and `{0 && <Timer/>}` in JSX renders the literal text
+  "0" instead of nothing, so the status line briefly showed a stray "0"
+  after a backup finished.
+
 ## v16.2 — Revert v16.1's images-in-backups and better-sqlite3 upgrade
 - v16.1 crashed the production container on startup — silently, no logs —
   the moment it tried to run. Reverting both changes it made: backups are
