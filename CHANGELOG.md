@@ -5,6 +5,33 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.2 — Revert v16.1's images-in-backups and better-sqlite3 upgrade
+- v16.1 crashed the production container on startup — silently, no logs —
+  the moment it tried to run. Reverting both changes it made: backups are
+  back to database-only (no `images-*.zip`), and `better-sqlite3` is back
+  to 11.x.
+- What actually happened: bundling a zip library into the same process as
+  better-sqlite3 turned out to be fragile in a way that showed up
+  differently on different platforms. It crashed locally (Windows, a very
+  new Node version) with better-sqlite3 11.x + a zip library together;
+  upgrading better-sqlite3 to 13.x fixed that locally, so that upgrade
+  shipped alongside the images-backup feature — but the *production*
+  container (Linux/Alpine, Node 20) then crashed on startup with 13.x +
+  the zip library, a completely different failure than the one being
+  fixed. Both platforms broke on the same underlying pattern (an
+  additional dependency sharing a process with better-sqlite3's native
+  binding), just via different specific bugs — so rather than chase a
+  version combination that happens to work on both, this pulls the zip
+  library out entirely and returns to the one dependency set that's
+  actually been proven stable in production this whole time.
+- Kept: the `safeBackupPath` fix from v16.1 (a real, unrelated bug — it
+  rejected every backup filename as invalid whenever `BACKUP_DIR` resolved
+  to a relative path) and the Movie Collections feature from v16.0, since
+  neither touches a native dependency.
+- Revisiting images-in-backups later needs actual testing against a real
+  Linux/Alpine container before shipping, not just local (Windows) testing
+  — the failure here was invisible until it hit production.
+
 ## v16.1 — Backups now include cached posters/covers
 - Every backup is now a pair of files sharing the same timestamp: the
   database (as before) and a new `images-*.zip` of everything in the

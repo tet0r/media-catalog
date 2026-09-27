@@ -396,16 +396,15 @@ optional automatic schedule (every 6/12 hours, daily, every 3 days, or
 weekly), with a configurable retention count (oldest backups beyond that,
 manual and automatic together, get deleted after each new one).
 
-Each backup is actually a pair of files sharing the same timestamp: the
-database (your collection, matches, personal ratings/notes/tags) and a zip
-of every cached poster/cover alongside it. The database uses SQLite's own
-online backup mechanism rather than a plain file copy, so it's always a
-complete, consistent snapshot regardless of what's been checkpointed to
-disk yet — in particular, a raw copy of just `library.db` while the app is
-running in WAL mode can miss recent writes still sitting in
-`library.db-wal`; this doesn't have that problem. The images zip exists
-mainly for manually-uploaded custom covers, which (unlike a normal poster)
-can't just be re-fetched from a source API on a metadata refresh.
+Only the database gets backed up — your collection, matches, personal
+ratings/notes/tags — not cached posters/covers, which are cheap to
+re-fetch on a metadata refresh (aside from a manually-uploaded custom
+cover, a smaller edge case). Each backup uses SQLite's own online backup
+mechanism rather than a plain file copy, so it's always a complete,
+consistent snapshot regardless of what's been checkpointed to disk yet —
+in particular, a raw copy of just `library.db` while the app is running in
+WAL mode can miss recent writes still sitting in `library.db-wal`; this
+doesn't have that problem.
 
 **Set `BACKUP_DIR`/`BACKUP_SYNC_PATH` to somewhere genuinely independent of
 `./data`** — a different share, a different disk, anywhere that wouldn't be
@@ -431,8 +430,7 @@ manager that restarts it for you, you'll need to start it again by hand.
 You can also restore entirely by hand if you'd rather not use the button:
 stop the container, replace `library.db` (and delete any
 `library.db-wal`/`library.db-shm` sitting next to it) in your data folder
-with the backup file, unzip the paired `images-*.zip` into your data
-folder's `posters` directory, then start the container again.
+with the backup file, then start the container again.
 
 ## Local development (without Docker)
 
