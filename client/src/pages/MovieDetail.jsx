@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ImagePicker from '../components/ImagePicker.jsx';
 import SearchAgain from '../components/SearchAgain.jsx';
@@ -110,6 +110,17 @@ export default function MovieDetail() {
               <span key={g} className="tag">{g}</span>
             ))}
           </div>
+
+          {movie.collections && movie.collections.length > 0 && (
+            <div className="tags">
+              <span className="muted">Part of:</span>
+              {movie.collections.map((c) => (
+                <Link key={c.id} className="tag link-tag" to={`/movies/collections/${c.id}`}>
+                  {c.name}
+                </Link>
+              ))}
+            </div>
+          )}
 
           <div className="stats">
             {movie.content_rating ? <span>{movie.content_rating}</span> : null}

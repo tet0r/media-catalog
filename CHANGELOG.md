@@ -5,6 +5,30 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.0 — Movie Collections
+- A new "Collections" tab sits next to the Movies tab in the top bar. Three
+  kinds of collections:
+  - **Franchise** — created automatically the moment you own a movie that
+    belongs to a TMDB collection (Star Wars, Toy Story, ...). Uses TMDB's own
+    name and poster. Membership isn't stored anywhere; it's just "every movie
+    with this franchise" recomputed live, so rematching a movie to a
+    different franchise (or a fresh add/refresh) moves it automatically.
+  - **Studio** — opt-in via Settings > Movies, since almost every movie has
+    *some* production company and auto-creating one for each would mostly be
+    noise. Settings lists every studio in your library with a movie count;
+    toggle on the ones worth their own collection (Marvel Studios, Studio
+    Ghibli, ...). Membership is likewise computed live, not stored.
+  - **Manual** — created from the Collections tab with just a name. Add or
+    remove any movie from its own detail page or from a search box on the
+    collection's page, rename it, or delete it entirely (the movies
+    themselves aren't affected).
+  - A movie's own page now shows "Part of: ..." for any collection(s) it
+    belongs to, linking straight to them.
+- Verified live end-to-end in the browser: franchise auto-grouping, enabling/
+  disabling a studio collection from Settings and watching it appear/
+  disappear on the Collections tab, and the full manual create → add movie →
+  remove movie → rename → delete flow.
+
 ## v15.7 — "Search Again" for Movies, TV Shows, Audiobooks, and Ebooks
 - Albums already let you re-point an item at a different catalog entry
   without deleting and re-adding it (for when the original scan matched

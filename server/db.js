@@ -457,6 +457,32 @@ CREATE TABLE IF NOT EXISTS games_sync_status (
   errored INTEGER DEFAULT 0,
   message TEXT
 );
+
+-- Movie collections. 'franchise' rows are auto-created the moment you own a
+-- movie belonging to a TMDB collection (Star Wars Collection, ...) and their
+-- membership is just "every movie with this tmdb_collection_id" — never
+-- stored explicitly. 'studio' rows are opt-in via Settings (any production
+-- company would otherwise create a collection, which is mostly noise) and
+-- their membership is "every movie whose production_companies includes this
+-- company" — also computed, not stored. Only 'manual' collections need
+-- collection_movies at all, since their membership is arbitrary and has no
+-- rule to compute it from.
+CREATE TABLE IF NOT EXISTS collections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  tmdb_collection_id INTEGER,
+  company_match TEXT,
+  poster_file TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS collection_movies (
+  collection_id INTEGER NOT NULL,
+  movie_id INTEGER NOT NULL,
+  added_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (collection_id, movie_id)
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has
@@ -487,6 +513,7 @@ ensureColumn('albums', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'disc_paths', 'TEXT');
 ensureColumn('album_ignored', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
+ensureColumn('movies', 'tmdb_collection_id', 'INTEGER');
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();

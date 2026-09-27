@@ -4,6 +4,7 @@ const fs = require('fs');
 const db = require('../db');
 const { addMovieFromTmdbId, refreshMovieMetadata, rematchMovie } = require('../lib/addMovie');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
+const { getCollectionsForMovie } = require('../lib/collections');
 const bulkRefresh = require('../lib/bulkRefresh');
 const { IMG_BASE } = require('../lib/tmdb');
 
@@ -28,6 +29,13 @@ function rowToMovie(row) {
     poster_url: row.poster_file ? `/posters/${row.poster_file}` : null,
     backdrop_url: row.backdrop_file ? `/posters/${row.backdrop_file}` : null,
   };
+}
+
+// Only used for single-movie responses (not the library list, which doesn't
+// display this) — each call runs a couple of extra lookups to find which
+// collections this movie belongs to.
+function rowToMovieDetail(row) {
+  return { ...rowToMovie(row), collections: getCollectionsForMovie(row) };
 }
 
 const SORT_COLUMNS = new Set(['title', 'year', 'added_at', 'personal_rating', 'tmdb_rating', 'runtime']);
@@ -94,6 +102,8 @@ router.post('/clear-all', (req, res) => {
       try { fs.unlinkSync(path.join(DATA_DIR, 'posters', file)); } catch { /* already gone, fine */ }
     }
   }
+  db.prepare('DELETE FROM collection_movies').run();
+  db.prepare('DELETE FROM collections').run();
   const info = db.prepare('DELETE FROM movies').run();
   res.json({ ok: true, count: info.changes });
 });
@@ -101,7 +111,7 @@ router.post('/clear-all', (req, res) => {
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
-  res.json(rowToMovie(row));
+  res.json(rowToMovieDetail(row));
 });
 
 router.post('/', async (req, res) => {
@@ -109,7 +119,7 @@ router.post('/', async (req, res) => {
     const { tmdb_id, file_path, format } = req.body;
     if (!tmdb_id) return res.status(400).json({ error: 'tmdb_id is required' });
     const row = await addMovieFromTmdbId(tmdb_id, { filePath: file_path || null, format: format || null });
-    res.status(201).json(rowToMovie(row));
+    res.status(201).json(rowToMovieDetail(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -136,7 +146,7 @@ router.put('/:id', (req, res) => {
   db.prepare(`UPDATE movies SET ${updates.join(', ')} WHERE id = @id`).run(params);
   const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
-  res.json(rowToMovie(row));
+  res.json(rowToMovieDetail(row));
 });
 
 async function setImage(req, res, column) {
@@ -147,7 +157,7 @@ async function setImage(req, res, column) {
     db.prepare(`UPDATE movies SET ${column} = ? WHERE id = ?`).run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
-    res.json(rowToMovie(row));
+    res.json(rowToMovieDetail(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -169,7 +179,7 @@ router.put('/:id/poster/upload', express.raw({ type: () => true, limit: '15mb' }
     db.prepare('UPDATE movies SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
-    res.json(rowToMovie(row));
+    res.json(rowToMovieDetail(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -181,7 +191,7 @@ router.post('/:id/refresh', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (!existing.tmdb_id) return res.status(400).json({ error: 'This movie has no TMDB match to refresh from' });
     const row = await refreshMovieMetadata(req.params.id, existing.tmdb_id);
-    res.json(rowToMovie(row));
+    res.json(rowToMovieDetail(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -198,13 +208,14 @@ router.post('/:id/rematch', async (req, res) => {
     const existing = db.prepare('SELECT id FROM movies WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
     const row = await rematchMovie(req.params.id, tmdb_id);
-    res.json(rowToMovie(row));
+    res.json(rowToMovieDetail(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
 router.delete('/:id', (req, res) => {
+  db.prepare('DELETE FROM collection_movies WHERE movie_id = ?').run(req.params.id);
   db.prepare('DELETE FROM movies WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });

@@ -3,6 +3,7 @@ const db = require('../db');
 const tmdb = require('./tmdb');
 const { cachePoster } = require('./images');
 const notifications = require('./notifications');
+const { syncFranchiseCollection } = require('./collections');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -56,22 +57,24 @@ function extractMetadata(details) {
     production_companies: JSON.stringify((details.production_companies || []).map((c) => c.name)),
     spoken_languages: JSON.stringify((details.spoken_languages || []).map((l) => l.english_name || l.name)),
     content_rating: extractContentRating(details),
+    tmdb_collection_id: details.belongs_to_collection ? details.belongs_to_collection.id : null,
   };
 }
 
 const INSERT_SQL = `INSERT INTO movies
   (tmdb_id, title, original_title, year, overview, tagline, runtime, genres, director, cast, crew,
    poster_file, backdrop_file, tmdb_rating, vote_count, imdb_id, budget, revenue, status,
-   original_language, homepage, production_companies, spoken_languages, content_rating, file_path, format)
+   original_language, homepage, production_companies, spoken_languages, content_rating, tmdb_collection_id, file_path, format)
   VALUES (@tmdb_id,@title,@original_title,@year,@overview,@tagline,@runtime,@genres,@director,@cast,@crew,
    @poster_file,@backdrop_file,@tmdb_rating,@vote_count,@imdb_id,@budget,@revenue,@status,
-   @original_language,@homepage,@production_companies,@spoken_languages,@content_rating,@file_path,@format)`;
+   @original_language,@homepage,@production_companies,@spoken_languages,@content_rating,@tmdb_collection_id,@file_path,@format)`;
 
 async function addMovieFromTmdbId(tmdbId, { filePath = null, format = null } = {}) {
   const details = await tmdb.getMovieDetails(db, tmdbId);
   const posterFile = await cachePoster(DATA_DIR, details.poster_path);
   const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path);
   const meta = extractMetadata(details);
+  await syncFranchiseCollection(details);
 
   const info = db.prepare(INSERT_SQL).run({
     ...meta,
@@ -92,6 +95,7 @@ async function addMovieFromTmdbId(tmdbId, { filePath = null, format = null } = {
 // metadata refresh shouldn't silently overwrite that choice.
 async function refreshMovieMetadata(movieId, tmdbId) {
   const details = await tmdb.getMovieDetails(db, tmdbId);
+  await syncFranchiseCollection(details);
   const meta = extractMetadata(details);
   const setClause = Object.keys(meta).map((k) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE movies SET ${setClause} WHERE id = @id`).run({ ...meta, id: movieId });
@@ -107,6 +111,7 @@ async function refreshMovieMetadata(movieId, tmdbId) {
 // it's still the same file on disk, just re-pointed at different metadata.
 async function rematchMovie(movieId, tmdbId) {
   const details = await tmdb.getMovieDetails(db, tmdbId);
+  await syncFranchiseCollection(details);
   const posterFile = await cachePoster(DATA_DIR, details.poster_path);
   const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path);
   const meta = extractMetadata(details);

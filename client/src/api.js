@@ -59,6 +59,36 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  listCollections: () => fetch(`${BASE}/collections`).then(handle),
+  getCollection: (id) => fetch(`${BASE}/collections/${id}`).then(handle),
+  createCollection: (name) =>
+    fetch(`${BASE}/collections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(handle),
+  renameCollection: (id, name) =>
+    fetch(`${BASE}/collections/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(handle),
+  deleteCollection: (id) => fetch(`${BASE}/collections/${id}`, { method: 'DELETE' }).then(handle),
+  addMovieToCollection: (id, movieId) =>
+    fetch(`${BASE}/collections/${id}/movies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie_id: movieId }),
+    }).then(handle),
+  removeMovieFromCollection: (id, movieId) =>
+    fetch(`${BASE}/collections/${id}/movies/${movieId}`, { method: 'DELETE' }).then(handle),
+  listStudioCandidates: () => fetch(`${BASE}/collections/studio-candidates`).then(handle),
+  enableStudioCollection: (company) =>
+    fetch(`${BASE}/collections/studio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company }),
+    }).then(handle),
   searchTpdbPosters: (title, year) =>
     fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
   searchTmdbPosters: (tmdbId) => fetch(`${BASE}/images/posters/${tmdbId}`).then(handle),

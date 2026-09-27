@@ -4,6 +4,8 @@ import { api } from './api.js';
 import Library from './pages/Library.jsx';
 import MovieDetail from './pages/MovieDetail.jsx';
 import AddMovie from './pages/AddMovie.jsx';
+import CollectionsLibrary from './pages/CollectionsLibrary.jsx';
+import CollectionDetail from './pages/CollectionDetail.jsx';
 import ScanLibrary from './pages/ScanLibrary.jsx';
 import AudiobookLibrary from './pages/AudiobookLibrary.jsx';
 import AudiobookDetail from './pages/AudiobookDetail.jsx';
@@ -83,6 +85,7 @@ export default function App() {
   }, [activeSection]);
 
   const onMoviesLibrary = location.pathname === '/movies';
+  const onMoviesCollections = location.pathname.startsWith('/movies/collections');
   const onAudiobooksLibrary = location.pathname === '/audiobooks';
   const onEbooksLibrary = location.pathname === '/ebooks';
   const onAlbumsLibrary = location.pathname === '/music/albums';
@@ -228,16 +231,28 @@ export default function App() {
           </nav>
           <NotificationBell />
         </div>
-        {onMoviesLibrary && (
+        {(onMoviesLibrary || onMoviesCollections) && (
           <div className="toolbar">
-            <input placeholder="Search your collection..." value={movieQ} onChange={(e) => setMovieQ(e.target.value)} />
-            <select value={movieRating} onChange={(e) => setMovieRating(e.target.value)}>
-              <option value="">View: All</option>
-              {RATINGS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-            <SortMenu sort={movieSort} dir={movieDir} onChange={(s, d) => { setMovieSort(s); setMovieDir(d); }} />
+            <div className="picker-tabs">
+              <NavLink to="/movies" end className={({ isActive }) => `picker-tab${isActive ? ' active' : ''}`}>
+                Movies
+              </NavLink>
+              <NavLink to="/movies/collections" className={({ isActive }) => `picker-tab${isActive ? ' active' : ''}`}>
+                Collections
+              </NavLink>
+            </div>
+            {onMoviesLibrary && (
+              <>
+                <input placeholder="Search your collection..." value={movieQ} onChange={(e) => setMovieQ(e.target.value)} />
+                <select value={movieRating} onChange={(e) => setMovieRating(e.target.value)}>
+                  <option value="">View: All</option>
+                  {RATINGS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <SortMenu sort={movieSort} dir={movieDir} onChange={(s, d) => { setMovieSort(s); setMovieDir(d); }} />
+              </>
+            )}
           </div>
         )}
         {onAudiobooksLibrary && (
@@ -400,6 +415,8 @@ export default function App() {
                 />
               }
             />
+            <Route path="/movies/collections" element={<CollectionsLibrary />} />
+            <Route path="/movies/collections/:id" element={<CollectionDetail />} />
             <Route path="/movies/:id" element={<MovieDetail />} />
             <Route path="/movies/add" element={<AddMovie />} />
             <Route path="/movies/scan" element={<ScanLibrary />} />

@@ -22,6 +22,7 @@ const { runSync: runGamesSync } = require('./lib/gamesSync');
 const { runBackup } = require('./lib/backup');
 
 app.use('/api/movies', require('./routes/movies'));
+app.use('/api/collections', require('./routes/collections'));
 app.use('/api/audiobooks', require('./routes/audiobooks'));
 app.use('/api/ebooks', require('./routes/ebooks'));
 app.use('/api/albums', require('./routes/albums'));
