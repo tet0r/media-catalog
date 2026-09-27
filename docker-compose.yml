@@ -12,6 +12,7 @@ services:
       # split a library across multiple folders — see the README.
       - MOVIES_DIR=/movies
       - AUDIOBOOKS_DIR=/audiobooks
+      - COMICS_DIR=/comics
       - EBOOKS_DIR=/ebooks
       - ALBUMS_DIR=/albums
       - TV_DIR=/tv
@@ -32,6 +33,7 @@ services:
       # _PATH variable in .env, or just replace the left side directly.
       - ${MOVIES_PATH:-./movies}:/movies:ro
       - ${AUDIOBOOKS_PATH:-./audiobooks}:/audiobooks:ro
+      - ${COMICS_PATH:-./comics}:/comics:ro
       - ${EBOOKS_PATH:-./ebooks}:/ebooks:ro
       - ${ALBUMS_PATH:-./albums}:/albums:ro
       - ${TV_PATH:-./tv}:/tv:ro

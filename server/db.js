@@ -310,6 +310,62 @@ CREATE TABLE IF NOT EXISTS ebook_scan_status (
   message TEXT
 );
 
+-- One row per issue, not per series — closer to how audiobooks track a
+-- series/series_sequence pair alongside a file-per-item model than to how
+-- TV shows collapse a whole folder into one entry. comicvine_issue_id is
+-- ComicVine's issue id (not its volume/series id); series/issue_number
+-- are stored as their own columns (not derived from title) since ComicVine
+-- doesn't always give an issue its own descriptive name.
+CREATE TABLE IF NOT EXISTS comics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  comicvine_issue_id INTEGER,
+  series TEXT,
+  issue_number TEXT,
+  title TEXT NOT NULL,
+  description TEXT,
+  publisher TEXT,
+  -- JSON array of {name, roles: [...]}, from ComicVine's person_credits —
+  -- parallels movies' crew field.
+  creators TEXT,
+  cover_date TEXT,
+  year INTEGER,
+  cover_file TEXT,
+  file_path TEXT,
+  format TEXT,
+  added_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS comic_scan_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_series TEXT,
+  guessed_issue_number TEXT,
+  guessed_format TEXT,
+  candidates TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Same permanent-exclusion idea as ebook_ignored/audiobook_ignored.
+CREATE TABLE IF NOT EXISTS comic_ignored (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE,
+  guessed_series TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS comic_scan_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  files_found INTEGER DEFAULT 0,
+  matched INTEGER DEFAULT 0,
+  pending INTEGER DEFAULT 0,
+  skipped INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
+  errored INTEGER DEFAULT 0,
+  message TEXT
+);
+
 CREATE TABLE IF NOT EXISTS albums (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- A MusicBrainz release-group MBID when metadata_source='musicbrainz'
@@ -520,6 +576,7 @@ ensureColumn('backup_status', 'started_at', 'TEXT');
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO ebook_scan_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO comic_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO album_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
@@ -535,7 +592,7 @@ db.prepare('INSERT OR IGNORE INTO backup_status (id, running) VALUES (1, 0)').ru
 // there at startup is always stale, never a real in-progress operation —
 // safe to reset unconditionally every time this module loads.
 const STATUS_TABLES = [
-  'scan_status', 'audiobook_scan_status', 'ebook_scan_status', 'album_scan_status',
+  'scan_status', 'audiobook_scan_status', 'ebook_scan_status', 'comic_scan_status', 'album_scan_status',
   'vinyl_sync_status', 'games_sync_status', 'tv_scan_status', 'backup_status',
 ];
 for (const table of STATUS_TABLES) {

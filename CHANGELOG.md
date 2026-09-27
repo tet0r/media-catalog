@@ -5,6 +5,32 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v18.0 — Comics, a new media type
+- Comics joins the sidebar: [ComicVine](https://comicvine.gamespot.com/api/)
+  metadata, matched per-issue (one library row per `.cbz`/`.cbr`/`.cb7` file,
+  not per series) rather than the "one folder = one entry" pattern TV Shows
+  uses. Point `COMICS_PATH` at your comics folder — commonly the same share
+  as your audiobooks, just a `Comics` sub-path.
+- Search Library, Add Comic (series+issue search, or paste a ComicVine
+  issue URL directly), and Scan Library (auto-matches an unambiguous
+  filename guess, everything else lands in Needs Review/Ignored) all work
+  the same way as every other scanned media type. Bulk-select supports
+  Refresh Metadata and Delete Selected.
+- Matching is filename-only — archive contents (ComicInfo.xml, embedded
+  metadata) are never read, deliberately avoiding any new zip/rar/7z
+  dependency after this session's earlier native-crash incidents with
+  adm-zip conflicting with better-sqlite3.
+- Verified live: table creation, list/detail endpoints, a clean
+  "no key configured" error, a fake-key request reaching ComicVine's real
+  servers and getting back a genuine 401 (confirming the request itself —
+  URL, User-Agent, params — is correct), and a full scan producing exactly
+  the expected auto-matched/pending/errored counts against seeded test
+  files. The UI (Library grid, Select + bulk-actions menu, Settings tab,
+  Add Comic's search error handling) was also checked in-browser. Add
+  Comic/Scan Library's actual ComicVine matching was **not** verified
+  end-to-end with a real API key, since I didn't ask for yours — worth
+  trying yourself once your key's in Settings.
+
 ## v17.2 — Collections: scroll restoration + sort inside a collection
 - Leaving the Collections tab or a collection's own page (to a movie, or
   back to the list) and returning now picks up right where you left off,

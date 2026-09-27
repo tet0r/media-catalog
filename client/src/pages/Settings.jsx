@@ -26,6 +26,7 @@ const SETTINGS_TABS = [
   { key: 'general', label: 'General' },
   { key: 'movies', label: 'Movies' },
   { key: 'audiobooks', label: 'Audiobooks' },
+  { key: 'comics', label: 'Comics' },
   { key: 'ebooks', label: 'Ebooks' },
   { key: 'albums', label: 'Albums' },
   { key: 'vinyl', label: 'Vinyl' },
@@ -36,6 +37,7 @@ const SETTINGS_TABS = [
 const SIDEBAR_SECTIONS = [
   { key: 'movies', label: 'Movies' },
   { key: 'audiobooks', label: 'Audiobooks' },
+  { key: 'comics', label: 'Comics' },
   { key: 'ebooks', label: 'Ebooks' },
   { key: 'albums', label: 'Albums' },
   { key: 'vinyl', label: 'Vinyl' },
@@ -81,6 +83,11 @@ export default function Settings() {
   const [audiobookAutoScanEnabled, setAudiobookAutoScanEnabled] = useState(false);
   const [audiobookAutoScanInterval, setAudiobookAutoScanInterval] = useState(60);
   const [audiobookAutoPruneMissing, setAudiobookAutoPruneMissing] = useState(false);
+  const [comicvineKey, setComicvineKey] = useState('');
+  const [comicvineSource, setComicvineSource] = useState('none');
+  const [comicAutoScanEnabled, setComicAutoScanEnabled] = useState(false);
+  const [comicAutoScanInterval, setComicAutoScanInterval] = useState(60);
+  const [comicAutoPruneMissing, setComicAutoPruneMissing] = useState(false);
   const [ebookAutoScanEnabled, setEbookAutoScanEnabled] = useState(false);
   const [ebookAutoScanInterval, setEbookAutoScanInterval] = useState(60);
   const [ebookAutoPruneMissing, setEbookAutoPruneMissing] = useState(false);
@@ -118,10 +125,12 @@ export default function Settings() {
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
   const [audiobookBulkStatus, setAudiobookBulkStatus] = useState(null);
+  const [comicBulkStatus, setComicBulkStatus] = useState(null);
   const [ebookBulkStatus, setEbookBulkStatus] = useState(null);
   const [albumBulkStatus, setAlbumBulkStatus] = useState(null);
   const [clearingMovies, setClearingMovies] = useState(false);
   const [clearingAudiobooks, setClearingAudiobooks] = useState(false);
+  const [clearingComics, setClearingComics] = useState(false);
   const [clearingEbooks, setClearingEbooks] = useState(false);
   const [clearingAlbums, setClearingAlbums] = useState(false);
   const [clearingVinyl, setClearingVinyl] = useState(false);
@@ -142,6 +151,11 @@ export default function Settings() {
         setAudiobookAutoScanEnabled(!!s.audiobook_auto_scan_enabled);
         setAudiobookAutoScanInterval(s.audiobook_auto_scan_interval_minutes || 60);
         setAudiobookAutoPruneMissing(!!s.audiobook_auto_prune_missing);
+        setComicvineKey(s.comicvine_api_key || '');
+        setComicvineSource(s.comicvine_api_key_source);
+        setComicAutoScanEnabled(!!s.comic_auto_scan_enabled);
+        setComicAutoScanInterval(s.comic_auto_scan_interval_minutes || 60);
+        setComicAutoPruneMissing(!!s.comic_auto_prune_missing);
         setEbookAutoScanEnabled(!!s.ebook_auto_scan_enabled);
         setEbookAutoScanInterval(s.ebook_auto_scan_interval_minutes || 60);
         setEbookAutoPruneMissing(!!s.ebook_auto_prune_missing);
@@ -270,6 +284,7 @@ export default function Settings() {
   const refreshBulkStatus = useCallback(() => {
     api.bulkRefreshStatus().then(setBulkStatus).catch(() => {});
     api.bulkRefreshAudiobooksStatus().then(setAudiobookBulkStatus).catch(() => {});
+    api.bulkRefreshComicsStatus().then(setComicBulkStatus).catch(() => {});
     api.bulkRefreshEbooksStatus().then(setEbookBulkStatus).catch(() => {});
     api.bulkRefreshAlbumsStatus().then(setAlbumBulkStatus).catch(() => {});
     api.bulkRefreshTvStatus().then(setTvBulkStatus).catch(() => {});
@@ -328,6 +343,31 @@ export default function Settings() {
       setError(err.message);
     } finally {
       setClearingAudiobooks(false);
+    }
+  }
+
+  async function startComicBulkRefresh() {
+    setError(null);
+    try {
+      await api.startBulkRefreshComics();
+      refreshBulkStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function clearComics() {
+    if (!confirm('Permanently delete every comic in your collection? This cannot be undone.')) return;
+    setClearingComics(true);
+    setError(null);
+    setClearMessage(null);
+    try {
+      const { count } = await api.clearComicLibrary();
+      setClearMessage(`Removed ${count} comic${count === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingComics(false);
     }
   }
 
@@ -447,6 +487,10 @@ export default function Settings() {
         audiobook_auto_scan_enabled: audiobookAutoScanEnabled,
         audiobook_auto_scan_interval_minutes: audiobookAutoScanInterval,
         audiobook_auto_prune_missing: audiobookAutoPruneMissing,
+        comicvine_api_key: comicvineKey,
+        comic_auto_scan_enabled: comicAutoScanEnabled,
+        comic_auto_scan_interval_minutes: comicAutoScanInterval,
+        comic_auto_prune_missing: comicAutoPruneMissing,
         ebook_auto_scan_enabled: ebookAutoScanEnabled,
         ebook_auto_scan_interval_minutes: ebookAutoScanInterval,
         ebook_auto_prune_missing: ebookAutoPruneMissing,
@@ -708,6 +752,77 @@ export default function Settings() {
       <p className="muted">Permanently deletes every audiobook in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearAudiobooks} disabled={clearingAudiobooks}>
         {clearingAudiobooks ? 'Clearing...' : 'Clear Audiobook Library'}
+      </button>
+
+        </>
+      )}
+
+      {activeTab === 'comics' && (
+        <>
+      <div className="form-grid">
+        <label>
+          ComicVine API Key
+          <input value={comicvineKey} onChange={(e) => setComicvineKey(e.target.value)} placeholder="Get a free key at comicvine.gamespot.com/api" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {comicvineSource === 'env'
+          ? 'environment variable (COMICVINE_API_KEY)'
+          : comicvineSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        . Get a free API key at{' '}
+        <a href="https://comicvine.gamespot.com/api/" target="_blank" rel="noreferrer">
+          comicvine.gamespot.com/api
+        </a>
+        {' '}(requires a free GameSpot account).
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={comicAutoScanEnabled}
+            onChange={(e) => setComicAutoScanEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically scan for new comics</span>
+        <IntervalSelect value={comicAutoScanInterval} onChange={setComicAutoScanInterval} disabled={!comicAutoScanEnabled} />
+      </div>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={comicAutoPruneMissing}
+            onChange={(e) => setComicAutoPruneMissing(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Remove comics whose file is no longer found</span>
+      </div>
+
+      <p className="muted">
+        Same safety net as the other media types: skipped for any share that returns zero comics
+        that scan, so a briefly-disconnected network mount can't wipe out your collection.
+      </p>
+
+      <h3>Bulk Actions</h3>
+      <p className="muted">
+        Re-fetches every comic's metadata from ComicVine in place. Doesn't touch covers,
+        so any custom upload is left alone.
+      </p>
+      <button onClick={startComicBulkRefresh} disabled={comicBulkStatus?.running}>
+        {comicBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
+      </button>
+      {comicBulkStatus && comicBulkStatus.message !== 'Idle' && <p className="muted"> {comicBulkStatus.message}</p>}
+
+      <h3>Danger Zone</h3>
+      <p className="muted">Permanently deletes every comic in your collection, along with their cached covers.</p>
+      <button className="danger" onClick={clearComics} disabled={clearingComics}>
+        {clearingComics ? 'Clearing...' : 'Clear Comic Library'}
       </button>
 
         </>

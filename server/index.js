@@ -15,6 +15,7 @@ app.use('/posters', express.static(path.join(DATA_DIR, 'posters')));
 const scanRouter = require('./routes/scan');
 const audiobookScanRouter = require('./routes/audiobookScan');
 const ebookScanRouter = require('./routes/ebookScan');
+const comicScanRouter = require('./routes/comicScan');
 const albumScanRouter = require('./routes/albumScan');
 const tvScanRouter = require('./routes/tvScan');
 const { runSync: runVinylSync } = require('./lib/vinylSync');
@@ -25,6 +26,7 @@ app.use('/api/movies', require('./routes/movies'));
 app.use('/api/collections', require('./routes/collections'));
 app.use('/api/audiobooks', require('./routes/audiobooks'));
 app.use('/api/ebooks', require('./routes/ebooks'));
+app.use('/api/comics', require('./routes/comics'));
 app.use('/api/albums', require('./routes/albums'));
 app.use('/api/vinyl', require('./routes/vinyl'));
 app.use('/api/games', require('./routes/games'));
@@ -33,6 +35,7 @@ app.use('/api/search', require('./routes/search'));
 app.use('/api/scan', scanRouter);
 app.use('/api/audiobook-scan', audiobookScanRouter);
 app.use('/api/ebook-scan', ebookScanRouter);
+app.use('/api/comic-scan', comicScanRouter);
 app.use('/api/album-scan', albumScanRouter);
 app.use('/api/tv-scan', tvScanRouter);
 app.use('/api/settings', require('./routes/settings'));
@@ -61,6 +64,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'ebook_auto_scan_enabled',
     intervalKey: 'ebook_auto_scan_interval_minutes',
     statusTable: 'ebook_scan_status',
+  },
+  {
+    runScan: comicScanRouter.runScan,
+    enabledKey: 'comic_auto_scan_enabled',
+    intervalKey: 'comic_auto_scan_interval_minutes',
+    statusTable: 'comic_scan_status',
   },
   {
     runScan: albumScanRouter.runScan,

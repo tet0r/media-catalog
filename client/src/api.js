@@ -262,6 +262,69 @@ export const api = {
   unignoreEbook: (id) => fetch(`${BASE}/ebook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearEbookLibrary: () => fetch(`${BASE}/ebooks/clear-all`, { method: 'POST' }).then(handle),
 
+  listComics: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+    );
+    return fetch(`${BASE}/comics?${qs}`).then(handle);
+  },
+  getComic: (id) => fetch(`${BASE}/comics/${id}`).then(handle),
+  addComic: (payload) =>
+    fetch(`${BASE}/comics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  deleteComic: (id) => fetch(`${BASE}/comics/${id}`, { method: 'DELETE' }).then(handle),
+  refreshComic: (id) => fetch(`${BASE}/comics/${id}/refresh`, { method: 'POST' }).then(handle),
+  rematchComic: (id, payload) =>
+    fetch(`${BASE}/comics/${id}/rematch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  startBulkRefreshComics: () => fetch(`${BASE}/comics/refresh-all`, { method: 'POST' }).then(handle),
+  bulkRefreshComicsStatus: () => fetch(`${BASE}/comics/refresh-all/status`).then(handle),
+  setComicCover: (id, imageUrl) =>
+    fetch(`${BASE}/comics/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadComicCover: (id, file) =>
+    fetch(`${BASE}/comics/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  searchComicVine: (q) => fetch(`${BASE}/search/comicvine?q=${encodeURIComponent(q)}`).then(handle),
+  lookupComicVineUrl: (url) => fetch(`${BASE}/search/comicvine-url?url=${encodeURIComponent(url)}`).then(handle),
+  startComicScan: () => fetch(`${BASE}/comic-scan`, { method: 'POST' }).then(handle),
+  comicScanStatus: () => fetch(`${BASE}/comic-scan/status`).then(handle),
+  comicScanPending: () => fetch(`${BASE}/comic-scan/pending`).then(handle),
+  resolveComicPending: (id, payload) =>
+    fetch(`${BASE}/comic-scan/pending/${id}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  ignoreComicPending: (id) => fetch(`${BASE}/comic-scan/pending/${id}/ignore`, { method: 'POST' }).then(handle),
+  batchSkipComicPending: (ids) =>
+    fetch(`${BASE}/comic-scan/pending/batch-skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  batchIgnoreComicPending: (ids) =>
+    fetch(`${BASE}/comic-scan/pending/batch-ignore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).then(handle),
+  listIgnoredComics: () => fetch(`${BASE}/comic-scan/ignored`).then(handle),
+  unignoreComic: (id) => fetch(`${BASE}/comic-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
+  clearComicLibrary: () => fetch(`${BASE}/comics/clear-all`, { method: 'POST' }).then(handle),
+
   listAlbums: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')

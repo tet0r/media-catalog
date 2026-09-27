@@ -7,6 +7,8 @@ const openlibrary = require('../lib/openlibrary');
 const musicbrainz = require('../lib/musicbrainz');
 const lastfm = require('../lib/lastfm');
 const tvdb = require('../lib/tvdb');
+const comicvine = require('../lib/comicvine');
+const { parseSeriesAndIssue } = require('../lib/comicMatch');
 
 const router = express.Router();
 
@@ -340,6 +342,53 @@ router.get('/tvdb-url', async (req, res) => {
       year: details.year || null,
       overview: details.overview,
       poster_url: details.image || null,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// One text box does the work of ComicVine's two-hop volume-then-issue
+// lookup: "Batman 5" or "Batman #5" is parsed into a series name and an
+// issue number (same parser the scanner uses on filenames), then resolved
+// straight to matching issues — the caller never deals with volumes.
+router.get('/comicvine', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const { series, issueNumber } = parseSeriesAndIssue(q);
+    if (!series || !issueNumber) {
+      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+    }
+    const results = await comicvine.searchIssues(db, series, issueNumber, { maxVolumes: 8 });
+    res.json(results);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Fallback for when the series+issue search doesn't surface the right
+// issue: paste a comicvine.gamespot.com issue URL and resolve it
+// directly. Issue URLs always contain a "4000-<id>" segment (ComicVine's
+// resource-type prefix for issues).
+router.get('/comicvine-url', async (req, res) => {
+  try {
+    const str = String(req.query.url || '');
+    const match = str.match(/comicvine\.gamespot\.com\/[^/]+\/4000-(\d+)/i);
+    if (!match) {
+      return res.status(400).json({
+        error: 'Not a recognizable comicvine.gamespot.com issue URL (expected .../4000-<id>/)',
+      });
+    }
+    const details = await comicvine.getIssueDetails(db, match[1]);
+    res.json({
+      id: details.id,
+      series: details.series,
+      issue_number: details.issue_number,
+      title: details.title,
+      year: details.year,
+      cover_url: details.cover_url,
+      publisher: details.publisher,
     });
   } catch (err) {
     res.status(400).json({ error: err.message });

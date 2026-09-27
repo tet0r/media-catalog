@@ -11,6 +11,10 @@ import AudiobookLibrary from './pages/AudiobookLibrary.jsx';
 import AudiobookDetail from './pages/AudiobookDetail.jsx';
 import AddAudiobook from './pages/AddAudiobook.jsx';
 import ScanAudiobooks from './pages/ScanAudiobooks.jsx';
+import ComicLibrary from './pages/ComicLibrary.jsx';
+import ComicDetail from './pages/ComicDetail.jsx';
+import AddComic from './pages/AddComic.jsx';
+import ScanComics from './pages/ScanComics.jsx';
 import EbookLibrary from './pages/EbookLibrary.jsx';
 import EbookDetail from './pages/EbookDetail.jsx';
 import AddEbook from './pages/AddEbook.jsx';
@@ -43,6 +47,7 @@ const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 // than being forced into one shared library view.
 const SECTIONS = [
   { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
+  { key: 'comics', label: 'Comics', path: '/comics', icon: '💥' },
   { key: 'ebooks', label: 'Ebooks', path: '/ebooks', icon: '📚' },
   { key: 'games', label: 'Games', path: '/games', icon: '🎮' },
   { key: 'movies', label: 'Movies', path: '/movies', icon: '🎬' },
@@ -87,6 +92,7 @@ export default function App() {
   const onMoviesLibrary = location.pathname === '/movies';
   const onMoviesCollections = location.pathname.startsWith('/movies/collections');
   const onAudiobooksLibrary = location.pathname === '/audiobooks';
+  const onComicsLibrary = location.pathname === '/comics';
   const onEbooksLibrary = location.pathname === '/ebooks';
   const onAlbumsLibrary = location.pathname === '/music/albums';
   const onVinylLibrary = location.pathname === '/music/vinyl';
@@ -108,6 +114,11 @@ export default function App() {
   const [bookSort, setBookSort] = useState('title');
   const [bookDir, setBookDir] = useState('asc');
   const [bookGroupByAuthor, setBookGroupByAuthor] = useState(false);
+
+  const [comicQ, setComicQ] = useState('');
+  const [comicSort, setComicSort] = useState('series');
+  const [comicDir, setComicDir] = useState('asc');
+  const [comicGroupBySeries, setComicGroupBySeries] = useState(false);
 
   const [ebookQ, setEbookQ] = useState('');
   const [ebookSort, setEbookSort] = useState('title');
@@ -200,6 +211,13 @@ export default function App() {
                 <NavLink to="/audiobooks/scan">Scan Library</NavLink>
               </>
             )}
+            {activeSection?.key === 'comics' && (
+              <>
+                <NavLink to="/comics" end>Library</NavLink>
+                <NavLink to="/comics/add">Add Comic</NavLink>
+                <NavLink to="/comics/scan">Scan Library</NavLink>
+              </>
+            )}
             {activeSection?.key === 'ebooks' && (
               <>
                 <NavLink to="/ebooks" end>Library</NavLink>
@@ -271,6 +289,25 @@ export default function App() {
               dir={bookDir}
               onChange={(s, d) => { setBookSort(s); setBookDir(d); }}
               options={AUDIOBOOK_SORT_OPTIONS}
+            />
+            <div id="bulk-actions-slot" />
+          </div>
+        )}
+        {onComicsLibrary && (
+          <div className="toolbar">
+            <input placeholder="Search series or title..." value={comicQ} onChange={(e) => setComicQ(e.target.value)} />
+            <button
+              type="button"
+              className={`toolbar-toggle${comicGroupBySeries ? ' active' : ''}`}
+              onClick={() => setComicGroupBySeries((g) => !g)}
+            >
+              Group by Series
+            </button>
+            <SortMenu
+              sort={comicSort}
+              dir={comicDir}
+              onChange={(s, d) => { setComicSort(s); setComicDir(d); }}
+              options={COMIC_SORT_OPTIONS}
             />
             <div id="bulk-actions-slot" />
           </div>
@@ -445,6 +482,22 @@ export default function App() {
             <Route path="/audiobooks/scan" element={<ScanAudiobooks />} />
 
             <Route
+              path="/comics"
+              element={
+                <ComicLibrary
+                  q={comicQ}
+                  sort={comicSort}
+                  dir={comicDir}
+                  onSortChange={(s, d) => { setComicSort(s); setComicDir(d); }}
+                  groupBySeries={comicGroupBySeries}
+                />
+              }
+            />
+            <Route path="/comics/:id" element={<ComicDetail />} />
+            <Route path="/comics/add" element={<AddComic />} />
+            <Route path="/comics/scan" element={<ScanComics />} />
+
+            <Route
               path="/ebooks"
               element={
                 <EbookLibrary
@@ -539,6 +592,12 @@ const EBOOK_SORT_OPTIONS = [
   { key: 'title', label: 'A-Z' },
   { key: 'year', label: 'Year' },
   { key: 'page_count', label: 'Length' },
+];
+
+const COMIC_SORT_OPTIONS = [
+  { key: 'series', label: 'Series A-Z' },
+  { key: 'title', label: 'Title A-Z' },
+  { key: 'year', label: 'Year' },
 ];
 
 const ALBUM_SORT_OPTIONS = [

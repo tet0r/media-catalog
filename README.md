@@ -36,6 +36,11 @@ Assumes Docker and your media files are on the same machine — see
   seasons/episodes are underneath.
 - **Audiobooks** — Audible via [Audnexus](https://audnex.us), no key
   needed. Point `AUDIOBOOKS_PATH` at your audiobook folder.
+- **Comics** — [ComicVine](https://comicvine.gamespot.com/api/). Free key
+  from your [GameSpot account](https://comicvine.gamespot.com/api/) — paste
+  into Settings or set `COMICVINE_API_KEY`. Point `COMICS_PATH` at your
+  comics folder (`.cbz`/`.cbr`/`.cb7`); matched per-issue, commonly the same
+  share as your audiobooks, just a different sub-path.
 - **Ebooks** — [Open Library](https://openlibrary.org), no key needed.
   Point `EBOOKS_PATH` at your ebook folder (`.epub`/`.pdf`/`.mobi`/`.azw3`).
 - **Music (Albums)** — [Last.fm](https://www.last.fm) by default; a free
@@ -94,7 +99,7 @@ mount there silently resolves to an empty folder, no error).
 
 1. In `.env`, set `SMB_HOST` (the share PC's **IP address**, not its
    hostname — the Linux VM can't resolve Windows NetBIOS names),
-   `SMB_USER`/`SMB_PASS`, and `SMB_SHARE1`/`SMB_SHARE_AUDIOBOOKS`/etc. (each
+   `SMB_USER`/`SMB_PASS`, and `SMB_SHARE1`/`SMB_SHARE_AUDIOBOOKS`/`SMB_SHARE_COMICS`/etc. (each
    share's sub-path, e.g. `movies/Movies`) — see the commented-out block at
    the bottom of `.env.example`.
 2. `docker compose -f docker-compose.network-shares.yml up -d` (or paste
@@ -127,7 +132,7 @@ same event that could reset `./data`.
 # terminal 1 — API server
 cd server
 npm install
-TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks EBOOKS_DIR=/path/to/ebooks ALBUMS_DIR=/path/to/albums node index.js
+TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks COMICS_DIR=/path/to/comics EBOOKS_DIR=/path/to/ebooks ALBUMS_DIR=/path/to/albums node index.js
 
 # terminal 2 — frontend dev server (proxies /api to :8080)
 cd client
