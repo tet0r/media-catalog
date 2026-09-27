@@ -3,7 +3,6 @@ const path = require('path');
 const db = require('../db');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-const IMAGES_DIR = path.join(DATA_DIR, 'posters');
 
 // Deliberately NOT inside DATA_DIR by default's own logic — well, it falls
 // back to a subfolder of it for zero-config convenience, but the whole
@@ -27,70 +26,31 @@ function setStatus(fields) {
   db.prepare('UPDATE backup_status SET running=@running, last_run=@last_run, started_at=@started_at, message=@message WHERE id = 1').run(merged);
 }
 
-// The database (library-<stamp>.db) is the irreplaceable part — personal
-// ratings/notes/tags, and which catalog entry each library item is already
-// matched to. Cached posters/covers (images-<stamp>/) are paired with it by
-// sharing that same <stamp>: mostly re-fetchable from their source APIs on
-// a metadata refresh, but a manually-uploaded custom cover isn't, so
-// they're backed up too rather than treated as disposable.
-//
-// This is a plain recursive directory copy (fs.cpSync, built into Node —
-// no third-party dependency), not a zip. An earlier version of this used a
-// zip library and crashed the server on startup in production the moment
-// that library shared a process with better-sqlite3 — a different native
-// failure than the one that motivated it in the first place, on a
-// different platform. A plain copy has no such interaction: it's the same
-// fs calls already used everywhere else in this file.
-function imagesDirNameFor(dbFilename) {
-  return dbFilename.replace(/^library-/, 'images-').replace(/\.db$/, '');
-}
-
-function dirSize(dir) {
-  let total = 0;
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return 0;
-  }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      total += dirSize(full);
-    } else {
-      try { total += fs.statSync(full).size; } catch { /* deleted mid-walk, skip */ }
-    }
-  }
-  return total;
-}
-
+// Only the database — not cached posters/covers. The database is the
+// irreplaceable part (personal ratings/notes/tags, and which catalog entry
+// each library item is already matched to), while posters are cheap to
+// re-fetch from their source APIs on a metadata refresh (aside from a
+// manually-uploaded custom cover, a smaller edge case). A version of this
+// that also copied cached posters/covers alongside the database (first as
+// a zip, then as a plain folder copy) was tried and dropped both times —
+// once for crashing production, once for just being clutter in the backup
+// folder — so this stays database-only.
 function listBackups() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  const entries = fs.readdirSync(BACKUP_DIR, { withFileTypes: true });
-  const imageDirNames = new Set(entries.filter((e) => e.isDirectory() && e.name.startsWith('images-')).map((e) => e.name));
-  return entries
-    .filter((e) => e.isFile() && e.name.startsWith('library-') && e.name.endsWith('.db'))
-    .map((e) => {
-      const f = e.name;
+  return fs
+    .readdirSync(BACKUP_DIR)
+    .filter((f) => f.startsWith('library-') && f.endsWith('.db'))
+    .map((f) => {
       const stat = fs.statSync(path.join(BACKUP_DIR, f));
-      const imagesDirName = imagesDirNameFor(f);
-      const hasImages = imageDirNames.has(imagesDirName);
-      return {
-        filename: f,
-        size: stat.size,
-        created_at: stat.mtime.toISOString(),
-        images_dir: hasImages ? imagesDirName : null,
-        images_size: hasImages ? dirSize(path.join(BACKUP_DIR, imagesDirName)) : null,
-      };
+      return { filename: f, size: stat.size, created_at: stat.mtime.toISOString() };
     })
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-// Resolves a client-supplied filename/dirname (list/delete/download all
-// take a bare name back) to a path guaranteed to stay inside BACKUP_DIR —
+// Resolves a client-supplied filename (list/delete/download all take a
+// bare filename back) to a path guaranteed to stay inside BACKUP_DIR —
 // guards against path traversal (e.g. "../../../etc/passwd") from ever
-// reaching fs.unlinkSync/fs.rmSync/res.download. Works the same whether
-// the name is the library-*.db file or its paired images-* directory.
+// reaching fs.unlinkSync/res.download.
 function safeBackupPath(filename) {
   const base = path.basename(String(filename || ''));
   // Resolve BACKUP_DIR to an absolute path before joining/comparing — if
@@ -110,9 +70,6 @@ function pruneOldBackups() {
   const retention = Number(getSetting('backup_retention_count')) || DEFAULT_RETENTION;
   for (const b of listBackups().slice(retention)) {
     try { fs.unlinkSync(path.join(BACKUP_DIR, b.filename)); } catch { /* already gone, fine */ }
-    if (b.images_dir) {
-      try { fs.rmSync(path.join(BACKUP_DIR, b.images_dir), { recursive: true, force: true }); } catch { /* already gone, fine */ }
-    }
   }
 }
 
@@ -134,8 +91,6 @@ function pruneOldBackups() {
 // and only the finished, already-closed file gets copied onto BACKUP_DIR
 // — an ordinary byte copy needs none of SQLite's locking, so a network
 // share is fine for that part even though it isn't for the first part.
-// The images copy is a plain recursive file copy the whole way through —
-// no locking concerns to route around, so it goes straight to BACKUP_DIR.
 async function createBackup() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -152,20 +107,9 @@ async function createBackup() {
     try { fs.unlinkSync(scratchFile); } catch { /* best-effort cleanup */ }
   }
 
-  const imagesDirName = imagesDirNameFor(filename);
-  const imagesDest = path.join(BACKUP_DIR, imagesDirName);
-  fs.mkdirSync(IMAGES_DIR, { recursive: true });
-  fs.cpSync(IMAGES_DIR, imagesDest, { recursive: true });
-
   pruneOldBackups();
   const stat = fs.statSync(dest);
-  return {
-    filename,
-    size: stat.size,
-    created_at: stat.mtime.toISOString(),
-    images_dir: imagesDirName,
-    images_size: dirSize(imagesDest),
-  };
+  return { filename, size: stat.size, created_at: stat.mtime.toISOString() };
 }
 
 // Named runBackup (not runScheduledBackup) to match the runScan/runSync
@@ -190,7 +134,7 @@ async function runBackup() {
     setStatus({
       running: 0,
       last_run: new Date().toISOString(),
-      message: `Backup complete — ${result.filename} (${(result.size / 1024).toFixed(0)} KB) + images (${(result.images_size / 1024).toFixed(0)} KB) in ${seconds}s.`,
+      message: `Backup complete — ${result.filename} (${(result.size / 1024).toFixed(0)} KB) in ${seconds}s.`,
     });
   } catch (err) {
     setStatus({ running: 0, message: `Backup failed: ${err.message}` });
@@ -199,9 +143,6 @@ async function runBackup() {
 
 function deleteBackup(filename) {
   fs.unlinkSync(safeBackupPath(filename));
-  // Best-effort: older backups made before images were included have no
-  // paired directory to delete, which is fine.
-  try { fs.rmSync(safeBackupPath(imagesDirNameFor(filename)), { recursive: true, force: true }); } catch { /* no paired images dir */ }
 }
 
 // Restoring means replacing the file this process's live `db` connection
@@ -231,18 +172,6 @@ async function restoreBackup(filename) {
   // hasn't been disturbed at all, and the error above is still reportable.
   fs.copyFileSync(src, tmpPath);
 
-  // Images are additive (every cached file is named deterministically from
-  // its source, whether that's a TMDB path or a hash of a custom upload),
-  // so copying on top of what's already there is safe — no need to wipe
-  // IMAGES_DIR first. A backup made before this feature existed has no
-  // paired images directory; that's fine, restoring the database alone
-  // still works, just without bringing any old posters back with it.
-  const imagesSrc = safeBackupPath(imagesDirNameFor(filename));
-  if (fs.existsSync(imagesSrc)) {
-    fs.mkdirSync(IMAGES_DIR, { recursive: true });
-    fs.cpSync(imagesSrc, IMAGES_DIR, { recursive: true, force: true });
-  }
-
   db.close();
   // Drop the current WAL/SHM sidecar files, if any — otherwise SQLite
   // would try to replay leftover WAL frames from the PREVIOUS database
@@ -253,4 +182,4 @@ async function restoreBackup(filename) {
   fs.renameSync(tmpPath, dbPath); // atomic on the same filesystem
 }
 
-module.exports = { createBackup, runBackup, listBackups, deleteBackup, restoreBackup, safeBackupPath, imagesDirNameFor, BACKUP_DIR };
+module.exports = { createBackup, runBackup, listBackups, deleteBackup, restoreBackup, safeBackupPath, BACKUP_DIR };

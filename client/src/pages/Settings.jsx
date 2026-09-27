@@ -517,11 +517,10 @@ export default function Settings() {
       <hr />
       <h2>Backups</h2>
       <p className="muted">
-        Backs up the database (your collection, matches, ratings, notes, tags) using SQLite's own
+        Backs up just the database (your collection, matches, ratings, notes, tags — not cached
+        posters/covers, which are cheap to re-fetch on a metadata refresh). Uses SQLite's own
         online backup mechanism, so it's always a complete, consistent snapshot regardless of
-        what's been checkpointed to disk yet — plus a plain copy of every cached poster/cover
-        alongside it, so a manually-uploaded custom image isn't lost even though it can't be
-        re-fetched from a source API the way a normal poster can.
+        what's been checkpointed to disk yet.
       </p>
       <p className="muted">
         <strong>Point <code>BACKUP_DIR</code> at a location that doesn't depend on this stack's own
@@ -581,10 +580,7 @@ export default function Settings() {
             <div key={b.filename} className="backup-item">
               <span className="backup-item-name">{b.filename}</span>
               <span className="muted">{new Date(b.created_at).toLocaleString()}</span>
-              <span className="muted">
-                {(b.size / 1024).toFixed(0)} KB
-                {b.images_dir && ` + ${(b.images_size / 1024).toFixed(0)} KB images`}
-              </span>
+              <span className="muted">{(b.size / 1024).toFixed(0)} KB</span>
               <a className="muted-btn" href={api.backupDownloadUrl(b.filename)} download>
                 Download
               </a>

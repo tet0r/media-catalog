@@ -5,6 +5,14 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v16.5 — Drop images folder from backups (kept the timing display)
+- Backups are back to database-only — no more `images-<timestamp>/`
+  folder alongside each one. It was cluttering the backup location badly
+  enough that it wasn't worth keeping around even without the crash risk
+  the earlier zip-based version had.
+- The "how long a backup took" timing display from v16.3 stays — that
+  part was unrelated and still useful on its own.
+
 ## v16.4 — "Add to Collection" on every movie, tidier auto-collections
 - Every movie's own page now has an "+ Add to Collection" button: pick an
   existing manual collection from a dropdown, or type a name to create a
