@@ -17,6 +17,28 @@ function getApiKey(db) {
   return (row && row.value) || process.env.COMICVINE_API_KEY || '';
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ComicVine enforces a velocity limit (HTTP 420, "Rate limit exceeded. Slow
+// down cowboy.") on top of its hourly quota — this trips easily on a burst
+// of back-to-back calls, which searchIssues() below naturally produces
+// (one volume search plus one issue lookup per candidate volume, with
+// nothing pacing those internal hops). Since every request funnels through
+// this one function, pacing it here protects every caller — manual
+// search's up-to-9-request burst included — without needing per-call-site
+// delays. 1.1s matches the spacing other ComicVine API clients settled on
+// to reliably avoid 420s.
+const MIN_REQUEST_INTERVAL_MS = 1100;
+let lastRequestAt = 0;
+
+// A 420 is ComicVine saying "you're going too fast", not "this request is
+// wrong" — worth a short wait-and-retry rather than failing the whole
+// search over it. Retry-After (seconds) is honored when present.
+const MAX_RATE_LIMIT_RETRIES = 3;
+const RATE_LIMIT_FALLBACK_MS = 3000;
+
 async function apiGet(db, path, params) {
   const apiKey = getApiKey(db);
   if (!apiKey) throw new Error('ComicVine API key not configured. Add it in Settings.');
@@ -26,11 +48,24 @@ async function apiGet(db, path, params) {
   for (const [k, v] of Object.entries(params || {})) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`ComicVine request failed: ${res.status}`);
-  const data = await res.json();
-  if (data.status_code !== 1) throw new Error(`ComicVine error: ${data.error || `status ${data.status_code}`}`);
-  return data;
+
+  for (let attempt = 0; ; attempt++) {
+    const wait = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
+    if (wait > 0) await sleep(wait);
+    lastRequestAt = Date.now();
+
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (res.status === 420) {
+      if (attempt >= MAX_RATE_LIMIT_RETRIES) throw new Error('ComicVine rate limit exceeded — try again in a minute.');
+      const retryAfter = Number(res.headers.get('retry-after'));
+      await sleep(retryAfter > 0 ? retryAfter * 1000 : RATE_LIMIT_FALLBACK_MS);
+      continue;
+    }
+    if (!res.ok) throw new Error(`ComicVine request failed: ${res.status}`);
+    const data = await res.json();
+    if (data.status_code !== 1) throw new Error(`ComicVine error: ${data.error || `status ${data.status_code}`}`);
+    return data;
+  }
 }
 
 // ComicVine descriptions are HTML — every other source's description

@@ -5,6 +5,25 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v18.2 — Fix ComicVine 420 rate-limit errors on manual search
+- ComicVine enforces a velocity/burst limiter (HTTP 420, "Rate limit
+  exceeded. Slow down cowboy.") separate from its hourly quota, and a
+  manual search could fire up to 9 requests back-to-back with no pacing
+  between them (one volume search plus one issue lookup per candidate
+  volume) — enough to trip it on most searches. The scanner had a
+  per-file delay, but nothing paced the internal hops within a single
+  search, which is where the burst actually came from.
+- Centralized request pacing (~1.1s minimum between calls) and 420
+  retry-with-backoff (honoring Retry-After when ComicVine sends it) in
+  the one function every ComicVine call already funnels through, so
+  manual search, scan auto-matching, and bulk refresh are all covered by
+  the same fix without touching their own code.
+- Verified the pacing enforces the minimum interval correctly against
+  ComicVine's real servers (two consecutive calls measured ~1.1s apart).
+  Not verified whether this fully eliminates 420s against your real
+  account's usage pattern, since this session doesn't have your key —
+  worth confirming manual search is reliable now.
+
 ## v18.1 — Fix Comics matching + a notification crash
 - Series search was using ComicVine's `/volumes/?filter=name:` endpoint,
   which turns out to be a case-sensitive substring match against ComicVine's
