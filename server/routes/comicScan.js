@@ -2,8 +2,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const db = require('../db');
-const comicvine = require('../lib/comicvine');
-const { addComicFromIssueId } = require('../lib/addComic');
+const comicSources = require('../lib/comicSources');
+const { addComicFromExternalId } = require('../lib/addComic');
 const { walk } = require('../lib/comicScanner');
 const { parseSeriesAndIssue } = require('../lib/comicMatch');
 
@@ -121,24 +121,28 @@ async function runScan() {
 
       // Same "count and skip rather than abort the whole scan" handling
       // as the other scanners — a network blip against hundreds of
-      // sequential ComicVine requests shouldn't cost every comic after it
-      // a chance.
+      // sequential requests shouldn't cost every comic after it a chance.
+      // comicSources.searchAllSources tries ComicVine, then Metron, then
+      // GCD (see that file) — only a genuine failure across every source
+      // lands here as an error; one source being rate-limited or missing
+      // a match just falls through to the next.
       try {
-        const hits = await comicvine.searchIssues(db, series, issueNumber, { maxVolumes: SCAN_MAX_VOLUMES });
+        const hits = await comicSources.searchAllSources(db, series, issueNumber, { maxVolumes: SCAN_MAX_VOLUMES });
         await sleep(REQUEST_DELAY_MS);
 
-        // Exactly one hit across the top candidate volumes is treated as
-        // confident enough to auto-add — the volume+issue-number lookup
-        // is already a precise match by construction, so ambiguity here
-        // means more than one series plausibly has this exact issue
+        // Exactly one hit across every source tried is treated as
+        // confident enough to auto-add — a volume/series+issue-number
+        // lookup is already a precise match by construction, so ambiguity
+        // here means more than one series plausibly has this exact issue
         // number, not a fuzzy near-miss.
         if (hits.length === 1) {
-          await addComicFromIssueId(hits[0].id, { filePath: file, format });
+          await addComicFromExternalId(hits[0].source, hits[0].id, { filePath: file, format });
           matched++;
         } else {
+          const source = hits[0] ? hits[0].source : 'comicvine';
           db.prepare(
-            'INSERT OR IGNORE INTO comic_scan_pending (file_path, guessed_series, guessed_issue_number, guessed_format, candidates) VALUES (?,?,?,?,?)'
-          ).run(file, series, issueNumber, format, JSON.stringify(hits.slice(0, 8)));
+            'INSERT OR IGNORE INTO comic_scan_pending (file_path, guessed_series, guessed_issue_number, guessed_format, candidates, source) VALUES (?,?,?,?,?,?)'
+          ).run(file, series, issueNumber, format, JSON.stringify(hits.slice(0, 8)), source);
           pending++;
         }
       } catch (err) {
@@ -183,9 +187,9 @@ router.post('/pending/:id/resolve', async (req, res) => {
   try {
     const pendingRow = db.prepare('SELECT * FROM comic_scan_pending WHERE id = ?').get(req.params.id);
     if (!pendingRow) return res.status(404).json({ error: 'Not found' });
-    const { issue_id, skip } = req.body;
+    const { issue_id, skip, source } = req.body;
     if (!skip && issue_id) {
-      await addComicFromIssueId(issue_id, { filePath: pendingRow.file_path, format: pendingRow.guessed_format });
+      await addComicFromExternalId(source || 'comicvine', issue_id, { filePath: pendingRow.file_path, format: pendingRow.guessed_format });
     }
     db.prepare('DELETE FROM comic_scan_pending WHERE id = ?').run(req.params.id);
     res.json({ ok: true });

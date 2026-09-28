@@ -5,6 +5,48 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v19.0 — Comics: Metron and the Grand Comics Database as fallback sources
+- Every comic search and scan now tries [Metron](https://metron.cloud) and
+  the [Grand Comics Database](https://www.comics.org) (GCD) too, not just
+  ComicVine — added specifically because ComicVine's rate limits (v18.2)
+  kept stalling matches even with proper pacing/backoff in place. GCD needs
+  no account at all; Metron needs a free one (username/password in
+  Settings, or `METRON_USERNAME`/`METRON_PASSWORD`).
+- Scanning tries ComicVine first, then falls through to Metron, then GCD,
+  stopping as soon as one source is confident (exactly one hit) — a source
+  being rate-limited, unconfigured, or missing a series no longer sends a
+  file to Needs Review or counts as a scan failure by itself. When nobody's
+  confident, every source's hits are merged (deduped by series+issue, since
+  the same comic often exists in more than one catalog) so Needs Review
+  shows everything found, tagged by source, rather than just whichever ran
+  last.
+- Add Comic, the comic's own "Search Again", and Needs Review's re-search
+  box all gained ComicVine/Metron/GCD tabs — the same three-catalog split
+  Albums already uses for Last.fm/MusicBrainz — so a rate-limited or
+  missing source can just be searched elsewhere by hand too.
+- The `comics` table generalized from a ComicVine-only `comicvine_issue_id`
+  column to `metadata_source`/`external_id`, the same pattern audiobooks
+  and albums already use for their own multi-source metadata (existing
+  rows migrate automatically; the old column is left in place unused,
+  never read again).
+- Fixed a real bug found along the way: `SearchAgain.jsx` (the shared
+  "search again" component every scanned media type uses) crashed if a
+  source had no URL-paste lookup — never triggered before since every
+  existing caller supplied one for every source, but Metron/GCD genuinely
+  don't have one.
+- Verified: GCD needs no key, so its search/detail endpoints and the full
+  add/refresh cycle were tested directly against its real, live API —
+  including a real quirk this surfaced, GCD's cover images 403 a plain
+  fetch (unlike ComicVine/Metron's), handled the same way as
+  MusicBrainz/Last.fm's occasionally-missing cover art already is: a
+  missing cover, not a failed add. ComicVine/Metron's request construction
+  was verified reaching their real servers correctly (fake credentials,
+  genuine 401s). The 3-tab UI was confirmed live in-browser (tab
+  switching, the URL-lookup form correctly disappearing on tabs that don't
+  support it, real GCD search results rendering). Metron itself — an
+  actual account's search results — wasn't verified end-to-end, since this
+  session doesn't have a real one; worth trying once yours is in Settings.
+
 ## v18.2 — Fix ComicVine 420 rate-limit errors on manual search
 - ComicVine enforces a velocity/burst limiter (HTTP 420, "Rate limit
   exceeded. Slow down cowboy.") separate from its hourly quota, and a

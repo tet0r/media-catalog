@@ -299,6 +299,8 @@ export const api = {
     }).then(handle),
   searchComicVine: (q) => fetch(`${BASE}/search/comicvine?q=${encodeURIComponent(q)}`).then(handle),
   lookupComicVineUrl: (url) => fetch(`${BASE}/search/comicvine-url?url=${encodeURIComponent(url)}`).then(handle),
+  searchMetron: (q) => fetch(`${BASE}/search/metron?q=${encodeURIComponent(q)}`).then(handle),
+  searchGCD: (q) => fetch(`${BASE}/search/gcd?q=${encodeURIComponent(q)}`).then(handle),
   startComicScan: () => fetch(`${BASE}/comic-scan`, { method: 'POST' }).then(handle),
   comicScanStatus: () => fetch(`${BASE}/comic-scan/status`).then(handle),
   comicScanPending: () => fetch(`${BASE}/comic-scan/pending`).then(handle),

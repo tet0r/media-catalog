@@ -110,14 +110,16 @@ export default function SearchAgain({
         <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
       </form>
 
-      <form onSubmit={lookupUrl} className="pending-search-row">
-        <input
-          value={urlByKey[activeKey] || ''}
-          onChange={(e) => setUrlByKey((prev) => ({ ...prev, [activeKey]: e.target.value }))}
-          placeholder={`Or ${active.urlPlaceholder.toLowerCase()}`}
-        />
-        <button type="submit" disabled={searching || !(urlByKey[activeKey] || '')}>Look up URL</button>
-      </form>
+      {active.lookupUrl && (
+        <form onSubmit={lookupUrl} className="pending-search-row">
+          <input
+            value={urlByKey[activeKey] || ''}
+            onChange={(e) => setUrlByKey((prev) => ({ ...prev, [activeKey]: e.target.value }))}
+            placeholder={`Or ${active.urlPlaceholder.toLowerCase()}`}
+          />
+          <button type="submit" disabled={searching || !(urlByKey[activeKey] || '')}>Look up URL</button>
+        </form>
+      )}
 
       {error && <p className="error">{error}</p>}
 

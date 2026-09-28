@@ -38,6 +38,11 @@ router.get('/', (req, res) => {
     ebook_auto_prune_missing: map.ebook_auto_prune_missing === 'true',
     comicvine_api_key: map.comicvine_api_key || '',
     comicvine_api_key_source: map.comicvine_api_key ? 'settings' : (process.env.COMICVINE_API_KEY ? 'env' : 'none'),
+    metron_username: map.metron_username || '',
+    metron_password: map.metron_password || '',
+    metron_source: map.metron_username && map.metron_password
+      ? 'settings'
+      : (process.env.METRON_USERNAME && process.env.METRON_PASSWORD ? 'env' : 'none'),
     comic_auto_scan_enabled: map.comic_auto_scan_enabled === 'true',
     comic_auto_scan_interval_minutes: Number(map.comic_auto_scan_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
     comic_auto_prune_missing: map.comic_auto_prune_missing === 'true',
@@ -84,7 +89,8 @@ router.put('/', (req, res) => {
     tmdb_api_key, auto_scan_enabled, auto_scan_interval_minutes, auto_prune_missing,
     audiobook_auto_scan_enabled, audiobook_auto_scan_interval_minutes, audiobook_auto_prune_missing,
     ebook_auto_scan_enabled, ebook_auto_scan_interval_minutes, ebook_auto_prune_missing,
-    comicvine_api_key, comic_auto_scan_enabled, comic_auto_scan_interval_minutes, comic_auto_prune_missing,
+    comicvine_api_key, metron_username, metron_password,
+    comic_auto_scan_enabled, comic_auto_scan_interval_minutes, comic_auto_prune_missing,
     album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
@@ -102,6 +108,8 @@ router.put('/', (req, res) => {
   if (typeof ebook_auto_prune_missing === 'boolean') upsert('ebook_auto_prune_missing', ebook_auto_prune_missing ? 'true' : 'false');
   upsertInterval('ebook_auto_scan_interval_minutes', ebook_auto_scan_interval_minutes);
   if (typeof comicvine_api_key === 'string') upsert('comicvine_api_key', comicvine_api_key);
+  if (typeof metron_username === 'string') upsert('metron_username', metron_username);
+  if (typeof metron_password === 'string') upsert('metron_password', metron_password);
   if (typeof comic_auto_scan_enabled === 'boolean') upsert('comic_auto_scan_enabled', comic_auto_scan_enabled ? 'true' : 'false');
   if (typeof comic_auto_prune_missing === 'boolean') upsert('comic_auto_prune_missing', comic_auto_prune_missing ? 'true' : 'false');
   upsertInterval('comic_auto_scan_interval_minutes', comic_auto_scan_interval_minutes);

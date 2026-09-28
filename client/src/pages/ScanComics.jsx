@@ -45,10 +45,10 @@ export default function ScanComics() {
     }
   }
 
-  async function resolve(id, issueId, skip) {
+  async function resolve(id, issueId, skip, source) {
     setBusyId(id);
     try {
-      await api.resolveComicPending(id, { issue_id: issueId, skip });
+      await api.resolveComicPending(id, { issue_id: issueId, skip, source });
       setPending((p) => p.filter((x) => x.id !== id));
     } catch (err) {
       setError(err.message);
@@ -206,7 +206,7 @@ export default function ScanComics() {
               busy={busyId === p.id}
               selected={selectedIds.has(p.id)}
               onToggleSelect={(shiftKey) => toggleSelect(index, p.id, shiftKey)}
-              onResolve={(issueId, skip) => resolve(p.id, issueId, skip)}
+              onResolve={(issueId, skip, source) => resolve(p.id, issueId, skip, source)}
               onIgnore={() => ignoreOne(p.id)}
             />
           ))}

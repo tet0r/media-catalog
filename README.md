@@ -36,11 +36,17 @@ Assumes Docker and your media files are on the same machine — see
   seasons/episodes are underneath.
 - **Audiobooks** — Audible via [Audnexus](https://audnex.us), no key
   needed. Point `AUDIOBOOKS_PATH` at your audiobook folder.
-- **Comics** — [ComicVine](https://comicvine.gamespot.com/api/). Free key
-  from your [GameSpot account](https://comicvine.gamespot.com/api/) — paste
-  into Settings or set `COMICVINE_API_KEY`. Point `COMICS_PATH` at your
-  comics folder (`.cbz`/`.cbr`/`.cb7`); matched per-issue, commonly the same
-  share as your audiobooks, just a different sub-path.
+- **Comics** — [ComicVine](https://comicvine.gamespot.com/api/) by default,
+  with [Metron](https://metron.cloud) and the
+  [Grand Comics Database](https://www.comics.org) as automatic fallbacks
+  for every search and scan (handy since ComicVine rate-limits fairly
+  aggressively) — GCD needs no account at all, Metron a free one. Free
+  ComicVine key from your [GameSpot account](https://comicvine.gamespot.com/api/)
+  — paste into Settings or set `COMICVINE_API_KEY`; Metron username/password
+  go in Settings too, or `METRON_USERNAME`/`METRON_PASSWORD`. Point
+  `COMICS_PATH` at your comics folder (`.cbz`/`.cbr`/`.cb7`); matched
+  per-issue, commonly the same share as your audiobooks, just a different
+  sub-path.
 - **Ebooks** — [Open Library](https://openlibrary.org), no key needed.
   Point `EBOOKS_PATH` at your ebook folder (`.epub`/`.pdf`/`.mobi`/`.azw3`).
 - **Music (Albums)** — [Last.fm](https://www.last.fm) by default; a free

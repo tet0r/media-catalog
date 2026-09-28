@@ -1,5 +1,5 @@
 const db = require('../db');
-const comicvine = require('./comicvine');
+const comicSources = require('./comicSources');
 const path = require('path');
 const { cacheImageFromUrl } = require('./images');
 const notifications = require('./notifications');
@@ -22,18 +22,33 @@ function extractMetadata(details) {
 }
 
 const INSERT_SQL = `INSERT INTO comics
-  (comicvine_issue_id, series, issue_number, title, description, publisher, creators, cover_date, year,
+  (external_id, metadata_source, series, issue_number, title, description, publisher, creators, cover_date, year,
    cover_file, file_path, format)
-  VALUES (@comicvine_issue_id,@series,@issue_number,@title,@description,@publisher,@creators,@cover_date,@year,
+  VALUES (@external_id,@metadata_source,@series,@issue_number,@title,@description,@publisher,@creators,@cover_date,@year,
    @cover_file,@file_path,@format)`;
 
-async function addComicFromIssueId(issueId, { filePath = null, format = null } = {}) {
-  const details = await comicvine.getIssueDetails(db, issueId);
-  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url) : null;
+async function fetchCoverFile(coverUrl) {
+  if (!coverUrl) return null;
+  // Unlike ComicVine/Metron's CDNs, GCD's cover images 403 a plain fetch
+  // without a matching Referer — same "a cover may just not be fetchable"
+  // situation as MusicBrainz/Last.fm's occasionally-missing artwork, so
+  // this is non-fatal (a missing cover, not an aborted add) rather than a
+  // thrown error.
+  try {
+    return await cacheImageFromUrl(DATA_DIR, coverUrl);
+  } catch {
+    return null;
+  }
+}
+
+async function addComicFromExternalId(source, externalId, { filePath = null, format = null } = {}) {
+  const details = await comicSources.getIssueDetails(db, source, externalId);
+  const coverFile = await fetchCoverFile(details.cover_url);
 
   const info = db.prepare(INSERT_SQL).run({
     ...extractMetadata(details),
-    comicvine_issue_id: details.id,
+    external_id: String(details.id),
+    metadata_source: source,
     cover_file: coverFile,
     file_path: filePath,
     format,
@@ -46,8 +61,8 @@ async function addComicFromIssueId(issueId, { filePath = null, format = null } =
 // Deliberately leaves cover_file untouched, same rationale as
 // refreshEbookMetadata/refreshMovieMetadata: a custom cover shouldn't be
 // silently overwritten by a metadata refresh.
-async function refreshComicMetadata(comicId, issueId) {
-  const details = await comicvine.getIssueDetails(db, issueId);
+async function refreshComicMetadata(comicId, source, externalId) {
+  const details = await comicSources.getIssueDetails(db, source, externalId);
   const meta = extractMetadata(details);
   const setClause = Object.keys(meta).map((k) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE comics SET ${setClause} WHERE id = @id`).run({ ...meta, id: comicId });
@@ -56,19 +71,20 @@ async function refreshComicMetadata(comicId, issueId) {
 
 // Unlike refreshComicMetadata (re-fetches from the SAME issue id, so
 // keeping the existing cover makes sense), this points an existing comic
-// at a DIFFERENT ComicVine issue entirely — picked from a fresh search on
-// the comic's own detail page, for when the original match was wrong. The
-// cover is replaced too, since the old one belongs to whatever the comic
-// was previously matched to. file_path/format are left alone: it's still
-// the same file on disk, just re-pointed at different metadata.
-async function rematchComic(comicId, issueId) {
-  const details = await comicvine.getIssueDetails(db, issueId);
-  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url) : null;
+// at a DIFFERENT issue entirely — possibly from a different source than it
+// was originally matched with — picked from a fresh search on the comic's
+// own detail page, for when the original match was wrong. The cover is
+// replaced too, since the old one belongs to whatever the comic was
+// previously matched to. file_path/format are left alone: it's still the
+// same file on disk, just re-pointed at different metadata.
+async function rematchComic(comicId, source, externalId) {
+  const details = await comicSources.getIssueDetails(db, source, externalId);
+  const coverFile = await fetchCoverFile(details.cover_url);
   const meta = extractMetadata(details);
-  const fields = { ...meta, comicvine_issue_id: details.id, cover_file: coverFile };
+  const fields = { ...meta, external_id: String(details.id), metadata_source: source, cover_file: coverFile };
   const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE comics SET ${setClause} WHERE id = @id`).run({ ...fields, id: comicId });
   return db.prepare('SELECT * FROM comics WHERE id = ?').get(comicId);
 }
 
-module.exports = { addComicFromIssueId, refreshComicMetadata, rematchComic, extractMetadata };
+module.exports = { addComicFromExternalId, refreshComicMetadata, rematchComic, extractMetadata };

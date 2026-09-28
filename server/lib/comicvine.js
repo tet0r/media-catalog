@@ -149,6 +149,7 @@ async function searchIssues(db, seriesQuery, issueNumber, { maxVolumes = 5, maxH
       year: issue.cover_date ? Number(issue.cover_date.slice(0, 4)) : null,
       cover_url: issue.image ? issue.image.medium_url || issue.image.small_url : null,
       publisher: volume.publisher,
+      source: 'comicvine',
     });
   }
   return hits;

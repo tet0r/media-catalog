@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import SearchAgain from '../components/SearchAgain.jsx';
 
-const COMICVINE_SOURCES = [
+// Same three catalogs as AddComic.jsx — a wrong match found via one source
+// can be re-picked from any of the others too.
+const COMIC_SOURCES = [
   {
     key: 'comicvine',
     label: 'ComicVine',
@@ -11,6 +13,8 @@ const COMICVINE_SOURCES = [
     lookupUrl: api.lookupComicVineUrl,
     urlPlaceholder: 'Paste a comicvine.gamespot.com issue URL',
   },
+  { key: 'metron', label: 'Metron', search: (q) => api.searchMetron(q) },
+  { key: 'gcd', label: 'GCD', search: (q) => api.searchGCD(q) },
 ];
 
 export default function ComicDetail() {
@@ -121,29 +125,39 @@ export default function ComicDetail() {
           )}
 
           <div className="tags">
-            {comic.comicvine_issue_id && (
+            {comic.metadata_source === 'comicvine' && comic.external_id && (
               <a
                 className="tag link-tag"
-                href={`https://comicvine.gamespot.com/issue/4000-${comic.comicvine_issue_id}/`}
+                href={`https://comicvine.gamespot.com/issue/4000-${comic.external_id}/`}
                 target="_blank"
                 rel="noreferrer"
               >
                 ComicVine ↗
               </a>
             )}
+            {comic.metadata_source === 'gcd' && comic.external_id && (
+              <a
+                className="tag link-tag"
+                href={`https://www.comics.org/issue/${comic.external_id}/`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                GCD ↗
+              </a>
+            )}
           </div>
 
           <div className="actions">
-            <button onClick={refreshMetadata} disabled={refreshing || !comic.comicvine_issue_id}>
+            <button onClick={refreshMetadata} disabled={refreshing || !comic.external_id}>
               {refreshing ? 'Refreshing...' : 'Refresh Metadata'}
             </button>
             <SearchAgain
-              sources={COMICVINE_SOURCES}
+              sources={COMIC_SOURCES}
               queryPlaceholder="Series name and issue #, e.g. Batman 5"
               idField="id"
               imageField="cover_url"
               renderLabel={(c) => `${c.series} #${c.issue_number}${c.year ? ` (${c.year})` : ''}`}
-              rematch={(_source, issueId) => api.rematchComic(id, { issue_id: issueId })}
+              rematch={(source, issueId) => api.rematchComic(id, { issue_id: issueId, source })}
               onRematched={setComic}
             />
             <button className="danger" onClick={remove}>Remove from Collection</button>

@@ -5,12 +5,12 @@ const { refreshComicMetadata } = require('./addComic');
 let status = { running: false, total: 0, done: 0, failed: 0, message: 'Idle' };
 
 async function runBulkRefresh() {
-  const comics = db.prepare('SELECT id, comicvine_issue_id FROM comics WHERE comicvine_issue_id IS NOT NULL').all();
+  const comics = db.prepare('SELECT id, metadata_source, external_id FROM comics WHERE external_id IS NOT NULL').all();
   status = { running: true, total: comics.length, done: 0, failed: 0, message: `Refreshing ${comics.length} comics...` };
 
   for (const comic of comics) {
     try {
-      await refreshComicMetadata(comic.id, comic.comicvine_issue_id);
+      await refreshComicMetadata(comic.id, comic.metadata_source, comic.external_id);
       status.done++;
     } catch {
       status.failed++;

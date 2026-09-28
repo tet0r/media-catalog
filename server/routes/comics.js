@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { addComicFromIssueId, refreshComicMetadata, rematchComic } = require('../lib/addComic');
+const { addComicFromExternalId, refreshComicMetadata, rematchComic } = require('../lib/addComic');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshComics');
 
@@ -71,9 +71,9 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { issue_id } = req.body;
+    const { issue_id, source } = req.body;
     if (!issue_id) return res.status(400).json({ error: 'issue_id is required' });
-    const row = await addComicFromIssueId(issue_id);
+    const row = await addComicFromExternalId(source || 'comicvine', issue_id);
     res.status(201).json(rowToComic(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -132,27 +132,28 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
 
 router.post('/:id/refresh', async (req, res) => {
   try {
-    const existing = db.prepare('SELECT comicvine_issue_id FROM comics WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT metadata_source, external_id FROM comics WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    if (!existing.comicvine_issue_id) return res.status(400).json({ error: 'This comic has no ComicVine match to refresh from' });
-    const row = await refreshComicMetadata(req.params.id, existing.comicvine_issue_id);
+    if (!existing.external_id) return res.status(400).json({ error: 'This comic has no catalog match to refresh from' });
+    const row = await refreshComicMetadata(req.params.id, existing.metadata_source, existing.external_id);
     res.json(rowToComic(row));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// Points this comic at a completely different ComicVine issue — found via
-// a fresh search right on the comic's own page, for when the original
-// match was wrong. Unlike /refresh (re-fetches the same issue id), this
-// takes a new one picked from that search.
+// Points this comic at a completely different issue — possibly from a
+// different source entirely — found via a fresh search right on the
+// comic's own page, for when the original match was wrong. Unlike
+// /refresh (re-fetches the same issue id from the same source), this
+// takes a new source+id pair picked from that search.
 router.post('/:id/rematch', async (req, res) => {
   try {
-    const { issue_id } = req.body;
+    const { issue_id, source } = req.body;
     if (!issue_id) return res.status(400).json({ error: 'issue_id is required' });
     const existing = db.prepare('SELECT id FROM comics WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    const row = await rematchComic(req.params.id, issue_id);
+    const row = await rematchComic(req.params.id, source || 'comicvine', issue_id);
     res.json(rowToComic(row));
   } catch (err) {
     res.status(400).json({ error: err.message });

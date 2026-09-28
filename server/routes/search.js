@@ -8,6 +8,8 @@ const musicbrainz = require('../lib/musicbrainz');
 const lastfm = require('../lib/lastfm');
 const tvdb = require('../lib/tvdb');
 const comicvine = require('../lib/comicvine');
+const metron = require('../lib/metron');
+const gcd = require('../lib/gcd');
 const { parseSeriesAndIssue } = require('../lib/comicMatch');
 
 const router = express.Router();
@@ -389,7 +391,43 @@ router.get('/comicvine-url', async (req, res) => {
       year: details.year,
       cover_url: details.cover_url,
       publisher: details.publisher,
+      source: 'comicvine',
     });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Same series+issue search as /comicvine above, against Metron instead —
+// a second catalog for when ComicVine is rate-limited, missing a series,
+// or not configured (see lib/comicSources.js for the scan/auto-match side
+// of this; these two extra endpoints are for the interactive search tabs).
+router.get('/metron', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const { series, issueNumber } = parseSeriesAndIssue(q);
+    if (!series || !issueNumber) {
+      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+    }
+    const results = await metron.searchIssues(db, series, issueNumber, { maxVolumes: 8 });
+    res.json(results);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Same, against the Grand Comics Database — needs no account/key at all.
+router.get('/gcd', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const { series, issueNumber } = parseSeriesAndIssue(q);
+    if (!series || !issueNumber) {
+      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+    }
+    const results = await gcd.searchIssues(db, series, issueNumber, { maxHits: 8 });
+    res.json(results);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

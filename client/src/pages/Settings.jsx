@@ -85,6 +85,9 @@ export default function Settings() {
   const [audiobookAutoPruneMissing, setAudiobookAutoPruneMissing] = useState(false);
   const [comicvineKey, setComicvineKey] = useState('');
   const [comicvineSource, setComicvineSource] = useState('none');
+  const [metronUsername, setMetronUsername] = useState('');
+  const [metronPassword, setMetronPassword] = useState('');
+  const [metronSource, setMetronSource] = useState('none');
   const [comicAutoScanEnabled, setComicAutoScanEnabled] = useState(false);
   const [comicAutoScanInterval, setComicAutoScanInterval] = useState(60);
   const [comicAutoPruneMissing, setComicAutoPruneMissing] = useState(false);
@@ -153,6 +156,9 @@ export default function Settings() {
         setAudiobookAutoPruneMissing(!!s.audiobook_auto_prune_missing);
         setComicvineKey(s.comicvine_api_key || '');
         setComicvineSource(s.comicvine_api_key_source);
+        setMetronUsername(s.metron_username || '');
+        setMetronPassword(s.metron_password || '');
+        setMetronSource(s.metron_source);
         setComicAutoScanEnabled(!!s.comic_auto_scan_enabled);
         setComicAutoScanInterval(s.comic_auto_scan_interval_minutes || 60);
         setComicAutoPruneMissing(!!s.comic_auto_prune_missing);
@@ -488,6 +494,8 @@ export default function Settings() {
         audiobook_auto_scan_interval_minutes: audiobookAutoScanInterval,
         audiobook_auto_prune_missing: audiobookAutoPruneMissing,
         comicvine_api_key: comicvineKey,
+        metron_username: metronUsername,
+        metron_password: metronPassword,
         comic_auto_scan_enabled: comicAutoScanEnabled,
         comic_auto_scan_interval_minutes: comicAutoScanInterval,
         comic_auto_prune_missing: comicAutoPruneMissing,
@@ -779,6 +787,36 @@ export default function Settings() {
         {' '}(requires a free GameSpot account).
       </p>
 
+      <h3>Additional Sources</h3>
+      <p className="muted">
+        Every search and scan tries ComicVine first, then falls back to Metron and the Grand Comics
+        Database (GCD) — useful when ComicVine is rate-limited, missing a series, or not configured.
+        GCD needs no account at all; Metron needs a free one.
+      </p>
+      <div className="form-grid">
+        <label>
+          Metron Username
+          <input value={metronUsername} onChange={(e) => setMetronUsername(e.target.value)} placeholder="Your metron.cloud username" />
+        </label>
+        <label>
+          Metron Password
+          <input type="password" value={metronPassword} onChange={(e) => setMetronPassword(e.target.value)} placeholder="Your metron.cloud password" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {metronSource === 'env'
+          ? 'environment variables (METRON_USERNAME/METRON_PASSWORD)'
+          : metronSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        . Sign up for free at{' '}
+        <a href="https://metron.cloud/accounts/signup/" target="_blank" rel="noreferrer">
+          metron.cloud
+        </a>
+        .
+      </p>
+
       <div className="auto-scan-row">
         <label className="toggle-switch">
           <input
@@ -811,7 +849,7 @@ export default function Settings() {
 
       <h3>Bulk Actions</h3>
       <p className="muted">
-        Re-fetches every comic's metadata from ComicVine in place. Doesn't touch covers,
+        Re-fetches every comic's metadata in place, from whichever source it was originally matched to. Doesn't touch covers,
         so any custom upload is left alone.
       </p>
       <button onClick={startComicBulkRefresh} disabled={comicBulkStatus?.running}>

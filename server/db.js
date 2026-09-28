@@ -572,6 +572,19 @@ ensureColumn('album_ignored', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
 ensureColumn('movies', 'tmdb_collection_id', 'INTEGER');
 ensureColumn('backup_status', 'started_at', 'TEXT');
+// Comics gained Metron and GCD as additional sources alongside ComicVine
+// (see lib/comicSources.js) — generalizing away from the comicvine_issue_id
+// column the same way audiobooks/albums already use metadata_source +
+// their own external-id column, rather than a column named after one
+// specific source. comicvine_issue_id itself is left in place unused
+// (same as movies' old company_match) rather than migrated away, since
+// every existing row's value is preserved below.
+ensureColumn('comics', 'metadata_source', "TEXT DEFAULT 'comicvine'");
+ensureColumn('comics', 'external_id', 'TEXT');
+db.prepare(
+  "UPDATE comics SET external_id = CAST(comicvine_issue_id AS TEXT) WHERE external_id IS NULL AND comicvine_issue_id IS NOT NULL"
+).run();
+ensureColumn('comic_scan_pending', 'source', "TEXT DEFAULT 'comicvine'");
 
 db.prepare('INSERT OR IGNORE INTO scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO audiobook_scan_status (id, running) VALUES (1, 0)').run();
