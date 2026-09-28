@@ -7,6 +7,7 @@ import { api } from '../api.js';
 const MEDIA_TYPE_INFO = {
   movie: { label: 'Movie', path: (id) => `/movies/${id}` },
   audiobook: { label: 'Audiobook', path: (id) => `/audiobooks/${id}` },
+  comic: { label: 'Comic', path: (id) => `/comics/${id}` },
   ebook: { label: 'Ebook', path: (id) => `/ebooks/${id}` },
   album: { label: 'Album', path: (id) => `/music/albums/${id}` },
   vinyl: { label: 'Vinyl', path: (id) => `/music/vinyl/${id}` },

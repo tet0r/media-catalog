@@ -5,6 +5,29 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v18.1 — Fix Comics matching + a notification crash
+- Series search was using ComicVine's `/volumes/?filter=name:` endpoint,
+  which turns out to be a case-sensitive substring match against ComicVine's
+  stored title (confirmed via ComicVine's own API forums) — a filename-
+  derived series name that didn't case-match exactly returned zero
+  candidates, so nearly everything fell straight to Needs Review with no
+  matches to pick from. Switched to ComicVine's `/search/` endpoint
+  instead, which matches on relevance rather than exact case.
+- Adding a comic (via scan auto-match or a manual add) threw `Unknown
+  notification media_type: comic` right after the comic was already
+  inserted — `comic` was missing from the notification system's allowed
+  media types. In a scan, that exception was caught by the "network error,
+  will retry" handling, so every successful auto-match got miscounted as a
+  failure. Also added the same missing entry to the notification bell's
+  own link-building map, which would've sent a click on a comic
+  notification to a dead link.
+- Verified the `/search/` request reaches ComicVine's real servers
+  correctly (a genuine 401, not a 403, confirming the URL/params/User-Agent
+  are right) and unit-tested that `addNotification('comic', ...)` no
+  longer throws. Not verified against real matching results end-to-end,
+  since this session still doesn't have a real ComicVine key — worth
+  re-running your scan now that both are fixed.
+
 ## v18.0 — Comics, a new media type
 - Comics joins the sidebar: [ComicVine](https://comicvine.gamespot.com/api/)
   metadata, matched per-issue (one library row per `.cbz`/`.cbr`/`.cb7` file,

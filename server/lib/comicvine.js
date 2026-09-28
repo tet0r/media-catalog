@@ -52,25 +52,32 @@ function parseCreators(credits) {
   }));
 }
 
-// Volumes (series) matching a name — the first hop. Sorted by issue count
-// descending so an established series outranks an obscure same-named
-// one-off when both match the filter.
+// Volumes (series) matching a name — the first hop. Uses /search/ rather
+// than /volumes/?filter=name: — that filter is a case-sensitive substring
+// match against ComicVine's stored name (confirmed via ComicVine's own API
+// forums), so a filename-derived series name that differs in casing or
+// punctuation from the canonical title returns zero results even when the
+// series obviously exists. /search/ is relevance-based instead. Sorted by
+// issue count descending (search doesn't support server-side sort) so an
+// established series outranks an obscure same-named one-off.
 async function searchVolumes(db, query, limit = 8) {
   if (!query) return [];
-  const data = await apiGet(db, '/volumes/', {
-    filter: `name:${query}`,
+  const data = await apiGet(db, '/search/', {
+    query,
+    resources: 'volume',
     limit,
-    sort: 'count_of_issues:desc',
     field_list: 'id,name,start_year,publisher,image,count_of_issues',
   });
-  return (data.results || []).map((v) => ({
-    id: v.id,
-    name: v.name,
-    start_year: v.start_year ? Number(v.start_year) : null,
-    publisher: v.publisher ? v.publisher.name : null,
-    image_url: v.image ? v.image.medium_url || v.image.small_url : null,
-    issue_count: v.count_of_issues || 0,
-  }));
+  return (data.results || [])
+    .map((v) => ({
+      id: v.id,
+      name: v.name,
+      start_year: v.start_year ? Number(v.start_year) : null,
+      publisher: v.publisher ? v.publisher.name : null,
+      image_url: v.image ? v.image.medium_url || v.image.small_url : null,
+      issue_count: v.count_of_issues || 0,
+    }))
+    .sort((a, b) => b.issue_count - a.issue_count);
 }
 
 // A specific issue within a volume — the second hop. Returns null (not a

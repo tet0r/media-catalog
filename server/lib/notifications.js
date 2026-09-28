@@ -3,7 +3,7 @@ const db = require('../db');
 // Kept out of the routes file too — the client needs the same mapping to
 // build a link to the added item, so it's easiest to have one canonical
 // list of valid media_type values right here.
-const MEDIA_TYPES = ['movie', 'audiobook', 'ebook', 'album', 'vinyl', 'game', 'tv'];
+const MEDIA_TYPES = ['movie', 'audiobook', 'comic', 'ebook', 'album', 'vinyl', 'game', 'tv'];
 
 // An occasional maintenance action (this app's own scans/syncs), not
 // something a user actively curates — cap it so a long-running install
