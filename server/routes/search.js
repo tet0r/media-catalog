@@ -360,7 +360,7 @@ router.get('/comicvine', async (req, res) => {
     if (!q) return res.json([]);
     const { series, issueNumber } = parseSeriesAndIssue(q);
     if (!series || !issueNumber) {
-      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+      return res.status(400).json({ error: 'Type a series name, e.g. "Batman 5" or just "Watchmen" for a one-shot/OGN' });
     }
     const results = await comicvine.searchIssues(db, series, issueNumber, { maxVolumes: 8 });
     res.json(results);
@@ -408,7 +408,7 @@ router.get('/metron', async (req, res) => {
     if (!q) return res.json([]);
     const { series, issueNumber } = parseSeriesAndIssue(q);
     if (!series || !issueNumber) {
-      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+      return res.status(400).json({ error: 'Type a series name, e.g. "Batman 5" or just "Watchmen" for a one-shot/OGN' });
     }
     const results = await metron.searchIssues(db, series, issueNumber, { maxVolumes: 8 });
     res.json(results);
@@ -424,7 +424,7 @@ router.get('/gcd', async (req, res) => {
     if (!q) return res.json([]);
     const { series, issueNumber } = parseSeriesAndIssue(q);
     if (!series || !issueNumber) {
-      return res.status(400).json({ error: 'Include an issue number, e.g. "Batman 5" or "Batman #5"' });
+      return res.status(400).json({ error: 'Type a series name, e.g. "Batman 5" or just "Watchmen" for a one-shot/OGN' });
     }
     const results = await gcd.searchIssues(db, series, issueNumber, { maxHits: 8 });
     res.json(results);

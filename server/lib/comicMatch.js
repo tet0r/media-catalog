@@ -45,8 +45,17 @@ function parseSeriesAndIssue(text) {
     if (series) return { series, issueNumber: normalizeIssueNumber(trailingMatch[1]) };
   }
 
+  // No issue number anywhere in the text at all — the normal case for a
+  // one-shot, OGN, or trade paperback, which typically isn't numbered in
+  // its filename the way a single issue is. Rather than give up on
+  // searching entirely, default to "1": one-shots/OGNs are catalogued as
+  // issue 1 of their volume on ComicVine, Metron, and GCD alike, so this
+  // still finds them the vast majority of the time. Worst case (a real
+  // annual/special numbered differently) is no worse than before — zero
+  // hits, same as never searching — since the caller still requires
+  // exactly one hit to auto-confident-match.
   const series = cleanSeries(withoutParens);
-  return { series: series || null, issueNumber: null };
+  return { series: series || null, issueNumber: series ? '1' : null };
 }
 
 module.exports = { parseSeriesAndIssue };

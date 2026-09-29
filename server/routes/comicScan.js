@@ -107,10 +107,10 @@ async function runScan() {
       const { series, issueNumber } = parseSeriesAndIssue(base);
 
       if (!series || !issueNumber) {
-        // Nothing confident to search ComicVine with at all (e.g. no
-        // issue number could be guessed) — straight to Needs Review
-        // rather than spend a request on a search that can't possibly
-        // land on one exact issue.
+        // parseSeriesAndIssue defaults issueNumber to "1" whenever a
+        // series name parsed at all (see comicMatch.js) — this only fires
+        // for a filename with nothing usable in it whatsoever, so there's
+        // truly nothing to search with.
         db.prepare(
           'INSERT OR IGNORE INTO comic_scan_pending (file_path, guessed_series, guessed_issue_number, guessed_format, candidates) VALUES (?,?,?,?,?)'
         ).run(file, series, issueNumber, format, '[]');

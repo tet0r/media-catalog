@@ -5,6 +5,27 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v19.1 — Fix comics with no issue number never being searched at all
+- A one-shot, OGN, or trade paperback typically isn't numbered in its
+  filename the way a single issue is — `parseSeriesAndIssue` returned no
+  issue number for those, and scanning/searching treated that as "nothing
+  confident to search with" and skipped straight to Needs Review without
+  ever trying ComicVine/Metron/GCD. Same problem manually: typing a bare
+  series name with no number into any comics search box (Add Comic, a
+  comic's own Search Again, Needs Review's re-search) was rejected outright.
+- Now defaults the issue number to "1" whenever a series name parses at
+  all — one-shots/OGNs are catalogued as issue 1 of their volume on
+  ComicVine, Metron, and GCD alike, so this finds them the vast majority
+  of the time. A genuinely differently-numbered annual/special just gets
+  zero hits, same as never searching before — no worse than the prior
+  behavior, since auto-add still requires exactly one confident hit.
+- Verified live against GCD's real API: a `Watchmen.cbz` test file, which
+  previously would have gone straight to Needs Review with zero candidates,
+  now actually searches (found 8 real candidates for "Watchmen #1",
+  correctly landing in Needs Review as ambiguous rather than falsely
+  auto-matching). Also verified the parser directly against numbered,
+  unnumbered, and unparseable filenames.
+
 ## v19.0 — Comics: Metron and the Grand Comics Database as fallback sources
 - Every comic search and scan now tries [Metron](https://metron.cloud) and
   the [Grand Comics Database](https://www.comics.org) (GCD) too, not just
