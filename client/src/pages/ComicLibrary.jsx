@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ComicCard from '../components/ComicCard.jsx';
+import GroupCard from '../components/GroupCard.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -45,6 +46,16 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [expandedSeries, setExpandedSeries] = useState(new Set());
+
+  function toggleSeries(series) {
+    setExpandedSeries((prev) => {
+      const next = new Set(prev);
+      if (next.has(series)) next.delete(series);
+      else next.add(series);
+      return next;
+    });
+  }
 
   const refreshComics = useCallback(() => {
     setLoading(true);
@@ -176,15 +187,23 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
           No comics yet. Use "Add Comic" to search by series and issue #, or "Scan Library" to import from your comics folder.
         </p>
       ) : groupBySeries ? (
-        <div>
+        <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
-              <div key={g.series} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
-                <h2>{g.series}</h2>
-                <div className="grid">{g.items.map((c) => renderCard(c, undefined))}</div>
-              </div>
+              <GroupCard
+                key={g.series}
+                id={isFirst ? `letter-${g.letter}` : undefined}
+                label={g.series}
+                count={g.items.length}
+                countLabel="issue"
+                coverUrls={g.items.map((c) => c.cover_url)}
+                expanded={expandedSeries.has(g.series)}
+                onToggle={() => toggleSeries(g.series)}
+              >
+                {g.items.map((c) => renderCard(c, undefined))}
+              </GroupCard>
             );
           })}
         </div>

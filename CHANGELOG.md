@@ -5,6 +5,32 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v20.0 — Group by Author/Series now shows image cards you expand
+- Grouping Audiobooks/Ebooks by Author, or Comics by Series, used to just
+  stack every group under a plain text heading with all its items already
+  shown — the toggle worked, but a library with many authors/series turned
+  into a long wall of headings. Now each author/series renders as its own
+  card in the same six-across grid every other library page already uses,
+  and clicking one expands it in place to show that author's/series' own
+  items, spanning the full row rather than navigating anywhere.
+- Since there's no dedicated "author" or "series" entity with its own
+  image, each card borrows the same fallback Collections already uses for
+  a manual collection with no poster: a 2x2 collage of up to 4 covers from
+  that group's own items (blank-filled if it has fewer than 4).
+- An author's expanded audiobooks are sorted by series, then position
+  within that series, then title — using the `series`/`series_sequence`
+  columns audiobooks already had but never actually sorted by. Ebooks
+  have no series data at all yet, so their expanded view is a title sort
+  for now. A series' expanded comic issues keep the existing issue-number
+  order.
+- Verified live: expanding an author/series correctly spans the full grid
+  row (checked via computed `grid-column`) while the trigger card itself
+  stays at normal card width; nested items render in the right order for
+  all three (a multi-series author correctly grouped/sorted, a multi-issue
+  series in issue order). Games/Albums/Vinyl's own group-by-X toggles were
+  deliberately left untouched — this was only asked for Audiobooks,
+  Ebooks, and Comics.
+
 ## v19.1 — Fix comics with no issue number never being searched at all
 - A one-shot, OGN, or trade paperback typically isn't numbered in its
   filename the way a single issue is — `parseSeriesAndIssue` returned no

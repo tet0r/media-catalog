@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import AudiobookCard from '../components/AudiobookCard.jsx';
+import GroupCard from '../components/GroupCard.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -47,6 +48,27 @@ function groupByAuthorName(audiobooks) {
   return groups;
 }
 
+// Within one author's expanded books: series first (alphabetical), then
+// by position within that series, so a multi-book series reads in the
+// right order rather than however the library's own sort happened to
+// return them. A book with no series data at all sorts after every book
+// that has one, then falls back to title.
+function sortBySeries(books) {
+  return [...books].sort((a, b) => {
+    const aSeries = a.series || '';
+    const bSeries = b.series || '';
+    if (aSeries !== bSeries) {
+      if (!aSeries) return 1;
+      if (!bSeries) return -1;
+      return aSeries.localeCompare(bSeries, undefined, { sensitivity: 'base' });
+    }
+    const aSeq = Number(a.series_sequence) || 0;
+    const bSeq = Number(b.series_sequence) || 0;
+    if (aSeq !== bSeq) return aSeq - bSeq;
+    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+  });
+}
+
 export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAuthor }) {
   const [audiobooks, setAudiobooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +78,16 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [expandedAuthors, setExpandedAuthors] = useState(new Set());
+
+  function toggleAuthor(author) {
+    setExpandedAuthors((prev) => {
+      const next = new Set(prev);
+      if (next.has(author)) next.delete(author);
+      else next.add(author);
+      return next;
+    });
+  }
 
   const refreshAudiobooks = useCallback(() => {
     setLoading(true);
@@ -191,15 +223,23 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
           No audiobooks yet. Use "Add Audiobook" to search by title, or "Scan Library" to import from your audiobook folder.
         </p>
       ) : groupByAuthor ? (
-        <div>
+        <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
-              <div key={g.author} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
-                <h2>{g.author}</h2>
-                <div className="grid">{g.books.map((a) => renderCard(a, undefined))}</div>
-              </div>
+              <GroupCard
+                key={g.author}
+                id={isFirst ? `letter-${g.letter}` : undefined}
+                label={g.author}
+                count={g.books.length}
+                countLabel="book"
+                coverUrls={g.books.map((a) => a.cover_url)}
+                expanded={expandedAuthors.has(g.author)}
+                onToggle={() => toggleAuthor(g.author)}
+              >
+                {sortBySeries(g.books).map((a) => renderCard(a, undefined))}
+              </GroupCard>
             );
           })}
         </div>

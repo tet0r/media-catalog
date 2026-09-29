@@ -176,6 +176,19 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
   border-bottom: 1px solid var(--border);
 }
 
+/* A group-by-author/series card (Audiobooks/Ebooks/Comics) — sits as a
+   normal item inside the shared .grid, six-across like any other card,
+   until expanded: then it spans the full grid row (grid-column: 1 / -1)
+   so its nested .grid of that group's own items lays out underneath it
+   at full width, without disturbing the other group cards' flow. */
+.group-card-wrap { display: flex; flex-direction: column; }
+.group-card-wrap.expanded { grid-column: 1 / -1; }
+.group-card {
+  display: block; width: 100%; max-width: 220px;
+  text-align: left; padding: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.group-card-expanded { margin-top: 16px; width: 100%; }
+
 .library-page { position: relative; padding-right: 34px; }
 .alpha-index {
   position: fixed; top: 122px; right: 6px; bottom: 14px; z-index: 10;

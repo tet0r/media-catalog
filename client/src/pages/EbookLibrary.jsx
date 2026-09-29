@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import EbookCard from '../components/EbookCard.jsx';
+import GroupCard from '../components/GroupCard.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -43,6 +44,14 @@ function groupByAuthorName(ebooks) {
   return groups;
 }
 
+// Ebooks have no series column at all (unlike audiobooks' series/
+// series_sequence) — nothing to sort by within an author yet, so this is
+// just a title sort for now, isolated in its own function so it's a clear
+// single spot to extend if series data is ever captured for ebooks.
+function sortWithinAuthor(books) {
+  return [...books].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+}
+
 export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor }) {
   const [ebooks, setEbooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +61,16 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [expandedAuthors, setExpandedAuthors] = useState(new Set());
+
+  function toggleAuthor(author) {
+    setExpandedAuthors((prev) => {
+      const next = new Set(prev);
+      if (next.has(author)) next.delete(author);
+      else next.add(author);
+      return next;
+    });
+  }
 
   const refreshEbooks = useCallback(() => {
     setLoading(true);
@@ -183,15 +202,23 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
           No ebooks yet. Use "Add Ebook" to search by title, or "Scan Library" to import from your ebook folder.
         </p>
       ) : groupByAuthor ? (
-        <div>
+        <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
-              <div key={g.author} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
-                <h2>{g.author}</h2>
-                <div className="grid">{g.books.map((e) => renderCard(e, undefined))}</div>
-              </div>
+              <GroupCard
+                key={g.author}
+                id={isFirst ? `letter-${g.letter}` : undefined}
+                label={g.author}
+                count={g.books.length}
+                countLabel="book"
+                coverUrls={g.books.map((e) => e.cover_url)}
+                expanded={expandedAuthors.has(g.author)}
+                onToggle={() => toggleAuthor(g.author)}
+              >
+                {sortWithinAuthor(g.books).map((e) => renderCard(e, undefined))}
+              </GroupCard>
             );
           })}
         </div>
