@@ -8,6 +8,24 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.5.1 — Automatic Vinyl/Games sync no longer touches existing items' metadata
+- Audited every media type for "does an automatic run ever silently
+  update an item already in the library" — Movies/TV/Audiobooks/Comics/
+  Ebooks/Digital's scanners already only ever look at *new* files (an
+  already-matched path is skipped outright, scan or no scan), so those
+  needed no change. Vinyl and Games were the exception: their "stay in
+  sync" mirror re-wrote every already-known record's/game's fields
+  (title, year, genres, ...) on *every* sync, scheduled or not.
+- Fixed by threading a `manual` flag through `lib/vinylSync.js` and
+  `lib/gamesSync.js`: an automatic (scheduled) sync still discovers new
+  records/games and still prunes ones removed from Discogs/LaunchBox, it
+  just leaves every already-known item's row completely untouched from
+  here on. Clicking "Sync Now" yourself still does the full refresh
+  exactly as before — nothing changed about manual syncing.
+- `lib/autoScanScheduler.js` now passes `{ manual: false }` into every
+  job it runs — harmless for the media types that never used it, load-
+  bearing for Vinyl/Games.
+
 ## v1.5.0 — Library Export (text and HTML)
 - New "Library Export" section in Settings (General tab), alongside
   Backups — two independent, manually-triggered exports, both landing in

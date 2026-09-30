@@ -64,7 +64,13 @@ Assumes Docker and your media files are on the same machine — see
   see below.
 
 Vinyl and Games both stay in sync one-way: edit your collection on
-Discogs/LaunchBox itself, then click Sync here to catch up.
+Discogs/LaunchBox itself, then click Sync here to catch up. This applies to
+every media type, not just these two: metadata is only ever refreshed by an
+explicit, manual action — a "Sync Now"/"Refresh Metadata" click — never
+silently by a scheduled auto-sync/auto-scan. An automatic run still finds
+new items (and, for Vinyl/Games, prunes ones removed from the source), it
+just never rewrites an item already in your library; only clicking Sync
+yourself does that.
 
 ### Games setup (LaunchBox)
 

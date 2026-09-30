@@ -26,7 +26,14 @@ function makeTick({ runScan, enabledKey, intervalKey, statusTable }) {
       const lastRun = status.last_run ? new Date(status.last_run).getTime() : 0;
       if (Date.now() - lastRun < intervalMinutes * 60 * 1000) return;
 
-      await runScan();
+      // Every scan/sync job is told it's running automatically — every
+      // media type except Vinyl/Games ignores the extra argument (they
+      // already never touch an existing item's metadata, scheduled or
+      // not, see routes/scan.js et al.), but Vinyl/Games' own "stay in
+      // sync" mirror otherwise updates an already-known record's fields
+      // on every run. { manual: false } is what keeps that to manual
+      // Sync clicks only — see lib/vinylSync.js and lib/gamesSync.js.
+      await runScan({ manual: false });
     } catch (err) {
       console.error(`Auto-scan check failed (${statusTable}):`, err);
     }

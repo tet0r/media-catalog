@@ -37,7 +37,11 @@ function setStatus(fields) {
   updateSyncStatus.run(merged);
 }
 
-async function runSync() {
+// manual defaults to true so every existing direct call (routes/vinyl.js's
+// "Sync Now" button, and any other caller that doesn't know about this
+// flag) keeps doing a full refresh exactly as before — only
+// autoScanScheduler.js's own scheduled tick passes manual: false.
+async function runSync({ manual = true } = {}) {
   const username = discogs.getUsername(db);
   const token = discogs.getApiKey(db);
   if (!username || !token) {
@@ -72,6 +76,13 @@ async function runSync() {
       seenInstanceIds.add(item.discogs_instance_id);
       const existing = existingByInstance.get(item.discogs_instance_id);
       const isNew = !existing;
+
+      // Once a record's been found, its metadata is only ever touched by
+      // a manual Sync click from here on — an automatic (scheduled) sync
+      // still discovers new records and prunes removed ones below, it
+      // just leaves every already-known record's row completely alone.
+      if (!isNew && !manual) continue;
+
       try {
         let coverFile = existing?.cover_file || null;
         if (isNew && item.cover_url) {
@@ -108,7 +119,8 @@ async function runSync() {
 
     setStatus({
       running: 0, last_run: new Date().toISOString(), total_found: items.length, added, updated, removed, errored,
-      message: `Sync complete — ${added} added, ${updated} updated${removed ? `, ${removed} removed` : ''}${errored ? `, ${errored} failed` : ''}.`,
+      message: `Sync complete — ${added} added, ${updated} updated${removed ? `, ${removed} removed` : ''}${errored ? `, ${errored} failed` : ''}.`
+        + (!manual ? ' (Automatic sync only adds/removes — click Sync Now to refresh existing records.)' : ''),
     });
   } catch (err) {
     setStatus({ running: 0, message: `Sync failed: ${err.message}` });
