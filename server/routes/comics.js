@@ -139,6 +139,16 @@ router.put('/series/:name/cover/upload', express.raw({ type: () => true, limit: 
   }
 });
 
+// Reverts a series back to the auto-collage.
+router.delete('/series/:name/cover', (req, res) => {
+  const coverFile = groupImages.getImage('comic_series', req.params.name);
+  if (coverFile) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
+  groupImages.deleteImage('comic_series', req.params.name);
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM comics WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });

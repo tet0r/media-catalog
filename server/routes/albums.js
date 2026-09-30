@@ -126,6 +126,16 @@ router.put('/artists/:name/cover/upload', express.raw({ type: () => true, limit:
   }
 });
 
+// Reverts an artist back to the auto-collage.
+router.delete('/artists/:name/cover', (req, res) => {
+  const coverFile = groupImages.getImage('album_artist', req.params.name);
+  if (coverFile) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
+  groupImages.deleteImage('album_artist', req.params.name);
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM albums WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });

@@ -132,6 +132,19 @@ router.put('/authors/:name/cover/upload', express.raw({ type: () => true, limit:
   }
 });
 
+// Reverts an author back to the auto-collage — the picture itself was
+// either uploaded or fetched via a search result, never something else
+// referencing it, so it's safe to unlink outright rather than just
+// unlinking the group_images row and leaving the file orphaned on disk.
+router.delete('/authors/:name/cover', (req, res) => {
+  const coverFile = groupImages.getImage('audiobook_author', req.params.name);
+  if (coverFile) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
+  groupImages.deleteImage('audiobook_author', req.params.name);
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });

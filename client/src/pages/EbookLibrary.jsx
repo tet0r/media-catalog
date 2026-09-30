@@ -102,6 +102,11 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
     refreshAuthorImages();
   }
 
+  async function deleteAuthorCover(authorName) {
+    await api.deleteEbookAuthorCover(authorName);
+    refreshAuthorImages();
+  }
+
   function authorImageSearchTabs(authorName) {
     return [
       { key: 'openlibrary', label: 'Open Library', sourceLabel: "Via Open Library's author database.", fetchOptions: () => api.searchEbookAuthorImages(authorName) },
@@ -315,6 +320,7 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
           onRename={(newName) => renameAuthor(openGroup.author, newName)}
           onUploadCover={(file) => uploadAuthorCover(openGroup.author, file)}
           onSetCoverUrl={(url) => setAuthorCoverUrl(openGroup.author, url)}
+          onDeleteCover={() => deleteAuthorCover(openGroup.author)}
           imageSearchTabs={authorImageSearchTabs(openGroup.author)}
         >
           {sortWithinAuthor(openGroup.books).map((e) => renderCard(e, undefined))}

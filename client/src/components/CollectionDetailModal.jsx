@@ -39,6 +39,7 @@ export default function CollectionDetailModal({ id, onClose }) {
   const [dir, setDir] = useState('asc');
   const [deleted, setDeleted] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [removingCover, setRemovingCover] = useState(false);
 
   useEffect(() => {
     api.getCollection(id).then(setCollection).catch((err) => setError(err.message));
@@ -115,6 +116,18 @@ export default function CollectionDetailModal({ id, onClose }) {
     setCollection(await api.setCollectionCover(id, url));
   }
 
+  async function removeCover() {
+    setRemovingCover(true);
+    setError(null);
+    try {
+      setCollection(await api.deleteCollectionCover(id));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRemovingCover(false);
+    }
+  }
+
   const imageSearchTabs = collection
     ? [
         { key: 'tmdb', label: 'TMDB', sourceLabel: 'Via TMDB’s own collection search — most useful when this collection’s name matches a real franchise.', fetchOptions: () => api.searchCollectionImages(collection.name) },
@@ -169,6 +182,11 @@ export default function CollectionDetailModal({ id, onClose }) {
                 <button type="button" className="muted-btn" onClick={() => setPickerOpen(true)}>
                   Set Picture...
                 </button>
+                {collection.poster_url && (
+                  <button type="button" className="muted-btn" disabled={removingCover} onClick={removeCover}>
+                    {removingCover ? 'Removing...' : 'Remove Picture'}
+                  </button>
+                )}
               </div>
               {renaming ? (
                 <form onSubmit={saveName} className="pending-search-row" style={{ flex: 1 }}>

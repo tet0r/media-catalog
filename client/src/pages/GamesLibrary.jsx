@@ -89,6 +89,11 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
     refreshPlatformImages();
   }
 
+  async function deletePlatformCover(platformName) {
+    await api.deleteGamePlatformCover(platformName);
+    refreshPlatformImages();
+  }
+
   function platformImageSearchTabs(platformName) {
     return [
       { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'No free, keyless platform-art API exists, so this is the only source — works for almost any well-known console/platform.', fetchOptions: () => api.searchGamePlatformImages(platformName) },
@@ -343,6 +348,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
           onRename={(newName) => renamePlatform(openGroup.platform, newName)}
           onUploadCover={(file) => uploadPlatformCover(openGroup.platform, file)}
           onSetCoverUrl={(url) => setPlatformCoverUrl(openGroup.platform, url)}
+          onDeleteCover={() => deletePlatformCover(openGroup.platform)}
           imageSearchTabs={platformImageSearchTabs(openGroup.platform)}
         >
           {openGroup.items.map((game) => renderCard(game, undefined))}

@@ -89,6 +89,11 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
     refreshArtistImages();
   }
 
+  async function deleteArtistCover(artistName) {
+    await api.deleteVinylArtistCover(artistName);
+    refreshArtistImages();
+  }
+
   function artistImageSearchTabs(artistName) {
     return [
       { key: 'deezer', label: 'Deezer', sourceLabel: "Via Deezer's artist search.", fetchOptions: () => api.searchVinylArtistImages(artistName) },
@@ -344,6 +349,7 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
           onRename={(newName) => renameArtist(openGroup.artist, newName)}
           onUploadCover={(file) => uploadArtistCover(openGroup.artist, file)}
           onSetCoverUrl={(url) => setArtistCoverUrl(openGroup.artist, url)}
+          onDeleteCover={() => deleteArtistCover(openGroup.artist)}
           imageSearchTabs={artistImageSearchTabs(openGroup.artist)}
         >
           {openGroup.items.map((r) => renderCard(r, undefined))}

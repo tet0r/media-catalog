@@ -102,6 +102,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteCollectionCover: (id) => fetch(`${BASE}/collections/${id}/cover`, { method: 'DELETE' }).then(handle),
   searchTpdbPosters: (title, year) =>
     fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
   searchTmdbPosters: (tmdbId) => fetch(`${BASE}/images/posters/${tmdbId}`).then(handle),
@@ -234,6 +235,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteAudiobookAuthorCover: (name) => fetch(`${BASE}/audiobooks/authors/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listEbooks: (params = {}) => {
     const qs = new URLSearchParams(
@@ -325,6 +327,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteEbookAuthorCover: (name) => fetch(`${BASE}/ebooks/authors/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listComics: (params = {}) => {
     const qs = new URLSearchParams(
@@ -412,6 +415,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteComicSeriesCover: (name) => fetch(`${BASE}/comics/series/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listAlbums: (params = {}) => {
     const qs = new URLSearchParams(
@@ -505,6 +509,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteAlbumArtistCover: (name) => fetch(`${BASE}/albums/artists/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listVinyl: (params = {}) => {
     const qs = new URLSearchParams(
@@ -551,6 +556,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteVinylArtistCover: (name) => fetch(`${BASE}/vinyl/artists/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listGames: (params = {}) => {
     const qs = new URLSearchParams(
@@ -597,6 +603,7 @@ export const api = {
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(handle),
+  deleteGamePlatformCover: (name) => fetch(`${BASE}/games/platforms/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
   listTvShows: (params = {}) => {
     const qs = new URLSearchParams(

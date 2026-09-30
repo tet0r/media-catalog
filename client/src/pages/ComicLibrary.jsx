@@ -87,6 +87,11 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
     refreshSeriesImages();
   }
 
+  async function deleteSeriesCover(seriesName) {
+    await api.deleteComicSeriesCover(seriesName);
+    refreshSeriesImages();
+  }
+
   function seriesImageSearchTabs(seriesName) {
     return [
       { key: 'comicvine', label: 'ComicVine', sourceLabel: "Via ComicVine's own volume search.", fetchOptions: () => api.searchComicSeriesImages(seriesName) },
@@ -300,6 +305,7 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
           onRename={(newName) => renameSeries(openGroup.series, newName)}
           onUploadCover={(file) => uploadSeriesCover(openGroup.series, file)}
           onSetCoverUrl={(url) => setSeriesCoverUrl(openGroup.series, url)}
+          onDeleteCover={() => deleteSeriesCover(openGroup.series)}
           imageSearchTabs={seriesImageSearchTabs(openGroup.series)}
         >
           {openGroup.items.map((c) => renderCard(c, undefined))}

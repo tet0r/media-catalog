@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const db = require('../db');
 const { getMemberMovies } = require('../lib/collections');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
@@ -146,6 +147,20 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// Reverts to the auto-collage (manual) or no picture at all (franchise —
+// there's no way back to the original TMDB-fetched poster once it's been
+// overwritten, since poster_file is a single column with no memory of
+// what it held before).
+router.delete('/:id/cover', (req, res) => {
+  const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (row.poster_file) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', row.poster_file)); } catch { /* already gone, fine */ }
+  }
+  db.prepare('UPDATE collections SET poster_file = NULL WHERE id = ?').run(req.params.id);
+  res.json(rowToCollection({ ...row, poster_file: null }, { includeAllMovies: true }));
 });
 
 // Works for any type — renaming a franchise collection doesn't touch its

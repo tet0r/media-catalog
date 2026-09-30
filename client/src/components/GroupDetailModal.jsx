@@ -17,12 +17,13 @@ import ImagePicker from './ImagePicker.jsx';
 // so a future caller with no relevant image source can still fall back
 // to upload-only.
 export default function GroupDetailModal({
-  label, count, countLabel, coverUrls, customImageUrl, onClose, onRename, onUploadCover, onSetCoverUrl, imageSearchTabs, children,
+  label, count, countLabel, coverUrls, customImageUrl, onClose, onRename, onUploadCover, onSetCoverUrl, onDeleteCover, imageSearchTabs, children,
 }) {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(label);
   const [renaming, setRenaming] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
@@ -58,6 +59,18 @@ export default function GroupDetailModal({
       setError(err.message);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleRemoveCover() {
+    setRemoving(true);
+    setError(null);
+    try {
+      await onDeleteCover();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -120,6 +133,11 @@ export default function GroupDetailModal({
                   {uploading ? 'Uploading...' : 'Set Picture...'}
                 </button>
               </>
+            )}
+            {onDeleteCover && customImageUrl && (
+              <button type="button" className="muted-btn" disabled={removing} onClick={handleRemoveCover}>
+                {removing ? 'Removing...' : 'Remove Picture'}
+              </button>
             )}
           </div>
         )}

@@ -119,6 +119,11 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
     refreshAuthorImages();
   }
 
+  async function deleteAuthorCover(authorName) {
+    await api.deleteAudiobookAuthorCover(authorName);
+    refreshAuthorImages();
+  }
+
   function authorImageSearchTabs(authorName) {
     return [
       { key: 'openlibrary', label: 'Open Library', sourceLabel: "Via Open Library's author database.", fetchOptions: () => api.searchAudiobookAuthorImages(authorName) },
@@ -336,6 +341,7 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
           onRename={(newName) => renameAuthor(openGroup.author, newName)}
           onUploadCover={(file) => uploadAuthorCover(openGroup.author, file)}
           onSetCoverUrl={(url) => setAuthorCoverUrl(openGroup.author, url)}
+          onDeleteCover={() => deleteAuthorCover(openGroup.author)}
           imageSearchTabs={authorImageSearchTabs(openGroup.author)}
         >
           {sortBySeries(openGroup.books).map((a) => renderCard(a, undefined))}

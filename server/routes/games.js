@@ -126,6 +126,16 @@ router.put('/platforms/:name/cover/upload', express.raw({ type: () => true, limi
   }
 });
 
+// Reverts a platform back to the auto-collage.
+router.delete('/platforms/:name/cover', (req, res) => {
+  const coverFile = groupImages.getImage('game_platform', req.params.name);
+  if (coverFile) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
+  groupImages.deleteImage('game_platform', req.params.name);
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM games WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });

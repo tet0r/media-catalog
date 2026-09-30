@@ -8,6 +8,17 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.3.0 — Remove a custom group picture
+- Every group-picture spot that can set a custom picture (author/series/
+  artist/platform groups, and Movies' Collections) can now also remove
+  one — a "Remove Picture" button next to "Set Picture..." that only
+  shows up once a custom picture is actually set. Removing one reverts to
+  the auto-collage (or, for a franchise collection whose original TMDB
+  poster was already overwritten, no picture at all — there's nothing to
+  revert back to once it's gone).
+- Deletes the cached image file from disk too, not just the record of it,
+  so a removed picture doesn't linger as an orphaned file.
+
 ## v1.2.0 — Search for a group picture instead of only uploading one
 - Setting a picture for an author/series/artist/platform group, or a
   Movies collection, now works the same way Movies' own poster search

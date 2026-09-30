@@ -129,6 +129,16 @@ router.put('/authors/:name/cover/upload', express.raw({ type: () => true, limit:
   }
 });
 
+// Reverts an author back to the auto-collage.
+router.delete('/authors/:name/cover', (req, res) => {
+  const coverFile = groupImages.getImage('ebook_author', req.params.name);
+  if (coverFile) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
+  groupImages.deleteImage('ebook_author', req.params.name);
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
