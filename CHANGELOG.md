@@ -8,6 +8,32 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.1.1 — Fix cut-off group titles; Collections now use the pop-over too
+- A group card's title (author/series/artist/platform) used the same
+  fixed-height, 3-line-clamp truncation every other card's title already
+  had — fine for a movie or book title, but a long series/collection name
+  could get cut off mid-word. Group card titles now wrap to as many lines
+  as they need instead.
+- Also removed a latent risk in the same area: `.group-card-wrap` could be
+  stretched taller than its own content by CSS Grid (to match a taller
+  sibling in the same row), and combined with the card's own
+  `overflow: hidden`, this left the door open for a title to end up
+  clipped rather than just leaving blank space below a shorter card. Fixed
+  by not letting the wrapper stretch at all — each group card now sizes to
+  its own content, full stop.
+- Movies' Collections was still opening its full detail page on click
+  instead of the new pop-over every other grouping already switched to in
+  v1.0.0/v1.1.0 — fixed: clicking a collection now opens the same modal
+  pattern (rename, custom picture, add/remove/sort movies, delete) without
+  navigating away or changing the URL. The standalone
+  `/movies/collections/:id` page still exists unchanged for direct
+  navigation; the library grid itself now opens the pop-over instead.
+- Verified live: a 4-cover group and a long-titled single-issue group
+  side by side both show their full title text correctly at the right
+  height; clicking a collection card opens the pop-over with the URL
+  unchanged (confirmed via `location.pathname`) rather than routing to a
+  separate page.
+
 ## v1.1.0 — Extend group merge/rename/pictures to everything else
 - v1.0.0's "Select Groups" merge, single-group rename, and custom-picture
   treatment (previously just Audiobooks/Ebooks-by-author and Comics-by-

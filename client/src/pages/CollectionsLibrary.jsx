@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import CollectionCard from '../components/CollectionCard.jsx';
+import CollectionDetailModal from '../components/CollectionDetailModal.jsx';
 import MergeCollectionsModal from '../components/MergeCollectionsModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 
@@ -10,7 +10,6 @@ import useBulkSelection from '../hooks/useBulkSelection.js';
 let savedScrollY = 0;
 
 export default function CollectionsLibrary() {
-  const navigate = useNavigate();
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,6 +18,7 @@ export default function CollectionsLibrary() {
   const hasRestoredScroll = useRef(false);
   const sel = useBulkSelection();
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [openCollectionId, setOpenCollectionId] = useState(null);
 
   const refreshCollections = () => {
     setLoading(true);
@@ -57,7 +57,9 @@ export default function CollectionsLibrary() {
     setError(null);
     try {
       const created = await api.createCollection(newName.trim());
-      navigate(`/movies/collections/${created.id}`);
+      setNewName('');
+      refreshCollections();
+      setOpenCollectionId(created.id);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -114,9 +116,9 @@ export default function CollectionsLibrary() {
                   onToggleSelect={() => sel.toggle(c.id)}
                 />
               ) : (
-                <Link key={c.id} to={`/movies/collections/${c.id}`}>
+                <div key={c.id} style={{ cursor: 'pointer' }} onClick={() => setOpenCollectionId(c.id)}>
                   <CollectionCard collection={c} />
-                </Link>
+                </div>
               )
             )}
           </div>
@@ -129,6 +131,16 @@ export default function CollectionsLibrary() {
           collections={collections.filter((c) => sel.selectedIds.has(c.id))}
           onMerge={mergeCollections}
           onClose={() => setMergeModalOpen(false)}
+        />
+      )}
+
+      {openCollectionId && (
+        <CollectionDetailModal
+          id={openCollectionId}
+          onClose={() => {
+            setOpenCollectionId(null);
+            refreshCollections();
+          }}
         />
       )}
     </div>

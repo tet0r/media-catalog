@@ -183,11 +183,21 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
    the group's name stays clearly visible in the modal's own header no
    matter how many items it contains, and the rest of the grid stays put
    in the dimmed background behind it. */
-.group-card-wrap { display: flex; flex-direction: column; }
+/* align-self: start keeps this from being grid-stretched to match a
+   taller sibling in the same row — with .card's own overflow: hidden,
+   a stretched-taller wrapper (whose own button content doesn't grow to
+   fill it) previously left the door open for the title/meta text to end
+   up clipped instead of just leaving blank space below a shorter card. */
+.group-card-wrap { display: flex; flex-direction: column; align-self: start; }
 .group-card {
   display: block; width: 100%; max-width: 220px;
   text-align: left; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
+/* Unlike every other card's title (fixed height + 3-line clamp, since a
+   movie/book/issue title is rarely much longer than that), a group's
+   label can legitimately be a long series/collection name — let it wrap
+   to as many lines as it needs instead of cutting off. */
+.group-card .card-title { height: auto; display: block; overflow: visible; }
 .modal-wide { max-width: 1100px; }
 .group-modal-picture { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .group-modal-picture .poster { width: 100px; flex-shrink: 0; border-radius: 6px; }
