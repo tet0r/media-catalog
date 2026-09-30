@@ -8,6 +8,34 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.1.2 — Fix the actual cause of missing group titles
+- v1.1.1's fix was real but incomplete — it addressed truncation/clipping,
+  but the actual bug behind "the title just isn't there at all" for any
+  group with 2+ covers was different: a real, full-resolution cover image
+  inside the 2x2 collage would silently overflow its grid cell (CSS
+  Grid/Flexbox give a replaced element like `<img>` a default "auto"
+  minimum size based on its own intrinsic dimensions, ignoring
+  `width/height: 100%`, unless told otherwise) and visually paint over the
+  title/count text beneath it — not a layout shift, a paint-order
+  overlap, which is why checking element positions/sizes directly showed
+  nothing wrong. My first test used tiny 1x1 placeholder images, which
+  have a negligible intrinsic size and never triggered it.
+- Fixed at the source (`min-width`/`min-height: 0` on the collage's own
+  grid items, overriding that default) plus a hard backstop
+  (`overflow: hidden` on the shared `.poster` class every card's cover
+  area already uses) so the same class of bug can't recur even from a
+  direction this fix didn't anticipate.
+- This also fixes a likely-dormant version of the same bug in Movies'
+  Collections, which has used this exact collage pattern since before
+  this session's group-card work — a manual collection with 2+ real
+  movie posters and no collection poster of its own.
+- Verified properly this time: reproduced the exact bug locally with
+  real, full-resolution (600×920) test images — confirmed via an actual
+  screenshot that a 4-cover group's title was genuinely invisible, not
+  just measuring correctly on paper — then confirmed the fix makes it
+  visible again with the same test images and CSS reverted-then-reapplied
+  for a clean before/after comparison.
+
 ## v1.1.1 — Fix cut-off group titles; Collections now use the pop-over too
 - A group card's title (author/series/artist/platform) used the same
   fixed-height, 3-line-clamp truncation every other card's title already

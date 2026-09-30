@@ -147,7 +147,13 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
 .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.15s; }
 .card:hover { transform: translateY(-3px); }
-.poster { position: relative; aspect-ratio: 2/3; background: #2a2d35; display: flex; align-items: center; justify-content: center; }
+/* overflow: hidden is a hard backstop: .poster is a flex container, which
+   has the same "auto" minimum-size quirk as grid (see .collection-collage
+   img above) — a real image's intrinsic size can force a flex child
+   larger than intended regardless of width/height: 100%, and without this
+   the overflow would visually spill out of the poster box instead of
+   just being clipped to it. */
+.poster { position: relative; aspect-ratio: 2/3; background: #2a2d35; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .poster img { width: 100%; height: 100%; object-fit: cover; }
 .poster.cover { aspect-ratio: 1/1; }
 .no-poster { padding: 10px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
@@ -349,8 +355,18 @@ textarea { font-family: inherit; resize: vertical; }
 .candidate { display: flex; align-items: center; gap: 8px; background: var(--bg-alt); padding: 6px 10px; border-radius: 6px; }
 .candidate img { width: 32px; height: 48px; object-fit: cover; border-radius: 3px; }
 
-.collection-collage { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px; }
-.collection-collage img { width: 100%; height: 100%; object-fit: cover; }
+.collection-collage { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px; }
+/* min-width/min-height: 0 overrides CSS Grid's default "auto" minimum
+   size for a grid item, which for a replaced element like <img> is based
+   on its OWN intrinsic dimensions — not the tiny 1x1 placeholder used
+   while testing this, but a real, full-resolution cover. Without this, a
+   real cover forces its grid cell (and the whole collage, and the poster
+   box around it) to grow past the intended square regardless of the
+   width/height: 100% below, silently overflowing into — and, combined
+   with .card's overflow: hidden, clipping out — the title/meta text
+   underneath. */
+.collection-collage img, .collection-collage-blank { min-width: 0; min-height: 0; }
+.collection-collage img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .collection-collage-blank { background: #2a2d35; }
 .collection-movie-tile { position: relative; }
 .collection-remove-btn {
