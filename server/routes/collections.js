@@ -1,8 +1,11 @@
 const express = require('express');
+const path = require('path');
 const db = require('../db');
 const { getMemberMovies } = require('../lib/collections');
+const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 
 const router = express.Router();
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
 function miniMovie(row) {
   return {
@@ -49,10 +52,82 @@ router.post('/', (req, res) => {
   res.status(201).json(rowToCollection(row, { includeAllMovies: true }));
 });
 
+// Defined ahead of /:id too — merging two or more collections into one:
+// every movie in each source (via getMemberMovies, so a franchise
+// collection's automatic TMDB matches get folded in as explicit
+// collection_movies rows on the target, same as a manual addition would
+// be) moves into targetId, the sources are deleted, and the target is
+// renamed to targetName. The target keeps its existing type/
+// tmdb_collection_id/poster — merging a manual collection into a
+// franchise one (or vice versa) just means the survivor's own membership
+// rule applies going forward, on top of whatever got folded in.
+router.post('/merge', (req, res) => {
+  const { sourceIds, targetId, targetName } = req.body;
+  if (!Array.isArray(sourceIds) || sourceIds.length < 2 || !targetId || !targetName || !targetName.trim()) {
+    return res.status(400).json({ error: 'sourceIds (2+ collection ids), targetId, and targetName are required' });
+  }
+  if (!sourceIds.map(String).includes(String(targetId))) {
+    return res.status(400).json({ error: 'targetId must be one of sourceIds' });
+  }
+  const target = db.prepare('SELECT * FROM collections WHERE id = ?').get(targetId);
+  if (!target) return res.status(404).json({ error: 'Target collection not found' });
+
+  const insertMovie = db.prepare('INSERT OR IGNORE INTO collection_movies (collection_id, movie_id) VALUES (?, ?)');
+  const tx = db.transaction(() => {
+    for (const id of sourceIds) {
+      if (String(id) === String(targetId)) continue;
+      const source = db.prepare('SELECT * FROM collections WHERE id = ?').get(id);
+      if (!source) continue;
+      for (const movie of getMemberMovies(source)) insertMovie.run(targetId, movie.id);
+      db.prepare('DELETE FROM collection_movies WHERE collection_id = ?').run(id);
+      db.prepare('DELETE FROM collections WHERE id = ?').run(id);
+    }
+    db.prepare('UPDATE collections SET name = ? WHERE id = ?').run(targetName.trim(), targetId);
+  });
+  tx();
+  const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(targetId);
+  res.json(rowToCollection(row, { includeAllMovies: true }));
+});
+
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
   res.json(rowToCollection(row, { includeAllMovies: true }));
+});
+
+router.put('/:id/cover', async (req, res) => {
+  try {
+    const { image_url } = req.body;
+    if (!image_url) return res.status(400).json({ error: 'image_url is required' });
+    const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+    db.prepare('UPDATE collections SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
+    res.json(rowToCollection({ ...row, poster_file: filename }, { includeAllMovies: true }));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Raw image bytes in the request body, same pattern as every other media
+// type's /:id/*/upload. Once set this way, syncFranchiseCollection never
+// touches poster_file again for this collection (it only ever sets a
+// poster on first creating the row — see lib/collections.js), so a
+// custom picture on a franchise collection is safe from being overwritten
+// by a later movie add/refresh.
+router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' }), async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
+    const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+    db.prepare('UPDATE collections SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
+    res.json(rowToCollection({ ...row, poster_file: filename }, { includeAllMovies: true }));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Works for any type — renaming a franchise collection doesn't touch its

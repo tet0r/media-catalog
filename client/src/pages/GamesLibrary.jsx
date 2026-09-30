@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import GameCard from '../components/GameCard.jsx';
+import GroupCard from '../components/GroupCard.jsx';
+import GroupDetailModal from '../components/GroupDetailModal.jsx';
+import MergeGroupsModal from '../components/MergeGroupsModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -45,8 +48,12 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
   const sel = useBulkSelection();
+  const groupSel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [openPlatform, setOpenPlatform] = useState(null);
+  const [platformImages, setPlatformImages] = useState({});
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const refreshList = useCallback(() => {
     setLoading(true);
@@ -56,6 +63,34 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [q, sort, dir]);
+
+  const refreshPlatformImages = useCallback(() => {
+    api.listGamePlatformImages().then(setPlatformImages).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshPlatformImages();
+  }, [refreshPlatformImages]);
+
+  async function renamePlatform(oldName, newName) {
+    await api.renameGamePlatforms([oldName], newName);
+    if (openPlatform === oldName) setOpenPlatform(newName);
+    refreshList();
+    refreshPlatformImages();
+  }
+
+  async function uploadPlatformCover(platformName, file) {
+    await api.uploadGamePlatformCover(platformName, file);
+    refreshPlatformImages();
+  }
+
+  async function mergePlatforms(targetName) {
+    await api.renameGamePlatforms([...groupSel.selectedIds], targetName);
+    groupSel.exitSelectMode();
+    setMergeModalOpen(false);
+    refreshList();
+    refreshPlatformImages();
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -143,6 +178,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
   }
 
   const groups = groupByPlatform ? groupByPlatformName(games) : null;
+  const openGroup = openPlatform && groups ? groups.find((g) => g.platform === openPlatform) : null;
   const availableLetters = new Set(
     groupByPlatform ? groups.map((g) => g.letter) : games.map((g) => letterFor(g.title))
   );
@@ -170,22 +206,39 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
 
   return (
     <div className="library-page">
-      <sel.Portal>
-        <button
-          type="button"
-          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
-          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
-        >
-          Select
-        </button>
-        {sel.selectMode && sel.selectedIds.size > 0 && (
-          <BulkActionsMenu
-            count={sel.selectedIds.size}
-            disabled={bulkBusy}
-            actions={[{ key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true }]}
-          />
-        )}
-      </sel.Portal>
+      {groupByPlatform ? (
+        <groupSel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${groupSel.selectMode ? ' active' : ''}`}
+            onClick={() => (groupSel.selectMode ? groupSel.exitSelectMode() : groupSel.setSelectMode(true))}
+          >
+            Select Groups
+          </button>
+          {groupSel.selectMode && groupSel.selectedIds.size >= 2 && (
+            <button type="button" onClick={() => setMergeModalOpen(true)}>
+              Merge {groupSel.selectedIds.size} Groups
+            </button>
+          )}
+        </groupSel.Portal>
+      ) : (
+        <sel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+            onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+          >
+            Select
+          </button>
+          {sel.selectMode && sel.selectedIds.size > 0 && (
+            <BulkActionsMenu
+              count={sel.selectedIds.size}
+              disabled={bulkBusy}
+              actions={[{ key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true }]}
+            />
+          )}
+        </sel.Portal>
+      )}
 
       {bulkProgress && (
         <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
@@ -220,15 +273,24 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
           No games yet. Point <code>LAUNCHBOX_DIR</code> at your LaunchBox folder, then click "Sync from LaunchBox" above.
         </p>
       ) : groupByPlatform ? (
-        <div>
+        <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
-              <div key={g.platform} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
-                <h2>{g.platform}</h2>
-                <div className="grid">{g.items.map((game) => renderCard(game, undefined))}</div>
-              </div>
+              <GroupCard
+                key={g.platform}
+                id={isFirst ? `letter-${g.letter}` : undefined}
+                label={g.platform}
+                count={g.items.length}
+                countLabel="game"
+                coverUrls={g.items.map((game) => game.cover_url)}
+                customImageUrl={platformImages[g.platform]}
+                onClick={() => setOpenPlatform(g.platform)}
+                selectMode={groupSel.selectMode}
+                selected={groupSel.selectedIds.has(g.platform)}
+                onToggleSelect={() => groupSel.toggle(g.platform)}
+              />
             );
           })}
         </div>
@@ -257,6 +319,29 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
             </button>
           ))}
         </nav>
+      )}
+
+      {openGroup && (
+        <GroupDetailModal
+          label={openGroup.platform}
+          count={openGroup.items.length}
+          countLabel="game"
+          coverUrls={openGroup.items.map((game) => game.cover_url)}
+          customImageUrl={platformImages[openGroup.platform]}
+          onClose={() => setOpenPlatform(null)}
+          onRename={(newName) => renamePlatform(openGroup.platform, newName)}
+          onUploadCover={(file) => uploadPlatformCover(openGroup.platform, file)}
+        >
+          {openGroup.items.map((game) => renderCard(game, undefined))}
+        </GroupDetailModal>
+      )}
+
+      {mergeModalOpen && (
+        <MergeGroupsModal
+          sourceNames={[...groupSel.selectedIds]}
+          onMerge={mergePlatforms}
+          onClose={() => setMergeModalOpen(false)}
+        />
       )}
     </div>
   );

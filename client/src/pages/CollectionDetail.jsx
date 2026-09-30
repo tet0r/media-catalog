@@ -33,7 +33,9 @@ export default function CollectionDetail() {
   const [removingId, setRemovingId] = useState(null);
   const [sort, setSort] = useState('title');
   const [dir, setDir] = useState('asc');
+  const [uploading, setUploading] = useState(false);
   const hasRestoredScroll = useRef(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     function handleScroll() {
@@ -118,6 +120,21 @@ export default function CollectionDetail() {
     }
   }
 
+  async function handleCoverFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      setCollection(await api.uploadCollectionCover(id, file));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const sortedMovies = [...collection.movies].sort((a, b) => {
     let cmp;
     if (sort === 'year') {
@@ -131,6 +148,35 @@ export default function CollectionDetail() {
   return (
     <div className="library-page">
       <div className="collection-header">
+        <div className="group-modal-picture">
+          <div
+            className="poster collection-poster clickable"
+            title="Click to upload a picture for this collection"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {collection.poster_url ? (
+              <img src={collection.poster_url} alt="" />
+            ) : collection.movies.length > 0 ? (
+              <div className="collection-collage">
+                {collection.movies.slice(0, 4).map((m) =>
+                  m.poster_url ? <img key={m.id} src={m.poster_url} alt="" /> : <div key={m.id} className="collection-collage-blank" />
+                )}
+              </div>
+            ) : (
+              <div className="no-poster">{collection.name}</div>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleCoverFile}
+          />
+          <button type="button" className="muted-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+            {uploading ? 'Uploading...' : 'Set Picture...'}
+          </button>
+        </div>
         {renaming ? (
           <form onSubmit={saveName} className="pending-search-row">
             <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} autoFocus />

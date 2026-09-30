@@ -1,11 +1,27 @@
 // Franchise collections have a real TMDB poster (poster_url). Manual
 // collections don't, so they fall back to a collage of up to 4 member
 // posters instead of needing their own image entirely.
-export default function CollectionCard({ collection }) {
+//
+// `selectMode`/`selected`/`onToggleSelect` are optional passthroughs for
+// the library page's bulk-select feature — see MovieCard.jsx for the full
+// rationale.
+export default function CollectionCard({ collection, selectMode, selected, onToggleSelect }) {
   const collage = !collection.poster_url && collection.movies.length > 0;
   return (
-    <div className="card">
+    <div
+      className={`card${selectMode ? ' selectable' : ''}${selected ? ' selected' : ''}`}
+      onClick={selectMode ? onToggleSelect : undefined}
+    >
       <div className="poster collection-poster">
+        {selectMode && (
+          <input
+            type="checkbox"
+            className="card-select"
+            checked={!!selected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         {collection.poster_url ? (
           <img src={collection.poster_url} alt={collection.name} />
         ) : collage ? (

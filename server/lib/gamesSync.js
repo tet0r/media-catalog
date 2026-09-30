@@ -11,16 +11,19 @@ const LAUNCHBOX_DIR = process.env.LAUNCHBOX_DIR || '';
 const getSyncStatus = db.prepare('SELECT * FROM games_sync_status WHERE id = 1');
 const updateSyncStatus = db.prepare(`UPDATE games_sync_status SET running=@running, last_run=@last_run, total_found=@total_found,
   added=@added, updated=@updated, removed=@removed, errored=@errored, message=@message WHERE id = 1`);
-const selectExisting = db.prepare('SELECT id, launchbox_id, cover_file FROM games');
+const selectExisting = db.prepare('SELECT id, launchbox_id, cover_file, platform FROM games');
 const deleteGame = db.prepare('DELETE FROM games WHERE id = ?');
 
-// cover_file IS included in the UPDATE clause, unlike every other media
-// type's metadata refresh — but the JS below only ever computes a
-// *different* cover_file when the existing one was empty, so an already-set
-// cover (auto-fetched or manually uploaded) is written right back
-// unchanged. This is what lets a routine sync backfill covers for games
-// that had none the first time (e.g. before a cover-matching bug was
-// fixed) without ever clobbering a deliberate pick.
+// cover_file and platform ARE included in the UPDATE clause, unlike every
+// other media type's metadata refresh — but the JS below only ever
+// computes a *different* value for either when the existing one was
+// empty, so an already-set cover (auto-fetched or manually uploaded) or a
+// manually-renamed platform is written right back unchanged. This is what
+// lets a routine sync backfill covers for games that had none the first
+// time (e.g. before a cover-matching bug was fixed) without ever
+// clobbering a deliberate pick — and, for platform, is what lets a
+// renamed platform group (routes/games.js's /platforms/rename) survive
+// future syncs instead of reverting to LaunchBox's own XML value.
 const upsertGame = db.prepare(`INSERT INTO games
   (launchbox_id, database_id, title, platform, developer, publisher, genres, release_date, overview, rating, version, cover_file, file_path)
   VALUES (@launchbox_id,@database_id,@title,@platform,@developer,@publisher,@genres,@release_date,@overview,@rating,@version,@cover_file,@file_path)
@@ -71,7 +74,11 @@ async function runSync() {
           launchbox_id: game.launchbox_id,
           database_id: game.database_id,
           title: game.title,
-          platform: game.platform,
+          // Same "already-set wins" rule as cover_file below — once a
+          // platform has been renamed (see routes/games.js's
+          // /platforms/rename), further syncs shouldn't silently revert
+          // it back to whatever LaunchBox's own XML says.
+          platform: existing?.platform || game.platform,
           developer: game.developer,
           publisher: game.publisher,
           genres: JSON.stringify(game.genres || []),

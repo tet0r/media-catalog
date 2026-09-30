@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import AlbumCard from '../components/AlbumCard.jsx';
+import GroupCard from '../components/GroupCard.jsx';
+import GroupDetailModal from '../components/GroupDetailModal.jsx';
+import MergeGroupsModal from '../components/MergeGroupsModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -44,8 +47,12 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
   const sel = useBulkSelection();
+  const groupSel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [openArtist, setOpenArtist] = useState(null);
+  const [artistImages, setArtistImages] = useState({});
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const refreshAlbums = useCallback(() => {
     setLoading(true);
@@ -55,6 +62,34 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [q, sort, dir]);
+
+  const refreshArtistImages = useCallback(() => {
+    api.listAlbumArtistImages().then(setArtistImages).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshArtistImages();
+  }, [refreshArtistImages]);
+
+  async function renameArtist(oldName, newName) {
+    await api.renameAlbumArtists([oldName], newName);
+    if (openArtist === oldName) setOpenArtist(newName);
+    refreshAlbums();
+    refreshArtistImages();
+  }
+
+  async function uploadArtistCover(artistName, file) {
+    await api.uploadAlbumArtistCover(artistName, file);
+    refreshArtistImages();
+  }
+
+  async function mergeArtists(targetName) {
+    await api.renameAlbumArtists([...groupSel.selectedIds], targetName);
+    groupSel.exitSelectMode();
+    setMergeModalOpen(false);
+    refreshAlbums();
+    refreshArtistImages();
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -119,6 +154,7 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
   }
 
   const groups = groupByArtist ? groupByArtistName(albums) : null;
+  const openGroup = openArtist && groups ? groups.find((g) => g.artist === openArtist) : null;
   const availableLetters = new Set(
     groupByArtist ? groups.map((g) => g.letter) : albums.map((a) => letterFor(a.title))
   );
@@ -146,25 +182,42 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
 
   return (
     <div className="library-page">
-      <sel.Portal>
-        <button
-          type="button"
-          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
-          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
-        >
-          Select
-        </button>
-        {sel.selectMode && sel.selectedIds.size > 0 && (
-          <BulkActionsMenu
-            count={sel.selectedIds.size}
-            disabled={bulkBusy}
-            actions={[
-              { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
-              { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
-            ]}
-          />
-        )}
-      </sel.Portal>
+      {groupByArtist ? (
+        <groupSel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${groupSel.selectMode ? ' active' : ''}`}
+            onClick={() => (groupSel.selectMode ? groupSel.exitSelectMode() : groupSel.setSelectMode(true))}
+          >
+            Select Groups
+          </button>
+          {groupSel.selectMode && groupSel.selectedIds.size >= 2 && (
+            <button type="button" onClick={() => setMergeModalOpen(true)}>
+              Merge {groupSel.selectedIds.size} Groups
+            </button>
+          )}
+        </groupSel.Portal>
+      ) : (
+        <sel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+            onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+          >
+            Select
+          </button>
+          {sel.selectMode && sel.selectedIds.size > 0 && (
+            <BulkActionsMenu
+              count={sel.selectedIds.size}
+              disabled={bulkBusy}
+              actions={[
+                { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
+                { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
+              ]}
+            />
+          )}
+        </sel.Portal>
+      )}
 
       {bulkProgress && (
         <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
@@ -177,15 +230,24 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
           No albums yet. Use "Add Album" to search by title, or "Scan Library" to import from your music folder.
         </p>
       ) : groupByArtist ? (
-        <div>
+        <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
-              <div key={g.artist} className="author-group" id={isFirst ? `letter-${g.letter}` : undefined}>
-                <h2>{g.artist}</h2>
-                <div className="grid">{g.items.map((a) => renderCard(a, undefined))}</div>
-              </div>
+              <GroupCard
+                key={g.artist}
+                id={isFirst ? `letter-${g.letter}` : undefined}
+                label={g.artist}
+                count={g.items.length}
+                countLabel="album"
+                coverUrls={g.items.map((a) => a.cover_url)}
+                customImageUrl={artistImages[g.artist]}
+                onClick={() => setOpenArtist(g.artist)}
+                selectMode={groupSel.selectMode}
+                selected={groupSel.selectedIds.has(g.artist)}
+                onToggleSelect={() => groupSel.toggle(g.artist)}
+              />
             );
           })}
         </div>
@@ -214,6 +276,29 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
             </button>
           ))}
         </nav>
+      )}
+
+      {openGroup && (
+        <GroupDetailModal
+          label={openGroup.artist}
+          count={openGroup.items.length}
+          countLabel="album"
+          coverUrls={openGroup.items.map((a) => a.cover_url)}
+          customImageUrl={artistImages[openGroup.artist]}
+          onClose={() => setOpenArtist(null)}
+          onRename={(newName) => renameArtist(openGroup.artist, newName)}
+          onUploadCover={(file) => uploadArtistCover(openGroup.artist, file)}
+        >
+          {openGroup.items.map((a) => renderCard(a, undefined))}
+        </GroupDetailModal>
+      )}
+
+      {mergeModalOpen && (
+        <MergeGroupsModal
+          sourceNames={[...groupSel.selectedIds]}
+          onMerge={mergeArtists}
+          onClose={() => setMergeModalOpen(false)}
+        />
       )}
     </div>
   );

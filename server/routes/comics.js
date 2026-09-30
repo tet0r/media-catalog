@@ -6,7 +6,7 @@ const { addComicFromExternalId, refreshComicMetadata, rematchComic } = require('
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshComics');
 const groupImages = require('../lib/groupImages');
-const { renameSeriesGroup } = require('../lib/groupRename');
+const { renameTextColumnGroup } = require('../lib/groupRename');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -84,7 +84,7 @@ router.post('/series/rename', (req, res) => {
   if (!Array.isArray(sourceNames) || sourceNames.length === 0 || !targetName || !targetName.trim()) {
     return res.status(400).json({ error: 'sourceNames (a non-empty array) and targetName are required' });
   }
-  const updated = renameSeriesGroup(sourceNames, targetName.trim());
+  const updated = renameTextColumnGroup('comics', 'series', 'comic_series', sourceNames, targetName.trim());
   res.json({ ok: true, updated });
 });
 

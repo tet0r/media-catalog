@@ -82,6 +82,24 @@ export const api = {
     }).then(handle),
   removeMovieFromCollection: (id, movieId) =>
     fetch(`${BASE}/collections/${id}/movies/${movieId}`, { method: 'DELETE' }).then(handle),
+  mergeCollections: (sourceIds, targetId, targetName) =>
+    fetch(`${BASE}/collections/merge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceIds, targetId, targetName }),
+    }).then(handle),
+  setCollectionCover: (id, imageUrl) =>
+    fetch(`${BASE}/collections/${id}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadCollectionCover: (id, file) =>
+    fetch(`${BASE}/collections/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
   searchTpdbPosters: (title, year) =>
     fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
   searchTmdbPosters: (tmdbId) => fetch(`${BASE}/images/posters/${tmdbId}`).then(handle),
@@ -458,6 +476,26 @@ export const api = {
   unignoreAlbum: (id) => fetch(`${BASE}/album-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearAlbumLibrary: () => fetch(`${BASE}/albums/clear-all`, { method: 'POST' }).then(handle),
 
+  listAlbumArtistImages: () => fetch(`${BASE}/albums/artists/images`).then(handle),
+  renameAlbumArtists: (sourceNames, targetName) =>
+    fetch(`${BASE}/albums/artists/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setAlbumArtistCover: (name, imageUrl) =>
+    fetch(`${BASE}/albums/artists/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadAlbumArtistCover: (name, file) =>
+    fetch(`${BASE}/albums/artists/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+
   listVinyl: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
@@ -482,6 +520,26 @@ export const api = {
   vinylSyncStatus: () => fetch(`${BASE}/vinyl/sync/status`).then(handle),
   clearVinylLibrary: () => fetch(`${BASE}/vinyl/clear-all`, { method: 'POST' }).then(handle),
 
+  listVinylArtistImages: () => fetch(`${BASE}/vinyl/artists/images`).then(handle),
+  renameVinylArtists: (sourceNames, targetName) =>
+    fetch(`${BASE}/vinyl/artists/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setVinylArtistCover: (name, imageUrl) =>
+    fetch(`${BASE}/vinyl/artists/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadVinylArtistCover: (name, file) =>
+    fetch(`${BASE}/vinyl/artists/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+
   listGames: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
@@ -505,6 +563,26 @@ export const api = {
   startGamesSync: () => fetch(`${BASE}/games/sync`, { method: 'POST' }).then(handle),
   gamesSyncStatus: () => fetch(`${BASE}/games/sync/status`).then(handle),
   clearGamesLibrary: () => fetch(`${BASE}/games/clear-all`, { method: 'POST' }).then(handle),
+
+  listGamePlatformImages: () => fetch(`${BASE}/games/platforms/images`).then(handle),
+  renameGamePlatforms: (sourceNames, targetName) =>
+    fetch(`${BASE}/games/platforms/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setGamePlatformCover: (name, imageUrl) =>
+    fetch(`${BASE}/games/platforms/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadGamePlatformCover: (name, file) =>
+    fetch(`${BASE}/games/platforms/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
 
   listTvShows: (params = {}) => {
     const qs = new URLSearchParams(

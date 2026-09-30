@@ -8,6 +8,34 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.1.0 — Extend group merge/rename/pictures to everything else
+- v1.0.0's "Select Groups" merge, single-group rename, and custom-picture
+  treatment (previously just Audiobooks/Ebooks-by-author and Comics-by-
+  series) now covers Games (by platform), Albums (by artist), and Vinyl
+  (by artist) too — same mechanics, same UI, applied consistently.
+- Games' platform and Vinyl's artist are both populated by a one-way sync
+  (LaunchBox, Discogs) that previously overwrote the field on every sync —
+  a rename would have silently reverted the next time you clicked "Sync".
+  Fixed the same way `cover_file` already avoided this: once a row exists,
+  its platform/artist is preserved across future syncs, the same as an
+  auto-fetched-or-uploaded cover already was. Albums has no such risk
+  (folder-scanned, not mirrored from an external source).
+- Movies' Collections — the closest existing analog to "grouping", already
+  its own real entity with an id — gained the same three things in its
+  own idiom: a "Select" bulk mode for merging two or more collections
+  (every movie from the others moves into whichever one you keep, which
+  is then renamed), and a picture-upload control right on the collection's
+  own page (it already had a name-rename form). A custom picture is safe
+  from being overwritten later, too — a franchise collection only ever
+  gets its TMDB poster set once, on first creation.
+- Verified live: merged duplicate platform/artist names for all three and
+  confirmed the underlying platform/artist column was actually rewritten
+  (not just a display trick); merged two collections (one with real
+  member movies) and confirmed both movies landed in the survivor and the
+  other collection was deleted; uploaded custom pictures for a game
+  platform and a collection and confirmed they render in place of the
+  auto-collage.
+
 ## v1.0.0 — Merge, rename, and pick a picture for author/series groups
 *(Versioning reset here — see the note above. This is the same feature
 that would otherwise have been v21.0.)*

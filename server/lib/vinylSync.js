@@ -13,12 +13,16 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const getSyncStatus = db.prepare('SELECT * FROM vinyl_sync_status WHERE id = 1');
 const updateSyncStatus = db.prepare(`UPDATE vinyl_sync_status SET running=@running, last_run=@last_run, total_found=@total_found,
   added=@added, updated=@updated, removed=@removed, errored=@errored, message=@message WHERE id = 1`);
-const selectExisting = db.prepare('SELECT id, discogs_instance_id, cover_file FROM vinyl_records');
+const selectExisting = db.prepare('SELECT id, discogs_instance_id, cover_file, artist FROM vinyl_records');
 const deleteRecord = db.prepare('DELETE FROM vinyl_records WHERE id = ?');
 
 // Deliberately leaves cover_file out of the UPDATE clause — same rationale
 // as every other media type's metadata refresh: a manually-uploaded cover
-// shouldn't be silently overwritten by a routine sync.
+// shouldn't be silently overwritten by a routine sync. artist IS included,
+// but same as games.js's platform: the JS below only ever computes a
+// *different* artist when there wasn't an existing record, so a renamed
+// artist group (routes/vinyl.js's /artists/rename) is written right back
+// unchanged rather than reverting to Discogs' own value.
 const upsertRecord = db.prepare(`INSERT INTO vinyl_records
   (discogs_instance_id, discogs_release_id, title, artist, year, genres, format, label, catalog_number, cover_file, date_added)
   VALUES (@discogs_instance_id,@discogs_release_id,@title,@artist,@year,@genres,@format,@label,@catalog_number,@cover_file,@date_added)
@@ -77,7 +81,7 @@ async function runSync() {
             coverFile = null;
           }
         }
-        const result = upsertRecord.run({ ...item, cover_file: coverFile });
+        const result = upsertRecord.run({ ...item, artist: existing?.artist || item.artist, cover_file: coverFile });
         if (isNew) {
           added++;
           notifications.addNotification('vinyl', result.lastInsertRowid, item.title);

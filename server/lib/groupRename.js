@@ -35,20 +35,21 @@ function renameAuthorGroup(table, mediaType, sourceNames, targetName) {
   return updated;
 }
 
-// Comics' series is a plain TEXT column (one series per issue, not a
-// JSON list), so this is a straight value swap rather than the JSON
-// surgery renameAuthorGroup needs.
-function renameSeriesGroup(sourceNames, targetName) {
-  const update = db.prepare('UPDATE comics SET series = ? WHERE series = ?');
+// Comics' series, Games' platform, and Albums'/Vinyl's artist are all
+// plain TEXT columns (one value per row, not a JSON list like audiobooks'
+// authors), so renaming any of them is the same straight value swap —
+// genuinely one function, just parameterized by which table/column.
+function renameTextColumnGroup(table, column, mediaType, sourceNames, targetName) {
+  const update = db.prepare(`UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`);
   let updated = 0;
   const tx = db.transaction(() => {
     for (const name of sourceNames) {
       updated += update.run(targetName, name).changes;
     }
-    groupImages.migrateKeys('comic_series', sourceNames, targetName);
+    groupImages.migrateKeys(mediaType, sourceNames, targetName);
   });
   tx();
   return updated;
 }
 
-module.exports = { renameAuthorGroup, renameSeriesGroup };
+module.exports = { renameAuthorGroup, renameTextColumnGroup };
