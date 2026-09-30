@@ -7,6 +7,8 @@ const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshEbooks');
 const groupImages = require('../lib/groupImages');
 const { renameAuthorGroup } = require('../lib/groupRename');
+const openlibrary = require('../lib/openlibrary');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -73,6 +75,21 @@ router.post('/clear-all', (req, res) => {
 // an :id value.
 router.get('/authors/images', (req, res) => {
   res.json(groupImages.getImageMap('ebook_author'));
+});
+
+// A relevant picture to set for an author group — same Open Library
+// author lookup as audiobooks.js (a general book-author database, not
+// tied to Ebooks' own Open Library metadata source specifically, though
+// it happens to be the same service here). Wikipedia is the universal
+// fallback every group-image search offers.
+router.get('/authors/search-images', async (req, res) => {
+  try {
+    const { q, source } = req.query;
+    if (!q) return res.json([]);
+    res.json(await (source === 'wikipedia' ? wikipedia : openlibrary).searchImages(q));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Renaming a single author (sourceNames.length === 1) and merging several

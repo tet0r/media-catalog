@@ -82,6 +82,8 @@ export const api = {
     }).then(handle),
   removeMovieFromCollection: (id, movieId) =>
     fetch(`${BASE}/collections/${id}/movies/${movieId}`, { method: 'DELETE' }).then(handle),
+  searchCollectionImages: (q, source) =>
+    fetch(`${BASE}/collections/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   mergeCollections: (sourceIds, targetId, targetName) =>
     fetch(`${BASE}/collections/merge`, {
       method: 'POST',
@@ -212,6 +214,8 @@ export const api = {
   unignoreAudiobook: (id) => fetch(`${BASE}/audiobook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
 
   listAudiobookAuthorImages: () => fetch(`${BASE}/audiobooks/authors/images`).then(handle),
+  searchAudiobookAuthorImages: (q, source) =>
+    fetch(`${BASE}/audiobooks/authors/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameAudiobookAuthors: (sourceNames, targetName) =>
     fetch(`${BASE}/audiobooks/authors/rename`, {
       method: 'POST',
@@ -301,6 +305,8 @@ export const api = {
   clearEbookLibrary: () => fetch(`${BASE}/ebooks/clear-all`, { method: 'POST' }).then(handle),
 
   listEbookAuthorImages: () => fetch(`${BASE}/ebooks/authors/images`).then(handle),
+  searchEbookAuthorImages: (q, source) =>
+    fetch(`${BASE}/ebooks/authors/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameEbookAuthors: (sourceNames, targetName) =>
     fetch(`${BASE}/ebooks/authors/rename`, {
       method: 'POST',
@@ -386,6 +392,8 @@ export const api = {
   clearComicLibrary: () => fetch(`${BASE}/comics/clear-all`, { method: 'POST' }).then(handle),
 
   listComicSeriesImages: () => fetch(`${BASE}/comics/series/images`).then(handle),
+  searchComicSeriesImages: (q, source) =>
+    fetch(`${BASE}/comics/series/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameComicSeries: (sourceNames, targetName) =>
     fetch(`${BASE}/comics/series/rename`, {
       method: 'POST',
@@ -477,6 +485,8 @@ export const api = {
   clearAlbumLibrary: () => fetch(`${BASE}/albums/clear-all`, { method: 'POST' }).then(handle),
 
   listAlbumArtistImages: () => fetch(`${BASE}/albums/artists/images`).then(handle),
+  searchAlbumArtistImages: (q, source) =>
+    fetch(`${BASE}/albums/artists/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameAlbumArtists: (sourceNames, targetName) =>
     fetch(`${BASE}/albums/artists/rename`, {
       method: 'POST',
@@ -521,6 +531,8 @@ export const api = {
   clearVinylLibrary: () => fetch(`${BASE}/vinyl/clear-all`, { method: 'POST' }).then(handle),
 
   listVinylArtistImages: () => fetch(`${BASE}/vinyl/artists/images`).then(handle),
+  searchVinylArtistImages: (q, source) =>
+    fetch(`${BASE}/vinyl/artists/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameVinylArtists: (sourceNames, targetName) =>
     fetch(`${BASE}/vinyl/artists/rename`, {
       method: 'POST',
@@ -565,6 +577,8 @@ export const api = {
   clearGamesLibrary: () => fetch(`${BASE}/games/clear-all`, { method: 'POST' }).then(handle),
 
   listGamePlatformImages: () => fetch(`${BASE}/games/platforms/images`).then(handle),
+  searchGamePlatformImages: (q, source) =>
+    fetch(`${BASE}/games/platforms/search-images?q=${encodeURIComponent(q)}${source ? `&source=${source}` : ''}`).then(handle),
   renameGamePlatforms: (sourceNames, targetName) =>
     fetch(`${BASE}/games/platforms/rename`, {
       method: 'POST',

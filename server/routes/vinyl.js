@@ -6,6 +6,8 @@ const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const { runSync } = require('../lib/vinylSync');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
+const deezer = require('../lib/deezer');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -71,6 +73,18 @@ router.post('/clear-all', (req, res) => {
 // an :id value.
 router.get('/artists/images', (req, res) => {
   res.json(groupImages.getImageMap('vinyl_artist'));
+});
+
+// A relevant picture to set for an artist group — same Deezer/Wikipedia
+// pair as albums.js.
+router.get('/artists/search-images', async (req, res) => {
+  try {
+    const { q, source } = req.query;
+    if (!q) return res.json([]);
+    res.json(await (source === 'wikipedia' ? wikipedia : deezer).searchImages(q));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Renaming a single artist (sourceNames.length === 1) and merging several

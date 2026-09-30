@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import MovieCard from './MovieCard.jsx';
 import SortMenu from './SortMenu.jsx';
+import ImagePicker from './ImagePicker.jsx';
 
 const TYPE_BLURB = {
   franchise: 'Franchise collection — membership follows TMDB automatically, and you can also add other movies to it by hand below.',
@@ -36,9 +37,8 @@ export default function CollectionDetailModal({ id, onClose }) {
   const [removingId, setRemovingId] = useState(null);
   const [sort, setSort] = useState('title');
   const [dir, setDir] = useState('asc');
-  const [uploading, setUploading] = useState(false);
   const [deleted, setDeleted] = useState(false);
-  const fileInputRef = useRef(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     api.getCollection(id).then(setCollection).catch((err) => setError(err.message));
@@ -107,20 +107,20 @@ export default function CollectionDetailModal({ id, onClose }) {
     }
   }
 
-  async function handleCoverFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      setCollection(await api.uploadCollectionCover(id, file));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setUploading(false);
-    }
+  async function uploadCoverFromPicker(file) {
+    setCollection(await api.uploadCollectionCover(id, file));
   }
+
+  async function setCoverUrl(url) {
+    setCollection(await api.setCollectionCover(id, url));
+  }
+
+  const imageSearchTabs = collection
+    ? [
+        { key: 'tmdb', label: 'TMDB', sourceLabel: 'Via TMDB’s own collection search — most useful when this collection’s name matches a real franchise.', fetchOptions: () => api.searchCollectionImages(collection.name) },
+        { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known collection/franchise name.', fetchOptions: () => api.searchCollectionImages(collection.name, 'wikipedia') },
+      ]
+    : [];
 
   const sortedMovies = collection
     ? [...collection.movies].sort((a, b) => {
@@ -151,8 +151,8 @@ export default function CollectionDetailModal({ id, onClose }) {
               <div className="group-modal-picture">
                 <div
                   className="poster collection-poster clickable"
-                  title="Click to upload a picture for this collection"
-                  onClick={() => fileInputRef.current?.click()}
+                  title="Click to set a picture for this collection"
+                  onClick={() => setPickerOpen(true)}
                 >
                   {collection.poster_url ? (
                     <img src={collection.poster_url} alt="" />
@@ -166,15 +166,8 @@ export default function CollectionDetailModal({ id, onClose }) {
                     <div className="no-poster">{collection.name}</div>
                   )}
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={handleCoverFile}
-                />
-                <button type="button" className="muted-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-                  {uploading ? 'Uploading...' : 'Set Picture...'}
+                <button type="button" className="muted-btn" onClick={() => setPickerOpen(true)}>
+                  Set Picture...
                 </button>
               </div>
               {renaming ? (
@@ -255,6 +248,16 @@ export default function CollectionDetailModal({ id, onClose }) {
           </>
         )}
       </div>
+
+      {pickerOpen && collection && (
+        <ImagePicker
+          title={`Choose a Picture for "${collection.name}"`}
+          tabs={imageSearchTabs}
+          onSelect={setCoverUrl}
+          onUpload={uploadCoverFromPicker}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

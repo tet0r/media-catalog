@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import ImagePicker from './ImagePicker.jsx';
 
 // The pop-over shown when a GroupCard (an author or a series) is clicked —
 // same modal pattern as BulkAddToCollectionModal/ImagePicker: a dimmed
@@ -8,15 +9,21 @@ import { useRef, useState } from 'react';
 // expand, where the trigger card's label can scroll out of view once
 // there's more than a couple of items.
 //
-// `onRename`/`onUploadCover` are optional — passing neither renders a
-// read-only header, same as any caller that doesn't wire them up.
+// `onRename` is optional — passing neither it nor `onUploadCover` renders
+// a read-only header/picture, same as any caller that doesn't wire them
+// up. `imageSearchTabs` (same shape ImagePicker itself takes) opens the
+// full search-or-upload picker instead of a plain file upload when
+// clicking the picture — every caller passes this now, but it's optional
+// so a future caller with no relevant image source can still fall back
+// to upload-only.
 export default function GroupDetailModal({
-  label, count, countLabel, coverUrls, customImageUrl, onClose, onRename, onUploadCover, children,
+  label, count, countLabel, coverUrls, customImageUrl, onClose, onRename, onUploadCover, onSetCoverUrl, imageSearchTabs, children,
 }) {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(label);
   const [renaming, setRenaming] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
   const covers = (coverUrls || []).filter(Boolean).slice(0, 4);
@@ -81,8 +88,8 @@ export default function GroupDetailModal({
           <div className="group-modal-picture">
             <div
               className="poster cover clickable"
-              title="Click to upload a picture for this group"
-              onClick={() => fileInputRef.current?.click()}
+              title="Click to set a picture for this group"
+              onClick={() => (imageSearchTabs ? setPickerOpen(true) : fileInputRef.current?.click())}
             >
               {customImageUrl ? (
                 <img src={customImageUrl} alt="" />
@@ -96,16 +103,24 @@ export default function GroupDetailModal({
                 <div className="no-poster">{label}</div>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleCoverFile}
-            />
-            <button type="button" className="muted-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-              {uploading ? 'Uploading...' : 'Set Picture...'}
-            </button>
+            {imageSearchTabs ? (
+              <button type="button" className="muted-btn" onClick={() => setPickerOpen(true)}>
+                Set Picture...
+              </button>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleCoverFile}
+                />
+                <button type="button" className="muted-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                  {uploading ? 'Uploading...' : 'Set Picture...'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -113,6 +128,16 @@ export default function GroupDetailModal({
         {error && <p className="error">{error}</p>}
         <div className="grid">{children}</div>
       </div>
+
+      {pickerOpen && (
+        <ImagePicker
+          title={`Choose a Picture for "${label}"`}
+          tabs={imageSearchTabs}
+          onSelect={onSetCoverUrl}
+          onUpload={onUploadCover}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

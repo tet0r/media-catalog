@@ -3,6 +3,8 @@ const path = require('path');
 const db = require('../db');
 const { getMemberMovies } = require('../lib/collections');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
+const tmdb = require('../lib/tmdb');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -87,6 +89,22 @@ router.post('/merge', (req, res) => {
   tx();
   const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(targetId);
   res.json(rowToCollection(row, { includeAllMovies: true }));
+});
+
+// Also defined ahead of /:id — "search-images" would otherwise be
+// swallowed as an :id value. A relevant picture for a collection —
+// TMDB's own collection artwork when the name happens to match a real
+// TMDB collection (most useful for a manual collection standing in for
+// one, e.g. "Star Wars Saga"), or Wikipedia as the universal fallback.
+router.get('/search-images', async (req, res) => {
+  try {
+    const { q, source } = req.query;
+    if (!q) return res.json([]);
+    if (source === 'wikipedia') return res.json(await wikipedia.searchImages(q));
+    res.json(await tmdb.searchCollections(db, q));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 router.get('/:id', (req, res) => {

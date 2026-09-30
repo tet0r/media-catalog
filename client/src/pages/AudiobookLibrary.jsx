@@ -114,6 +114,18 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
     refreshAuthorImages();
   }
 
+  async function setAuthorCoverUrl(authorName, url) {
+    await api.setAudiobookAuthorCover(authorName, url);
+    refreshAuthorImages();
+  }
+
+  function authorImageSearchTabs(authorName) {
+    return [
+      { key: 'openlibrary', label: 'Open Library', sourceLabel: "Via Open Library's author database.", fetchOptions: () => api.searchAudiobookAuthorImages(authorName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known author.', fetchOptions: () => api.searchAudiobookAuthorImages(authorName, 'wikipedia') },
+    ];
+  }
+
   async function mergeAuthors(targetName) {
     await api.renameAudiobookAuthors([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
@@ -323,6 +335,8 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
           onClose={() => setOpenAuthor(null)}
           onRename={(newName) => renameAuthor(openGroup.author, newName)}
           onUploadCover={(file) => uploadAuthorCover(openGroup.author, file)}
+          onSetCoverUrl={(url) => setAuthorCoverUrl(openGroup.author, url)}
+          imageSearchTabs={authorImageSearchTabs(openGroup.author)}
         >
           {sortBySeries(openGroup.books).map((a) => renderCard(a, undefined))}
         </GroupDetailModal>

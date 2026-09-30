@@ -97,6 +97,18 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
     refreshAuthorImages();
   }
 
+  async function setAuthorCoverUrl(authorName, url) {
+    await api.setEbookAuthorCover(authorName, url);
+    refreshAuthorImages();
+  }
+
+  function authorImageSearchTabs(authorName) {
+    return [
+      { key: 'openlibrary', label: 'Open Library', sourceLabel: "Via Open Library's author database.", fetchOptions: () => api.searchEbookAuthorImages(authorName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known author.', fetchOptions: () => api.searchEbookAuthorImages(authorName, 'wikipedia') },
+    ];
+  }
+
   async function mergeAuthors(targetName) {
     await api.renameEbookAuthors([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
@@ -302,6 +314,8 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
           onClose={() => setOpenAuthor(null)}
           onRename={(newName) => renameAuthor(openGroup.author, newName)}
           onUploadCover={(file) => uploadAuthorCover(openGroup.author, file)}
+          onSetCoverUrl={(url) => setAuthorCoverUrl(openGroup.author, url)}
+          imageSearchTabs={authorImageSearchTabs(openGroup.author)}
         >
           {sortWithinAuthor(openGroup.books).map((e) => renderCard(e, undefined))}
         </GroupDetailModal>

@@ -8,6 +8,32 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.2.0 — Search for a group picture instead of only uploading one
+- Setting a picture for an author/series/artist/platform group, or a
+  Movies collection, now works the same way Movies' own poster search
+  already does: a "Choose a Picture" dialog with source tabs to search by
+  name, plus upload as a fallback — instead of upload being the only
+  option.
+- Each type gets whichever real source fits, alongside Wikipedia as a
+  universal fallback that works for almost any well-known name:
+  ComicVine's own volume search for Comics' series, Open Library's author
+  database for Audiobooks'/Ebooks' authors, Deezer's artist search for
+  Albums'/Vinyl's artists, and TMDB's collection search for Movies'
+  Collections. Games' platforms only get Wikipedia — no free, keyless
+  platform-art API exists to pair it with.
+- Reuses the exact `ImagePicker` component Movies' own poster/backdrop
+  search already uses, rather than building a new picker UI.
+- Caught and fixed a real close call before it shipped: an early version
+  of this change accidentally overwrote `server/lib/openlibrary.js`
+  (Ebooks' actual book-metadata source, not just an author-photo
+  lookalike) instead of adding to it — caught in a pre-commit diff review,
+  restored, and re-verified that both the original book search and the
+  new author-photo search work correctly side by side.
+- Verified live: opened the picker for a comic series with no ComicVine
+  key configured (showed a clean per-tab error there, real results on the
+  Wikipedia tab), picked a real Wikipedia image, and confirmed it was
+  fetched, cached, and saved as that series' picture.
+
 ## v1.1.2 — Fix the actual cause of missing group titles
 - v1.1.1's fix was real but incomplete — it addressed truncation/clipping,
   but the actual bug behind "the title just isn't there at all" for any

@@ -7,6 +7,8 @@ const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshAlbums');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
+const deezer = require('../lib/deezer');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -72,6 +74,19 @@ router.post('/clear-all', (req, res) => {
 // an :id value.
 router.get('/artists/images', (req, res) => {
   res.json(groupImages.getImageMap('album_artist'));
+});
+
+// A relevant picture to set for an artist group — Deezer's public artist
+// search needs no key and reliably has a real photo; Wikipedia is the
+// universal fallback every group-image search offers.
+router.get('/artists/search-images', async (req, res) => {
+  try {
+    const { q, source } = req.query;
+    if (!q) return res.json([]);
+    res.json(await (source === 'wikipedia' ? wikipedia : deezer).searchImages(q));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Renaming a single artist (sourceNames.length === 1) and merging several

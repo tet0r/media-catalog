@@ -82,6 +82,18 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
     refreshSeriesImages();
   }
 
+  async function setSeriesCoverUrl(seriesName, url) {
+    await api.setComicSeriesCover(seriesName, url);
+    refreshSeriesImages();
+  }
+
+  function seriesImageSearchTabs(seriesName) {
+    return [
+      { key: 'comicvine', label: 'ComicVine', sourceLabel: "Via ComicVine's own volume search.", fetchOptions: () => api.searchComicSeriesImages(seriesName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known series.', fetchOptions: () => api.searchComicSeriesImages(seriesName, 'wikipedia') },
+    ];
+  }
+
   async function mergeSeries(targetName) {
     await api.renameComicSeries([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
@@ -287,6 +299,8 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
           onClose={() => setOpenSeries(null)}
           onRename={(newName) => renameSeries(openGroup.series, newName)}
           onUploadCover={(file) => uploadSeriesCover(openGroup.series, file)}
+          onSetCoverUrl={(url) => setSeriesCoverUrl(openGroup.series, url)}
+          imageSearchTabs={seriesImageSearchTabs(openGroup.series)}
         >
           {openGroup.items.map((c) => renderCard(c, undefined))}
         </GroupDetailModal>

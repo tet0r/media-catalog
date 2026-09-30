@@ -6,6 +6,7 @@ const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const { runSync } = require('../lib/gamesSync');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -70,6 +71,21 @@ router.post('/clear-all', (req, res) => {
 // as an :id value.
 router.get('/platforms/images', (req, res) => {
   res.json(groupImages.getImageMap('game_platform'));
+});
+
+// A relevant picture to set for a platform group — no free, keyless
+// image API specifically for game-platform art exists, so Wikipedia
+// (a real console/platform almost always has its own page with a photo)
+// is the only source offered here, same fallback every other
+// group-image search also offers alongside its own specialized source.
+router.get('/platforms/search-images', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    res.json(await wikipedia.searchImages(q));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Renaming a single platform (sourceNames.length === 1) and merging

@@ -7,6 +7,8 @@ const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshComics');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
+const comicvine = require('../lib/comicvine');
+const wikipedia = require('../lib/wikipedia');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -74,6 +76,30 @@ router.post('/clear-all', (req, res) => {
 // an :id value.
 router.get('/series/images', (req, res) => {
   res.json(groupImages.getImageMap('comic_series'));
+});
+
+// A relevant picture to set for a series group, from whichever source
+// the client's tab asked for. ComicVine's own volume search already
+// fetches a series image (used for regular issue matching too — see
+// lib/comicvine.js); Metron's series schema has no image field at all
+// (confirmed via its own API docs), so it's not offered here. Wikipedia
+// is the universal fallback every group-image search offers.
+router.get('/series/search-images', async (req, res) => {
+  try {
+    const { q, source } = req.query;
+    if (!q) return res.json([]);
+    if (source === 'wikipedia') {
+      return res.json(await wikipedia.searchImages(q));
+    }
+    const volumes = await comicvine.searchVolumes(db, q, 8);
+    res.json(
+      volumes
+        .filter((v) => v.image_url)
+        .map((v) => ({ url: v.image_url, thumbnail_url: v.image_url, label: v.name }))
+    );
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Renaming a single series (sourceNames.length === 1) and merging several

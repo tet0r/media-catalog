@@ -20,6 +20,29 @@ async function searchMovies(db, query, year) {
   return data.results || [];
 }
 
+// For Collections' picture search — TMDB's own collection artwork, when
+// a manual collection's name happens to match a real TMDB collection
+// (e.g. "Star Wars Saga"). Franchise collections already get their
+// poster auto-fetched via syncFranchiseCollection; this is for picking
+// one by hand, same as a manual collection's picture search.
+async function searchCollections(db, query) {
+  const apiKey = getApiKey(db);
+  if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
+  const url = new URL(`${BASE}/search/collection`);
+  url.searchParams.set('api_key', apiKey);
+  url.searchParams.set('query', query);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
+  const data = await res.json();
+  return (data.results || [])
+    .filter((c) => c.poster_path)
+    .map((c) => ({
+      url: `${IMG_BASE}/w500${c.poster_path}`,
+      thumbnail_url: `${IMG_BASE}/w200${c.poster_path}`,
+      label: c.name,
+    }));
+}
+
 async function getMovieDetails(db, tmdbId) {
   const apiKey = getApiKey(db);
   if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
@@ -52,4 +75,4 @@ async function getMovieImages(db, tmdbId) {
   return res.json();
 }
 
-module.exports = { searchMovies, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };
+module.exports = { searchMovies, searchCollections, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };

@@ -90,4 +90,50 @@ async function getWorkKeyByIsbn(isbn) {
   return workKeyFromPath(edition.works?.[0]?.key);
 }
 
-module.exports = { searchBooks, getBookByKey, getWorkKeyByIsbn, coverUrl, workKeyFromPath };
+// --- Author photos, for Audiobooks/Ebooks' "group by author" picture
+// search (unrelated to the book-metadata functions above, but the same
+// free/keyless Open Library service backs both). Its author-photo
+// endpoint always returns 200 even when an author has no real photo — a
+// tiny (43-byte) known placeholder image — so each candidate is HEAD-
+// checked to filter those out before they're ever offered as a picker
+// option.
+const AUTHOR_SEARCH_BASE = 'https://openlibrary.org/search/authors.json';
+const AUTHOR_COVERS_BASE = 'https://covers.openlibrary.org/a/olid';
+const USER_AGENT = 'media-catalog (self-hosted personal use; https://github.com/tet0r/media-catalog)';
+const NO_PHOTO_BYTE_SIZE = 43;
+
+async function hasRealPhoto(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) return false;
+    const length = Number(res.headers.get('content-length'));
+    return length > NO_PHOTO_BYTE_SIZE;
+  } catch {
+    return false;
+  }
+}
+
+async function searchImages(query, limit = 6) {
+  if (!query) return [];
+  const url = new URL(AUTHOR_SEARCH_BASE);
+  url.searchParams.set('q', query);
+  url.searchParams.set('limit', String(limit));
+
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+  if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
+  const data = await res.json();
+
+  const candidates = (data.docs || []).map((a) => ({
+    url: `${AUTHOR_COVERS_BASE}/${a.key}-L.jpg`,
+    thumbnail_url: `${AUTHOR_COVERS_BASE}/${a.key}-M.jpg`,
+    label: a.name,
+  }));
+
+  // Checked in parallel — a handful of small HEAD requests, not the kind
+  // of burst that trips a rate limit the way a comic-metadata scan's
+  // hundreds of sequential lookups could.
+  const checks = await Promise.all(candidates.map((c) => hasRealPhoto(c.thumbnail_url)));
+  return candidates.filter((_, i) => checks[i]);
+}
+
+module.exports = { searchBooks, getBookByKey, getWorkKeyByIsbn, coverUrl, workKeyFromPath, searchImages };

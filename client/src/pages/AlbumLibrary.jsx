@@ -83,6 +83,18 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
     refreshArtistImages();
   }
 
+  async function setArtistCoverUrl(artistName, url) {
+    await api.setAlbumArtistCover(artistName, url);
+    refreshArtistImages();
+  }
+
+  function artistImageSearchTabs(artistName) {
+    return [
+      { key: 'deezer', label: 'Deezer', sourceLabel: "Via Deezer's artist search.", fetchOptions: () => api.searchAlbumArtistImages(artistName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known artist.', fetchOptions: () => api.searchAlbumArtistImages(artistName, 'wikipedia') },
+    ];
+  }
+
   async function mergeArtists(targetName) {
     await api.renameAlbumArtists([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
@@ -288,6 +300,8 @@ export default function AlbumLibrary({ q, sort, dir, onSortChange, groupByArtist
           onClose={() => setOpenArtist(null)}
           onRename={(newName) => renameArtist(openGroup.artist, newName)}
           onUploadCover={(file) => uploadArtistCover(openGroup.artist, file)}
+          onSetCoverUrl={(url) => setArtistCoverUrl(openGroup.artist, url)}
+          imageSearchTabs={artistImageSearchTabs(openGroup.artist)}
         >
           {openGroup.items.map((a) => renderCard(a, undefined))}
         </GroupDetailModal>

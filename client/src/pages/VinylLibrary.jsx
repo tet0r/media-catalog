@@ -84,6 +84,18 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
     refreshArtistImages();
   }
 
+  async function setArtistCoverUrl(artistName, url) {
+    await api.setVinylArtistCover(artistName, url);
+    refreshArtistImages();
+  }
+
+  function artistImageSearchTabs(artistName) {
+    return [
+      { key: 'deezer', label: 'Deezer', sourceLabel: "Via Deezer's artist search.", fetchOptions: () => api.searchVinylArtistImages(artistName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'A general fallback — works for almost any well-known artist.', fetchOptions: () => api.searchVinylArtistImages(artistName, 'wikipedia') },
+    ];
+  }
+
   async function mergeArtists(targetName) {
     await api.renameVinylArtists([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
@@ -331,6 +343,8 @@ export default function VinylLibrary({ q, sort, dir, onSortChange, groupByArtist
           onClose={() => setOpenArtist(null)}
           onRename={(newName) => renameArtist(openGroup.artist, newName)}
           onUploadCover={(file) => uploadArtistCover(openGroup.artist, file)}
+          onSetCoverUrl={(url) => setArtistCoverUrl(openGroup.artist, url)}
+          imageSearchTabs={artistImageSearchTabs(openGroup.artist)}
         >
           {openGroup.items.map((r) => renderCard(r, undefined))}
         </GroupDetailModal>
