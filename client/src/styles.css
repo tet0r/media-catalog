@@ -189,6 +189,8 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
   text-align: left; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
 .modal-wide { max-width: 1100px; }
+.group-modal-picture { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.group-modal-picture .poster { width: 100px; flex-shrink: 0; border-radius: 6px; }
 
 .library-page { position: relative; padding-right: 34px; }
 .alpha-index {

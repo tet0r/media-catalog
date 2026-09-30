@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import ComicCard from '../components/ComicCard.jsx';
 import GroupCard from '../components/GroupCard.jsx';
 import GroupDetailModal from '../components/GroupDetailModal.jsx';
+import MergeGroupsModal from '../components/MergeGroupsModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -45,9 +46,12 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
   const sel = useBulkSelection();
+  const groupSel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
   const [openSeries, setOpenSeries] = useState(null);
+  const [seriesImages, setSeriesImages] = useState({});
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const refreshComics = useCallback(() => {
     setLoading(true);
@@ -57,6 +61,34 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [q, sort, dir]);
+
+  const refreshSeriesImages = useCallback(() => {
+    api.listComicSeriesImages().then(setSeriesImages).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshSeriesImages();
+  }, [refreshSeriesImages]);
+
+  async function renameSeries(oldName, newName) {
+    await api.renameComicSeries([oldName], newName);
+    if (openSeries === oldName) setOpenSeries(newName);
+    refreshComics();
+    refreshSeriesImages();
+  }
+
+  async function uploadSeriesCover(seriesName, file) {
+    await api.uploadComicSeriesCover(seriesName, file);
+    refreshSeriesImages();
+  }
+
+  async function mergeSeries(targetName) {
+    await api.renameComicSeries([...groupSel.selectedIds], targetName);
+    groupSel.exitSelectMode();
+    setMergeModalOpen(false);
+    refreshComics();
+    refreshSeriesImages();
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -149,25 +181,42 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
 
   return (
     <div className="library-page">
-      <sel.Portal>
-        <button
-          type="button"
-          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
-          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
-        >
-          Select
-        </button>
-        {sel.selectMode && sel.selectedIds.size > 0 && (
-          <BulkActionsMenu
-            count={sel.selectedIds.size}
-            disabled={bulkBusy}
-            actions={[
-              { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
-              { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
-            ]}
-          />
-        )}
-      </sel.Portal>
+      {groupBySeries ? (
+        <groupSel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${groupSel.selectMode ? ' active' : ''}`}
+            onClick={() => (groupSel.selectMode ? groupSel.exitSelectMode() : groupSel.setSelectMode(true))}
+          >
+            Select Groups
+          </button>
+          {groupSel.selectMode && groupSel.selectedIds.size >= 2 && (
+            <button type="button" onClick={() => setMergeModalOpen(true)}>
+              Merge {groupSel.selectedIds.size} Groups
+            </button>
+          )}
+        </groupSel.Portal>
+      ) : (
+        <sel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+            onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+          >
+            Select
+          </button>
+          {sel.selectMode && sel.selectedIds.size > 0 && (
+            <BulkActionsMenu
+              count={sel.selectedIds.size}
+              disabled={bulkBusy}
+              actions={[
+                { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
+                { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
+              ]}
+            />
+          )}
+        </sel.Portal>
+      )}
 
       {bulkProgress && (
         <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
@@ -192,7 +241,11 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
                 count={g.items.length}
                 countLabel="issue"
                 coverUrls={g.items.map((c) => c.cover_url)}
+                customImageUrl={seriesImages[g.series]}
                 onClick={() => setOpenSeries(g.series)}
+                selectMode={groupSel.selectMode}
+                selected={groupSel.selectedIds.has(g.series)}
+                onToggleSelect={() => groupSel.toggle(g.series)}
               />
             );
           })}
@@ -229,10 +282,22 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
           label={openGroup.series}
           count={openGroup.items.length}
           countLabel="issue"
+          coverUrls={openGroup.items.map((c) => c.cover_url)}
+          customImageUrl={seriesImages[openGroup.series]}
           onClose={() => setOpenSeries(null)}
+          onRename={(newName) => renameSeries(openGroup.series, newName)}
+          onUploadCover={(file) => uploadSeriesCover(openGroup.series, file)}
         >
           {openGroup.items.map((c) => renderCard(c, undefined))}
         </GroupDetailModal>
+      )}
+
+      {mergeModalOpen && (
+        <MergeGroupsModal
+          sourceNames={[...groupSel.selectedIds]}
+          onMerge={mergeSeries}
+          onClose={() => setMergeModalOpen(false)}
+        />
       )}
     </div>
   );

@@ -5,6 +5,39 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v21.0 — Merge, rename, and pick a picture for author/series groups
+- Group by Author (Audiobooks/Ebooks) and Group by Series (Comics) gained
+  a "Select Groups" mode, mirroring every other library page's bulk-select:
+  pick two or more groups and merge them into one — handy for "J.K.
+  Rowling" and "JK Rowling" ending up as separate groups purely from
+  metadata spelling differences. Renaming a single group (no merge
+  involved) works the same way, from a Rename button right in the group's
+  own pop-over.
+- A merge/rename actually rewrites the underlying data: for audiobooks/
+  ebooks, every affected book's primary author (authors[0] — the one
+  grouping already keys off) is updated in place; for comics, the
+  series column on every affected issue. A co-author listed elsewhere on
+  the same book is left untouched, consistent with how grouping itself
+  only ever looks at the primary author.
+- Each group can also have its own picture now — set from the group's
+  pop-over — which takes over from the auto-collage everywhere that group
+  is shown. Since an author/series isn't a real entity with an id (just a
+  text value several rows share), this lives in a new small table keyed
+  by that text; renaming or merging a group carries its picture along
+  (adopting whichever source group's picture existed, if the target
+  didn't already have its own) rather than losing it.
+- "Clear Library" now also removes a media type's custom group pictures,
+  so a wiped-and-rebuilt library doesn't have an old author's picture
+  mysteriously reappear on an unrelated new entry that happens to share
+  a name later.
+- Verified live end-to-end: merged two author-name variants into one and
+  confirmed both books' data actually updated; renamed a merged group from
+  its own pop-over and confirmed the change propagated everywhere
+  (the group card, the pop-over's own header, and both books' author
+  field); uploaded a custom picture, confirmed it appears in place of the
+  auto-collage on the group card, and confirmed it survived a rename by
+  migrating to the new name's key.
+
 ## v20.1 — Group cards pop over instead of expanding in place
 - v20.0's in-grid expand (a group card growing to span the full row, with
   its items appearing directly underneath) is now a proper pop-over

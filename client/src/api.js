@@ -193,6 +193,26 @@ export const api = {
   listIgnoredAudiobooks: () => fetch(`${BASE}/audiobook-scan/ignored`).then(handle),
   unignoreAudiobook: (id) => fetch(`${BASE}/audiobook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
 
+  listAudiobookAuthorImages: () => fetch(`${BASE}/audiobooks/authors/images`).then(handle),
+  renameAudiobookAuthors: (sourceNames, targetName) =>
+    fetch(`${BASE}/audiobooks/authors/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setAudiobookAuthorCover: (name, imageUrl) =>
+    fetch(`${BASE}/audiobooks/authors/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadAudiobookAuthorCover: (name, file) =>
+    fetch(`${BASE}/audiobooks/authors/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+
   listEbooks: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
@@ -262,6 +282,26 @@ export const api = {
   unignoreEbook: (id) => fetch(`${BASE}/ebook-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearEbookLibrary: () => fetch(`${BASE}/ebooks/clear-all`, { method: 'POST' }).then(handle),
 
+  listEbookAuthorImages: () => fetch(`${BASE}/ebooks/authors/images`).then(handle),
+  renameEbookAuthors: (sourceNames, targetName) =>
+    fetch(`${BASE}/ebooks/authors/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setEbookAuthorCover: (name, imageUrl) =>
+    fetch(`${BASE}/ebooks/authors/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadEbookAuthorCover: (name, file) =>
+    fetch(`${BASE}/ebooks/authors/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+
   listComics: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
@@ -326,6 +366,26 @@ export const api = {
   listIgnoredComics: () => fetch(`${BASE}/comic-scan/ignored`).then(handle),
   unignoreComic: (id) => fetch(`${BASE}/comic-scan/ignored/${id}`, { method: 'DELETE' }).then(handle),
   clearComicLibrary: () => fetch(`${BASE}/comics/clear-all`, { method: 'POST' }).then(handle),
+
+  listComicSeriesImages: () => fetch(`${BASE}/comics/series/images`).then(handle),
+  renameComicSeries: (sourceNames, targetName) =>
+    fetch(`${BASE}/comics/series/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setComicSeriesCover: (name, imageUrl) =>
+    fetch(`${BASE}/comics/series/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadComicSeriesCover: (name, file) =>
+    fetch(`${BASE}/comics/series/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
 
   listAlbums: (params = {}) => {
     const qs = new URLSearchParams(

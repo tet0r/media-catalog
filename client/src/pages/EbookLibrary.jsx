@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import EbookCard from '../components/EbookCard.jsx';
 import GroupCard from '../components/GroupCard.jsx';
 import GroupDetailModal from '../components/GroupDetailModal.jsx';
+import MergeGroupsModal from '../components/MergeGroupsModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -60,9 +61,12 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   const [pendingJump, setPendingJump] = useState(null);
   const hasRestoredScroll = useRef(false);
   const sel = useBulkSelection();
+  const groupSel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
   const [openAuthor, setOpenAuthor] = useState(null);
+  const [authorImages, setAuthorImages] = useState({});
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const refreshEbooks = useCallback(() => {
     setLoading(true);
@@ -72,6 +76,34 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [q, sort, dir]);
+
+  const refreshAuthorImages = useCallback(() => {
+    api.listEbookAuthorImages().then(setAuthorImages).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshAuthorImages();
+  }, [refreshAuthorImages]);
+
+  async function renameAuthor(oldName, newName) {
+    await api.renameEbookAuthors([oldName], newName);
+    if (openAuthor === oldName) setOpenAuthor(newName);
+    refreshEbooks();
+    refreshAuthorImages();
+  }
+
+  async function uploadAuthorCover(authorName, file) {
+    await api.uploadEbookAuthorCover(authorName, file);
+    refreshAuthorImages();
+  }
+
+  async function mergeAuthors(targetName) {
+    await api.renameEbookAuthors([...groupSel.selectedIds], targetName);
+    groupSel.exitSelectMode();
+    setMergeModalOpen(false);
+    refreshEbooks();
+    refreshAuthorImages();
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -164,25 +196,42 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
 
   return (
     <div className="library-page">
-      <sel.Portal>
-        <button
-          type="button"
-          className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
-          onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
-        >
-          Select
-        </button>
-        {sel.selectMode && sel.selectedIds.size > 0 && (
-          <BulkActionsMenu
-            count={sel.selectedIds.size}
-            disabled={bulkBusy}
-            actions={[
-              { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
-              { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
-            ]}
-          />
-        )}
-      </sel.Portal>
+      {groupByAuthor ? (
+        <groupSel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${groupSel.selectMode ? ' active' : ''}`}
+            onClick={() => (groupSel.selectMode ? groupSel.exitSelectMode() : groupSel.setSelectMode(true))}
+          >
+            Select Groups
+          </button>
+          {groupSel.selectMode && groupSel.selectedIds.size >= 2 && (
+            <button type="button" onClick={() => setMergeModalOpen(true)}>
+              Merge {groupSel.selectedIds.size} Groups
+            </button>
+          )}
+        </groupSel.Portal>
+      ) : (
+        <sel.Portal>
+          <button
+            type="button"
+            className={`toolbar-toggle${sel.selectMode ? ' active' : ''}`}
+            onClick={() => (sel.selectMode ? sel.exitSelectMode() : sel.setSelectMode(true))}
+          >
+            Select
+          </button>
+          {sel.selectMode && sel.selectedIds.size > 0 && (
+            <BulkActionsMenu
+              count={sel.selectedIds.size}
+              disabled={bulkBusy}
+              actions={[
+                { key: 'refresh', label: 'Refresh Metadata', onClick: bulkRefresh },
+                { key: 'delete', label: 'Delete Selected', onClick: bulkDelete, danger: true },
+              ]}
+            />
+          )}
+        </sel.Portal>
+      )}
 
       {bulkProgress && (
         <p className="muted">{bulkProgress.label}... ({bulkProgress.done}/{bulkProgress.total})</p>
@@ -207,7 +256,11 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
                 count={g.books.length}
                 countLabel="book"
                 coverUrls={g.books.map((e) => e.cover_url)}
+                customImageUrl={authorImages[g.author]}
                 onClick={() => setOpenAuthor(g.author)}
+                selectMode={groupSel.selectMode}
+                selected={groupSel.selectedIds.has(g.author)}
+                onToggleSelect={() => groupSel.toggle(g.author)}
               />
             );
           })}
@@ -244,10 +297,22 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
           label={openGroup.author}
           count={openGroup.books.length}
           countLabel="book"
+          coverUrls={openGroup.books.map((e) => e.cover_url)}
+          customImageUrl={authorImages[openGroup.author]}
           onClose={() => setOpenAuthor(null)}
+          onRename={(newName) => renameAuthor(openGroup.author, newName)}
+          onUploadCover={(file) => uploadAuthorCover(openGroup.author, file)}
         >
           {sortWithinAuthor(openGroup.books).map((e) => renderCard(e, undefined))}
         </GroupDetailModal>
+      )}
+
+      {mergeModalOpen && (
+        <MergeGroupsModal
+          sourceNames={[...groupSel.selectedIds]}
+          onMerge={mergeAuthors}
+          onClose={() => setMergeModalOpen(false)}
+        />
       )}
     </div>
   );

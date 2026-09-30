@@ -540,6 +540,21 @@ CREATE TABLE IF NOT EXISTS collection_movies (
   added_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (collection_id, movie_id)
 );
+
+-- A custom picture for a "group by author/series" card (see
+-- client/src/components/GroupCard.jsx and lib/groupImages.js) — unlike
+-- collections, an author/series isn't its own entity with an id; it's
+-- just a text value shared by several audiobooks/ebooks/comics rows, so
+-- this is keyed directly by that text (plus media_type, since "Batman"
+-- could be both a comic series and, in principle, an author name) rather
+-- than a foreign key. group_key tracks renames via lib/groupRename.js
+-- rather than being immutable.
+CREATE TABLE IF NOT EXISTS group_images (
+  media_type TEXT NOT NULL,
+  group_key TEXT NOT NULL,
+  cover_file TEXT,
+  PRIMARY KEY (media_type, group_key)
+);
 `);
 
 // Migrate existing databases created before a column existed (SQLite has

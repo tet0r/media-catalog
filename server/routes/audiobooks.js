@@ -5,6 +5,8 @@ const db = require('../db');
 const { addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook } = require('../lib/addAudiobook');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const bulkRefresh = require('../lib/bulkRefreshAudiobooks');
+const groupImages = require('../lib/groupImages');
+const { renameAuthorGroup } = require('../lib/groupRename');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -61,8 +63,56 @@ router.post('/clear-all', (req, res) => {
     if (!row.cover_file) continue;
     try { fs.unlinkSync(path.join(DATA_DIR, 'posters', row.cover_file)); } catch { /* already gone, fine */ }
   }
+  // Also drop any custom author pictures (group_images) — otherwise a
+  // re-added author later would inherit a picture from before the wipe.
+  for (const coverFile of groupImages.clearAll('audiobook_author')) {
+    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  }
   const info = db.prepare('DELETE FROM audiobooks').run();
   res.json({ ok: true, count: info.changes });
+});
+
+// Also defined ahead of /:id — "authors" would otherwise be swallowed as
+// an :id value.
+router.get('/authors/images', (req, res) => {
+  res.json(groupImages.getImageMap('audiobook_author'));
+});
+
+// Renaming a single author (sourceNames.length === 1) and merging several
+// into one (sourceNames.length > 1, picked via the library page's group
+// select mode) are the same operation — see lib/groupRename.js.
+router.post('/authors/rename', (req, res) => {
+  const { sourceNames, targetName } = req.body;
+  if (!Array.isArray(sourceNames) || sourceNames.length === 0 || !targetName || !targetName.trim()) {
+    return res.status(400).json({ error: 'sourceNames (a non-empty array) and targetName are required' });
+  }
+  const updated = renameAuthorGroup('audiobooks', 'audiobook_author', sourceNames, targetName.trim());
+  res.json({ ok: true, updated });
+});
+
+router.put('/authors/:name/cover', async (req, res) => {
+  try {
+    const { image_url } = req.body;
+    if (!image_url) return res.status(400).json({ error: 'image_url is required' });
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+    groupImages.setImage('audiobook_author', req.params.name, filename);
+    res.json({ ok: true, cover_url: `/posters/${filename}` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.put('/authors/:name/cover/upload', express.raw({ type: () => true, limit: '15mb' }), async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+    groupImages.setImage('audiobook_author', req.params.name, filename);
+    res.json({ ok: true, cover_url: `/posters/${filename}` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 router.get('/:id', (req, res) => {
