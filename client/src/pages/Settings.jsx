@@ -124,6 +124,12 @@ export default function Settings() {
   const [backingUp, setBackingUp] = useState(false);
   const [restoringFilename, setRestoringFilename] = useState(null);
   const [restoreWaitMessage, setRestoreWaitMessage] = useState(null);
+  const [textExports, setTextExports] = useState([]);
+  const [textExportStatus, setTextExportStatus] = useState(null);
+  const [textExporting, setTextExporting] = useState(false);
+  const [htmlExports, setHtmlExports] = useState([]);
+  const [htmlExportStatus, setHtmlExportStatus] = useState(null);
+  const [htmlExporting, setHtmlExporting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -237,6 +243,81 @@ export default function Settings() {
     try {
       await api.deleteBackup(filename);
       setBackups((list) => list.filter((b) => b.filename !== filename));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  const refreshExports = useCallback(() => {
+    api.listTextExports().then(setTextExports).catch(() => {});
+    api.textExportStatus().then(setTextExportStatus).catch(() => {});
+    api.listHtmlExports().then(setHtmlExports).catch(() => {});
+    api.htmlExportStatus().then(setHtmlExportStatus).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshExports();
+    const interval = setInterval(refreshExports, 5000);
+    return () => clearInterval(interval);
+  }, [refreshExports]);
+
+  async function exportTextNow() {
+    setTextExporting(true);
+    setError(null);
+    try {
+      await api.startTextExport();
+      for (let i = 0; i < 30; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const s = await api.textExportStatus();
+        setTextExportStatus(s);
+        if (!s.running) break;
+      }
+      refreshExports();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTextExporting(false);
+    }
+  }
+
+  async function removeTextExport(filename) {
+    if (!confirm(`Delete export "${filename}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteTextExport(filename);
+      setTextExports((list) => list.filter((f) => f.filename !== filename));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function exportHtmlNow() {
+    setHtmlExporting(true);
+    setError(null);
+    try {
+      await api.startHtmlExport();
+      // An HTML export writes far more files than a text export (a page
+      // per library item, plus copying every referenced poster) — give it
+      // much longer than the text export's poll loop before giving up on
+      // ever seeing it finish and falling back to the next 5s tick.
+      for (let i = 0; i < 600; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const s = await api.htmlExportStatus();
+        setHtmlExportStatus(s);
+        if (!s.running) break;
+      }
+      refreshExports();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setHtmlExporting(false);
+    }
+  }
+
+  async function removeHtmlExport(name) {
+    if (!confirm(`Delete export "${name}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteHtmlExport(name);
+      setHtmlExports((list) => list.filter((e) => e.name !== name));
     } catch (err) {
       setError(err.message);
     }
@@ -640,6 +721,85 @@ export default function Settings() {
                 {restoringFilename === b.filename ? 'Restoring...' : 'Restore'}
               </button>
               <button className="muted-btn" disabled={!!restoringFilename} onClick={() => removeBackup(b.filename)}>
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <hr />
+      <h2>Library Export</h2>
+      <p className="muted">
+        A read-only snapshot of your whole collection, separate from Backups above (which is for
+        restoring into this app, not for browsing outside it). Both kinds land in{' '}
+        <code>{backupDir || '...'}</code>/exports, next to your backups.
+      </p>
+
+      <h3>Text</h3>
+      <p className="muted">
+        One plain-text file, a section per media type, sorted alphabetically within each.
+      </p>
+      <button onClick={exportTextNow} disabled={textExporting || textExportStatus?.running}>
+        {textExporting || textExportStatus?.running ? 'Exporting...' : 'Export to Text'}
+      </button>
+      {textExportStatus?.message && (
+        <p className="muted">
+          {' '}{textExportStatus.message}
+          {!!textExportStatus.running && <ElapsedTimer startedAt={textExportStatus.started_at} />}
+        </p>
+      )}
+      {textExports.length === 0 ? (
+        <p className="muted">No text exports yet.</p>
+      ) : (
+        <div className="backup-list">
+          {textExports.map((f) => (
+            <div key={f.filename} className="backup-item">
+              <span className="backup-item-name">{f.filename}</span>
+              <span className="muted">{new Date(f.created_at).toLocaleString()}</span>
+              <span className="muted">{(f.size / 1024).toFixed(0)} KB</span>
+              <a className="muted-btn" href={api.textExportDownloadUrl(f.filename)} download>
+                Download
+              </a>
+              <button className="muted-btn" onClick={() => removeTextExport(f.filename)}>
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h3>HTML</h3>
+      <p className="muted">
+        A static, browsable site that visually matches this app — library grids and a detail page
+        per item — with no Settings, Add, or Scan functionality, starting at its own{' '}
+        <code>index.html</code>. Generating one writes a page per item plus a copy of every cover
+        it uses, so a large library can take a while.
+      </p>
+      <button onClick={exportHtmlNow} disabled={htmlExporting || htmlExportStatus?.running}>
+        {htmlExporting || htmlExportStatus?.running ? 'Exporting...' : 'Export to HTML'}
+      </button>
+      {htmlExportStatus?.message && (
+        <p className="muted">
+          {' '}{htmlExportStatus.message}
+          {!!htmlExportStatus.running && <ElapsedTimer startedAt={htmlExportStatus.started_at} />}
+        </p>
+      )}
+      {htmlExports.length === 0 ? (
+        <p className="muted">No HTML exports yet.</p>
+      ) : (
+        <div className="backup-list">
+          {htmlExports.map((e) => (
+            <div key={e.name} className="backup-item">
+              <span className="backup-item-name">{e.name}</span>
+              <span className="muted">{new Date(e.created_at).toLocaleString()}</span>
+              <span className="muted">
+                {e.total_items != null ? `${e.total_items} items, ` : ''}{(e.size / 1024 / 1024).toFixed(1)} MB
+              </span>
+              <a className="muted-btn" href={api.htmlExportDownloadUrl(e.name)} download>
+                Download .zip
+              </a>
+              <button className="muted-btn" onClick={() => removeHtmlExport(e.name)}>
                 Delete
               </button>
             </div>

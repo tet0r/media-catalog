@@ -183,6 +183,18 @@ CREATE TABLE IF NOT EXISTS backup_status (
   message TEXT
 );
 
+-- Same shape as backup_status, but one row per export kind ('text'/'html')
+-- rather than a single id=1 row, since the two run independently of each
+-- other (starting a text export while an HTML export is running, or vice
+-- versa, is fine — they touch different files entirely).
+CREATE TABLE IF NOT EXISTS export_status (
+  type TEXT PRIMARY KEY,
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  started_at TEXT,
+  message TEXT
+);
+
 CREATE TABLE IF NOT EXISTS audiobooks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- The catalog ID from whichever source metadata_source names — an
@@ -610,6 +622,8 @@ db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)'
 db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO tv_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO backup_status (id, running) VALUES (1, 0)').run();
+db.prepare("INSERT OR IGNORE INTO export_status (type, running) VALUES ('text', 0)").run();
+db.prepare("INSERT OR IGNORE INTO export_status (type, running) VALUES ('html', 0)").run();
 
 // A scan/sync/backup's own code always resets `running` back to 0 when it
 // finishes, whether it succeeds or fails — but that code never gets the
@@ -628,5 +642,11 @@ for (const table of STATUS_TABLES) {
     `UPDATE ${table} SET running = 0, message = 'Interrupted by a restart — try again.' WHERE running != 0`
   ).run();
 }
+// export_status has a compound-ish key (type, not id) but the same reset
+// rationale applies — a row stuck at running=1 after a crash is always
+// stale, never a real in-progress export.
+db.prepare(
+  "UPDATE export_status SET running = 0, message = 'Interrupted by a restart — try again.' WHERE running != 0"
+).run();
 
 module.exports = db;

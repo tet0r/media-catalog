@@ -8,6 +8,30 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.5.0 — Library Export (text and HTML)
+- New "Library Export" section in Settings (General tab), alongside
+  Backups — two independent, manually-triggered exports, both landing in
+  `BACKUP_DIR/exports/` (text/ and html/ subfolders) rather than inside
+  `./data`, same reasoning as backups already living there.
+- **Export to Text**: one plain-text file, a section per media type
+  (Movies, TV Shows, Audiobooks, Comics, Ebooks, Digital, Vinyl, Games),
+  each sorted alphabetically by title.
+- **Export to HTML**: a static, browsable clone of the app itself — a
+  library grid plus a detail page per item, for all eight media types —
+  reusing the exact CSS the live app's own build outputs, so it's visually
+  indistinguishable from the running site. No Settings, Add, or Scan
+  functionality (it's read-only by construction — there's no live API to
+  call). Starts at its own `index.html`; every referenced cover is copied
+  alongside it, so the folder is fully self-contained and portable (works
+  from a USB drive or another web host, not just in place). Also
+  downloadable as a `.zip`, streamed on demand rather than pre-built.
+- Both exports run as background jobs with the same status-polling pattern
+  Backups already uses (a "Back Up Now"-style button, live progress
+  message, list of past exports with Download/Delete) — generating an
+  HTML export writes far more files than a backup ever does (a page per
+  item, plus every cover), so it yields periodically during generation
+  rather than blocking the server for its whole duration.
+
 ## v1.4.1 — Rename the Albums section to Digital; fix Comics missing from the README intro
 - The Music sub-section sidebar link, its Settings tab, and its
   sidebar-visibility toggle now read "Digital" instead of "Albums" — it

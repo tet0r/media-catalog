@@ -132,6 +132,14 @@ button for it. Point `BACKUP_SYNC_PATH` somewhere genuinely independent of
 `./data` — a different disk or share — so a backup isn't wiped out by the
 same event that could reset `./data`.
 
+The same Settings section also has a Library Export: "Export to Text" writes
+one plain-text file (a section per media type, sorted alphabetically) for
+a quick read-only list, and "Export to HTML" writes a static, browsable
+site that visually matches the app itself (library grids + a detail page
+per item) but with no Settings/Add/Scan functionality — open its
+`index.html` directly, or download it as a `.zip`. Both land in
+`BACKUP_DIR/exports/` (text/ and html/ subfolders), alongside your backups.
+
 ## Local development (without Docker)
 
 ```bash

@@ -686,4 +686,16 @@ export const api = {
   backupDownloadUrl: (filename) => `${BASE}/backups/${encodeURIComponent(filename)}/download`,
   deleteBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(handle),
   restoreBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}/restore`, { method: 'POST' }).then(handle),
+
+  listTextExports: () => fetch(`${BASE}/exports/text`).then(handle),
+  textExportStatus: () => fetch(`${BASE}/exports/text/status`).then(handle),
+  startTextExport: () => fetch(`${BASE}/exports/text`, { method: 'POST' }).then(handle),
+  textExportDownloadUrl: (filename) => `${BASE}/exports/text/${encodeURIComponent(filename)}/download`,
+  deleteTextExport: (filename) => fetch(`${BASE}/exports/text/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(handle),
+
+  listHtmlExports: () => fetch(`${BASE}/exports/html`).then(handle),
+  htmlExportStatus: () => fetch(`${BASE}/exports/html/status`).then(handle),
+  startHtmlExport: () => fetch(`${BASE}/exports/html`, { method: 'POST' }).then(handle),
+  htmlExportDownloadUrl: (name) => `${BASE}/exports/html/${encodeURIComponent(name)}/download`,
+  deleteHtmlExport: (name) => fetch(`${BASE}/exports/html/${encodeURIComponent(name)}`, { method: 'DELETE' }).then(handle),
 };
