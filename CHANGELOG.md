@@ -1,11 +1,16 @@
 # Changelog
 
-Versioning here isn't strict semver — a **major** bump (v*X*.0) marks a
-genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
-smaller enhancement to something that already existed. Docs-only commits
-aren't versioned separately.
+Versioning follows semver (*major*.*minor*.*patch*), reset to 1.0.0 below —
+the entries under it (v17.2 down to v21.0) are the real history of what
+shipped before the reset and are left as originally numbered. From 1.0.0
+on: a new capability bumps **minor**; a fix, tweak, or smaller enhancement
+to something that already existed bumps **patch**. Major stays fixed at 1
+barring a deliberate decision to bump it. Docs-only commits aren't
+versioned separately.
 
-## v21.0 — Merge, rename, and pick a picture for author/series groups
+## v1.0.0 — Merge, rename, and pick a picture for author/series groups
+*(Versioning reset here — see the note above. This is the same feature
+that would otherwise have been v21.0.)*
 - Group by Author (Audiobooks/Ebooks) and Group by Series (Comics) gained
   a "Select Groups" mode, mirroring every other library page's bulk-select:
   pick two or more groups and merge them into one — handy for "J.K.
