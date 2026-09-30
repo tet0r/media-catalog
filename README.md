@@ -1,8 +1,8 @@
 # Media Catalog
 
-A self-hosted, Docker-deployable media collection cataloger — Movies,
-Audiobooks, Ebooks, Music (Albums + Vinyl), Games, and TV Shows. Each media
-type gets its own sidebar tab, library scanner, and Settings section.
+A self-hosted, Docker-deployable media collection cataloger — Movies, TV
+Shows, Audiobooks, Comics, Ebooks, Music (Digital + Vinyl), and Games. Each
+media type gets its own sidebar tab, library scanner, and Settings section.
 
 The running app's version shows next to its name in the nav bar (from the
 `VERSION` file) and at `GET /api/health` — handy for confirming a Portainer
@@ -49,7 +49,7 @@ Assumes Docker and your media files are on the same machine — see
   sub-path.
 - **Ebooks** — [Open Library](https://openlibrary.org), no key needed.
   Point `EBOOKS_PATH` at your ebook folder (`.epub`/`.pdf`/`.mobi`/`.azw3`).
-- **Music (Albums)** — [Last.fm](https://www.last.fm) by default; a free
+- **Music (Digital)** — [Last.fm](https://www.last.fm) by default; a free
   key from [last.fm/api/account/create](https://www.last.fm/api/account/create)
   is optional (falls back to keyless [MusicBrainz](https://musicbrainz.org)
   without one). Point `ALBUMS_PATH` at your music folder — one folder per

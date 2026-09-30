@@ -8,6 +8,19 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.4.1 — Rename the Albums section to Digital; fix Comics missing from the README intro
+- The Music sub-section sidebar link, its Settings tab, and its
+  sidebar-visibility toggle now read "Digital" instead of "Albums" — it
+  sits alongside "Vinyl" as the other music format, and "Albums" read as
+  if it were the only music section rather than one of two. Individual
+  items are still called albums (an "album" is still the right word for
+  one digital release) — only the section label changed, not the routes,
+  settings keys, or item-level wording ("Add Album", "Clear Album
+  Library", etc).
+- The README's intro line listed every media type except Comics — added
+  it back in, in the same order the **Media types** section below lists
+  them.
+
 ## v1.4.0 — Mobile-friendly layout, installable as a home-screen app
 - The sidebar is now a slide-out drawer (behind a hamburger button) below
   tablet width instead of a permanent column squeezing the rest of the

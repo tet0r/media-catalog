@@ -39,12 +39,12 @@ const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
 // Alphabetical, per how the sidebar is meant to order media-type tabs — a
 // future media type just slots in here and the sidebar/order follow.
-// "Music" is the one section with sub-sections (Albums, Vinyl) rather than
-// a single library, since those two are fundamentally different: Albums
-// scans local files and matches them against MusicBrainz, while Vinyl
-// pulls an existing collection from Discogs — no local files involved at
-// all — so they need to stay visually and navigationally distinct rather
-// than being forced into one shared library view.
+// "Music" is the one section with sub-sections (Digital, Vinyl) rather
+// than a single library, since those two are fundamentally different:
+// Digital scans local files and matches them against MusicBrainz, while
+// Vinyl pulls an existing collection from Discogs — no local files
+// involved at all — so they need to stay visually and navigationally
+// distinct rather than being forced into one shared library view.
 const SECTIONS = [
   { key: 'audiobooks', label: 'Audiobooks', path: '/audiobooks', icon: '🎧' },
   { key: 'comics', label: 'Comics', path: '/comics', icon: '💥' },
@@ -56,7 +56,7 @@ const SECTIONS = [
     label: 'Music',
     icon: '💿',
     children: [
-      { key: 'albums', label: 'Albums', path: '/music/albums' },
+      { key: 'albums', label: 'Digital', path: '/music/albums' },
       { key: 'vinyl', label: 'Vinyl', path: '/music/vinyl' },
     ],
   },
@@ -421,7 +421,7 @@ export default function App() {
               if (visibleChildren.length === 0) return null;
               // A group containing the page you're actually on always
               // shows expanded, regardless of the manual toggle — so
-              // navigating into Albums/Vinyl never hides the link you
+              // navigating into Digital/Vinyl never hides the link you
               // just used, and collapsing Music elsewhere never hides
               // where you currently are.
               const isActiveGroup = visibleChildren.some((c) => c.key === activeSection?.key);

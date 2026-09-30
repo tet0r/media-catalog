@@ -28,7 +28,7 @@ const SETTINGS_TABS = [
   { key: 'audiobooks', label: 'Audiobooks' },
   { key: 'comics', label: 'Comics' },
   { key: 'ebooks', label: 'Ebooks' },
-  { key: 'albums', label: 'Albums' },
+  { key: 'albums', label: 'Digital' },
   { key: 'vinyl', label: 'Vinyl' },
   { key: 'games', label: 'Games' },
   { key: 'tv', label: 'TV Shows' },
@@ -39,7 +39,7 @@ const SIDEBAR_SECTIONS = [
   { key: 'audiobooks', label: 'Audiobooks' },
   { key: 'comics', label: 'Comics' },
   { key: 'ebooks', label: 'Ebooks' },
-  { key: 'albums', label: 'Albums' },
+  { key: 'albums', label: 'Digital' },
   { key: 'vinyl', label: 'Vinyl' },
   { key: 'games', label: 'Games' },
   { key: 'tv', label: 'TV Shows' },
@@ -919,7 +919,7 @@ export default function Settings() {
 
       {activeTab === 'albums' && (
         <>
-      <h2>Music — Albums</h2>
+      <h2>Music — Digital</h2>
 
       <div className="form-grid">
         <label>
