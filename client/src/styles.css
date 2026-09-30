@@ -177,17 +177,18 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
 }
 
 /* A group-by-author/series card (Audiobooks/Ebooks/Comics) — sits as a
-   normal item inside the shared .grid, six-across like any other card,
-   until expanded: then it spans the full grid row (grid-column: 1 / -1)
-   so its nested .grid of that group's own items lays out underneath it
-   at full width, without disturbing the other group cards' flow. */
+   normal item inside the shared .grid, six-across like any other card.
+   Clicking it opens GroupDetailModal (a .modal-overlay, same pattern as
+   BulkAddToCollectionModal/ImagePicker) rather than expanding in place, so
+   the group's name stays clearly visible in the modal's own header no
+   matter how many items it contains, and the rest of the grid stays put
+   in the dimmed background behind it. */
 .group-card-wrap { display: flex; flex-direction: column; }
-.group-card-wrap.expanded { grid-column: 1 / -1; }
 .group-card {
   display: block; width: 100%; max-width: 220px;
   text-align: left; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
-.group-card-expanded { margin-top: 16px; width: 100%; }
+.modal-wide { max-width: 1100px; }
 
 .library-page { position: relative; padding-right: 34px; }
 .alpha-index {

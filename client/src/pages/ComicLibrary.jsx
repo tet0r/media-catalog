@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ComicCard from '../components/ComicCard.jsx';
 import GroupCard from '../components/GroupCard.jsx';
+import GroupDetailModal from '../components/GroupDetailModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -46,16 +47,7 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
-  const [expandedSeries, setExpandedSeries] = useState(new Set());
-
-  function toggleSeries(series) {
-    setExpandedSeries((prev) => {
-      const next = new Set(prev);
-      if (next.has(series)) next.delete(series);
-      else next.add(series);
-      return next;
-    });
-  }
+  const [openSeries, setOpenSeries] = useState(null);
 
   const refreshComics = useCallback(() => {
     setLoading(true);
@@ -129,6 +121,7 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
   }
 
   const groups = groupBySeries ? groupBySeriesName(comics) : null;
+  const openGroup = openSeries && groups ? groups.find((g) => g.series === openSeries) : null;
   const availableLetters = new Set(
     groupBySeries ? groups.map((g) => g.letter) : comics.map((c) => letterFor(c.series || c.title))
   );
@@ -199,11 +192,8 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
                 count={g.items.length}
                 countLabel="issue"
                 coverUrls={g.items.map((c) => c.cover_url)}
-                expanded={expandedSeries.has(g.series)}
-                onToggle={() => toggleSeries(g.series)}
-              >
-                {g.items.map((c) => renderCard(c, undefined))}
-              </GroupCard>
+                onClick={() => setOpenSeries(g.series)}
+              />
             );
           })}
         </div>
@@ -232,6 +222,17 @@ export default function ComicLibrary({ q, sort, dir, onSortChange, groupBySeries
             </button>
           ))}
         </nav>
+      )}
+
+      {openGroup && (
+        <GroupDetailModal
+          label={openGroup.series}
+          count={openGroup.items.length}
+          countLabel="issue"
+          onClose={() => setOpenSeries(null)}
+        >
+          {openGroup.items.map((c) => renderCard(c, undefined))}
+        </GroupDetailModal>
       )}
     </div>
   );

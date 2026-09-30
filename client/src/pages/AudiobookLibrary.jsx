@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import AudiobookCard from '../components/AudiobookCard.jsx';
 import GroupCard from '../components/GroupCard.jsx';
+import GroupDetailModal from '../components/GroupDetailModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -78,16 +79,7 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
-  const [expandedAuthors, setExpandedAuthors] = useState(new Set());
-
-  function toggleAuthor(author) {
-    setExpandedAuthors((prev) => {
-      const next = new Set(prev);
-      if (next.has(author)) next.delete(author);
-      else next.add(author);
-      return next;
-    });
-  }
+  const [openAuthor, setOpenAuthor] = useState(null);
 
   const refreshAudiobooks = useCallback(() => {
     setLoading(true);
@@ -165,6 +157,7 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
   }
 
   const groups = groupByAuthor ? groupByAuthorName(audiobooks) : null;
+  const openGroup = openAuthor && groups ? groups.find((g) => g.author === openAuthor) : null;
   const availableLetters = new Set(
     groupByAuthor ? groups.map((g) => g.letter) : audiobooks.map((a) => letterFor(a.title))
   );
@@ -235,11 +228,8 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
                 count={g.books.length}
                 countLabel="book"
                 coverUrls={g.books.map((a) => a.cover_url)}
-                expanded={expandedAuthors.has(g.author)}
-                onToggle={() => toggleAuthor(g.author)}
-              >
-                {sortBySeries(g.books).map((a) => renderCard(a, undefined))}
-              </GroupCard>
+                onClick={() => setOpenAuthor(g.author)}
+              />
             );
           })}
         </div>
@@ -268,6 +258,17 @@ export default function AudiobookLibrary({ q, sort, dir, onSortChange, groupByAu
             </button>
           ))}
         </nav>
+      )}
+
+      {openGroup && (
+        <GroupDetailModal
+          label={openGroup.author}
+          count={openGroup.books.length}
+          countLabel="book"
+          onClose={() => setOpenAuthor(null)}
+        >
+          {sortBySeries(openGroup.books).map((a) => renderCard(a, undefined))}
+        </GroupDetailModal>
       )}
     </div>
   );

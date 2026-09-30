@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import EbookCard from '../components/EbookCard.jsx';
 import GroupCard from '../components/GroupCard.jsx';
+import GroupDetailModal from '../components/GroupDetailModal.jsx';
 import useBulkSelection from '../hooks/useBulkSelection.js';
 import BulkActionsMenu from '../components/BulkActionsMenu.jsx';
 
@@ -61,16 +62,7 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   const sel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
-  const [expandedAuthors, setExpandedAuthors] = useState(new Set());
-
-  function toggleAuthor(author) {
-    setExpandedAuthors((prev) => {
-      const next = new Set(prev);
-      if (next.has(author)) next.delete(author);
-      else next.add(author);
-      return next;
-    });
-  }
+  const [openAuthor, setOpenAuthor] = useState(null);
 
   const refreshEbooks = useCallback(() => {
     setLoading(true);
@@ -144,6 +136,7 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
   }
 
   const groups = groupByAuthor ? groupByAuthorName(ebooks) : null;
+  const openGroup = openAuthor && groups ? groups.find((g) => g.author === openAuthor) : null;
   const availableLetters = new Set(
     groupByAuthor ? groups.map((g) => g.letter) : ebooks.map((e) => letterFor(e.title))
   );
@@ -214,11 +207,8 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
                 count={g.books.length}
                 countLabel="book"
                 coverUrls={g.books.map((e) => e.cover_url)}
-                expanded={expandedAuthors.has(g.author)}
-                onToggle={() => toggleAuthor(g.author)}
-              >
-                {sortWithinAuthor(g.books).map((e) => renderCard(e, undefined))}
-              </GroupCard>
+                onClick={() => setOpenAuthor(g.author)}
+              />
             );
           })}
         </div>
@@ -247,6 +237,17 @@ export default function EbookLibrary({ q, sort, dir, onSortChange, groupByAuthor
             </button>
           ))}
         </nav>
+      )}
+
+      {openGroup && (
+        <GroupDetailModal
+          label={openGroup.author}
+          count={openGroup.books.length}
+          countLabel="book"
+          onClose={() => setOpenAuthor(null)}
+        >
+          {sortWithinAuthor(openGroup.books).map((e) => renderCard(e, undefined))}
+        </GroupDetailModal>
       )}
     </div>
   );

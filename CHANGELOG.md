@@ -5,6 +5,25 @@ genuinely new capability; a **minor** bump (v*X*.*Y*) marks a fix, tweak, or
 smaller enhancement to something that already existed. Docs-only commits
 aren't versioned separately.
 
+## v20.1 — Group cards pop over instead of expanding in place
+- v20.0's in-grid expand (a group card growing to span the full row, with
+  its items appearing directly underneath) is now a proper pop-over
+  instead: clicking an author/series card opens it in a modal over a
+  dimmed backdrop, leaving the rest of the grid untouched behind it — same
+  pattern the bulk "Add to Collection" picker and the image picker already
+  use.
+- Fixes a real readability problem the in-grid version had: the group's
+  name lived only on the trigger card itself, so once a group had more
+  than a couple of items and you'd scrolled down into its expanded list,
+  there was nothing on screen telling you which author/series you were
+  looking at. The modal's own header keeps the name pinned at the top
+  regardless of how many items are inside.
+- Verified live: opening a group's modal shows its name and item count in
+  a persistent header with the right items in the right order underneath,
+  the backdrop is a real dimmed fixed-position overlay behind everything
+  else, and both the Close button and clicking outside the modal dismiss
+  it correctly.
+
 ## v20.0 — Group by Author/Series now shows image cards you expand
 - Grouping Audiobooks/Ebooks by Author, or Comics by Series, used to just
   stack every group under a plain text heading with all its items already
