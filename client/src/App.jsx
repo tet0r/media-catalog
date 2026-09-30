@@ -298,7 +298,7 @@ export default function App() {
               className={`toolbar-toggle${bookGroupByAuthor ? ' active' : ''}`}
               onClick={() => setBookGroupByAuthor((g) => !g)}
             >
-              Group by Author
+              Groups
             </button>
             <SortMenu
               sort={bookSort}
@@ -336,7 +336,7 @@ export default function App() {
               className={`toolbar-toggle${ebookGroupByAuthor ? ' active' : ''}`}
               onClick={() => setEbookGroupByAuthor((g) => !g)}
             >
-              Group by Author
+              Groups
             </button>
             <SortMenu
               sort={ebookSort}

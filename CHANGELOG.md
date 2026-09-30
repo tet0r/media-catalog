@@ -8,6 +8,8 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.5.2 — Shorten "Group by Author" to "Groups" (Audiobooks, Ebooks)
+
 ## v1.5.1 — Automatic Vinyl/Games sync no longer touches existing items' metadata
 - Audited every media type for "does an automatic run ever silently
   update an item already in the library" — Movies/TV/Audiobooks/Comics/
