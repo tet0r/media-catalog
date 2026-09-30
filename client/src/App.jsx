@@ -76,7 +76,14 @@ export default function App() {
   // containing the active page is always shown regardless of this, so
   // this only matters for collapsing/expanding while browsing elsewhere.
   const [expandedGroups, setExpandedGroups] = useState({});
+  // Only matters below the mobile breakpoint, where the sidebar becomes a
+  // slide-out drawer instead of the permanent column it is on desktop.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   const activeSection = FLAT_SECTIONS.find((s) => location.pathname.startsWith(s.path));
 
@@ -179,6 +186,15 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-row">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label="Toggle navigation menu"
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((o) => !o)}
+          >
+            ☰
+          </button>
           <div className="brand">
             <Link to={lastSectionPath} className="brand-link" title="Back to your last media type">
               🎬 Media Catalog
@@ -397,7 +413,8 @@ export default function App() {
         )}
       </header>
       <div className="app-body">
-        <nav className="sidebar" aria-label="Media type">
+        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+        <nav className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`} aria-label="Media type">
           {SECTIONS.map((s) => {
             if (s.children) {
               const visibleChildren = s.children.filter((c) => !hiddenSections[c.key]);

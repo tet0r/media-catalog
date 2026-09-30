@@ -8,6 +8,24 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.4.0 — Mobile-friendly layout, installable as a home-screen app
+- The sidebar is now a slide-out drawer (behind a hamburger button) below
+  tablet width instead of a permanent column squeezing the rest of the
+  page — same for the topbar's nav links, which wrap onto their own row
+  instead of overflowing.
+- The floating A-Z jump nav is hidden below that width too — a mouse-era
+  convenience that mostly got in the way of card width on a touchscreen,
+  where scrolling (or the search box already in the toolbar) covers the
+  same need.
+- Modals, the picture-picker row, and the notification panel all now fit
+  within a phone-width viewport without overflowing it.
+- Added a manifest + app icons (generated from the existing favicon) and
+  the iOS-specific meta tags, so the site can be added to a phone's home
+  screen and opens looking like a standalone app instead of a browser tab.
+- Also fixes a miss from v1.3.0: the root `VERSION` file (what the running
+  app actually reads for its displayed version and update check) never
+  got bumped alongside `package.json`, so it was still reporting 1.2.0.
+
 ## v1.3.0 — Remove a custom group picture
 - Every group-picture spot that can set a custom picture (author/series/
   artist/platform groups, and Movies' Collections) can now also remove

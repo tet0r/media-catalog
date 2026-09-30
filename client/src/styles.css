@@ -38,6 +38,14 @@ code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; }
 .topbar nav a { color: var(--text-muted); padding: 6px 4px; border-bottom: 2px solid transparent; }
 .topbar nav a.active { color: var(--text); border-color: var(--accent); }
 
+/* Only shown below the mobile breakpoint (see the media query at the
+   bottom of this file), where it opens the sidebar as a slide-out drawer
+   instead of the permanent column it is on desktop. */
+.sidebar-toggle {
+  display: none; background: var(--card); color: var(--text); border: 1px solid var(--border);
+  font-size: 1.1rem; line-height: 1; padding: 6px 10px;
+}
+
 .app-body { display: flex; align-items: flex-start; }
 
 .sidebar {
@@ -377,3 +385,54 @@ textarea { font-family: inherit; resize: vertical; }
 .collection-remove-btn:hover { background: var(--danger); }
 .collection-header h1 { display: flex; align-items: center; gap: 12px; }
 .collection-header .muted-btn { font-size: 0.75rem; padding: 4px 10px; }
+
+/* Only shown below the mobile breakpoint, as the dimmed backdrop behind
+   the sidebar once it's opened as a drawer there. */
+.sidebar-overlay { display: none; }
+
+/* Everything below this line only applies at phone/small-tablet widths —
+   above it, the sidebar is a permanent column (see .sidebar above) and
+   everything else uses the same layout as desktop. */
+@media (max-width: 768px) {
+  .sidebar-toggle { display: inline-flex; align-items: center; justify-content: center; }
+
+  .topbar { padding: 10px 14px; }
+  .topbar-row { flex-wrap: wrap; gap: 8px 10px; }
+  /* nav is the one row that wraps onto its own line — brand/bell stay
+     together on the first line regardless of where nav sits in the
+     markup, since flex order (unlike source order) is what decides this. */
+  .topbar-row nav { order: 3; flex-basis: 100%; margin: 4px 0 0; }
+  .toolbar input { flex: 1 1 140px; min-width: 100px; }
+
+  .content { padding: 14px; }
+
+  /* The sidebar's own desktop rules (sticky, always in flow) are
+     overridden here rather than duplicated — same selector, later in the
+     file, at a narrower width always wins. */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 40;
+    width: 230px; min-height: 100vh;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.5);
+  }
+  .sidebar.sidebar-open { transform: translateX(0); }
+  .sidebar-overlay {
+    display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 35;
+  }
+
+  /* The A-Z jump nav is a mouse-era convenience for a long scrolling
+     list — on a touchscreen, scrolling itself (plus the search box
+     already in the toolbar) covers the same need without a floating
+     column eating into card width. */
+  .alpha-index { display: none; }
+  .library-page { padding-right: 0; }
+
+  .grid { gap: 10px; }
+
+  .modal-overlay { padding: 8px; }
+  .modal { padding: 14px; max-height: 92vh; }
+  .modal-wide { max-width: 100%; }
+  .group-modal-picture { flex-wrap: wrap; }
+
+  .notification-panel { width: min(320px, calc(100vw - 20px)); }
+}
