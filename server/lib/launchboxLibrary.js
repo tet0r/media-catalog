@@ -45,6 +45,11 @@ function parseGameBlock(gameXml) {
     database_id: extractField(gameXml, 'DatabaseID'),
     title,
     platform: extractField(gameXml, 'Platform'),
+    // LaunchBox's own "Source" field — which storefront a game came from
+    // (Steam, GOG, Epic Games, Amazon Games, ...). A PC game's <Platform>
+    // is just "Windows" regardless of store, so this is the only place the
+    // store is recorded.
+    source: extractField(gameXml, 'Source'),
     developer: extractField(gameXml, 'Developer'),
     publisher: extractField(gameXml, 'Publisher'),
     genres: (extractField(gameXml, 'Genre') || '')

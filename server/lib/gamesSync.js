@@ -11,7 +11,7 @@ const LAUNCHBOX_DIR = process.env.LAUNCHBOX_DIR || '';
 const getSyncStatus = db.prepare('SELECT * FROM games_sync_status WHERE id = 1');
 const updateSyncStatus = db.prepare(`UPDATE games_sync_status SET running=@running, last_run=@last_run, total_found=@total_found,
   added=@added, updated=@updated, removed=@removed, errored=@errored, message=@message WHERE id = 1`);
-const selectExisting = db.prepare('SELECT id, launchbox_id, cover_file, platform FROM games');
+const selectExisting = db.prepare('SELECT id, launchbox_id, cover_file, platform, source FROM games');
 const deleteGame = db.prepare('DELETE FROM games WHERE id = ?');
 
 // cover_file and platform ARE included in the UPDATE clause, unlike every
@@ -25,10 +25,10 @@ const deleteGame = db.prepare('DELETE FROM games WHERE id = ?');
 // renamed platform group (routes/games.js's /platforms/rename) survive
 // future syncs instead of reverting to LaunchBox's own XML value.
 const upsertGame = db.prepare(`INSERT INTO games
-  (launchbox_id, database_id, title, platform, developer, publisher, genres, release_date, overview, rating, version, cover_file, file_path)
-  VALUES (@launchbox_id,@database_id,@title,@platform,@developer,@publisher,@genres,@release_date,@overview,@rating,@version,@cover_file,@file_path)
+  (launchbox_id, database_id, title, platform, source, developer, publisher, genres, release_date, overview, rating, version, cover_file, file_path)
+  VALUES (@launchbox_id,@database_id,@title,@platform,@source,@developer,@publisher,@genres,@release_date,@overview,@rating,@version,@cover_file,@file_path)
   ON CONFLICT(launchbox_id) DO UPDATE SET
-    database_id=excluded.database_id, title=excluded.title, platform=excluded.platform,
+    database_id=excluded.database_id, title=excluded.title, platform=excluded.platform, source=excluded.source,
     developer=excluded.developer, publisher=excluded.publisher, genres=excluded.genres,
     release_date=excluded.release_date, overview=excluded.overview, rating=excluded.rating,
     version=excluded.version, file_path=excluded.file_path, cover_file=excluded.cover_file`);
@@ -90,6 +90,9 @@ async function runSync({ manual = true } = {}) {
           // /platforms/rename), further syncs shouldn't silently revert
           // it back to whatever LaunchBox's own XML says.
           platform: existing?.platform || game.platform,
+          // Same rule for the storefront, so a renamed/merged store group
+          // (routes/games.js's /stores/rename) survives a manual sync too.
+          source: existing?.source || game.source,
           developer: game.developer,
           publisher: game.publisher,
           genres: JSON.stringify(game.genres || []),

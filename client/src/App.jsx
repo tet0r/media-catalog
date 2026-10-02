@@ -145,7 +145,8 @@ export default function App() {
   const [gamesQ, setGamesQ] = useState('');
   const [gamesSort, setGamesSort] = useState('title');
   const [gamesDir, setGamesDir] = useState('asc');
-  const [gamesGroupByPlatform, setGamesGroupByPlatform] = useState(false);
+  // null (ungrouped), 'platform', or 'store' — at most one grouping at a time.
+  const [gamesGroupBy, setGamesGroupBy] = useState(null);
 
   const [tvQ, setTvQ] = useState('');
   const [tvSort, setTvSort] = useState('title');
@@ -387,13 +388,20 @@ export default function App() {
         )}
         {onGamesLibrary && (
           <div className="toolbar">
-            <input placeholder="Search title or platform..." value={gamesQ} onChange={(e) => setGamesQ(e.target.value)} />
+            <input placeholder="Search title, platform, or store..." value={gamesQ} onChange={(e) => setGamesQ(e.target.value)} />
             <button
               type="button"
-              className={`toolbar-toggle${gamesGroupByPlatform ? ' active' : ''}`}
-              onClick={() => setGamesGroupByPlatform((g) => !g)}
+              className={`toolbar-toggle${gamesGroupBy === 'platform' ? ' active' : ''}`}
+              onClick={() => setGamesGroupBy((g) => (g === 'platform' ? null : 'platform'))}
             >
               Group by Platform
+            </button>
+            <button
+              type="button"
+              className={`toolbar-toggle${gamesGroupBy === 'store' ? ' active' : ''}`}
+              onClick={() => setGamesGroupBy((g) => (g === 'store' ? null : 'store'))}
+            >
+              Group by Store
             </button>
             <SortMenu
               sort={gamesSort}
@@ -569,7 +577,7 @@ export default function App() {
                   sort={gamesSort}
                   dir={gamesDir}
                   onSortChange={(s, d) => { setGamesSort(s); setGamesDir(d); }}
-                  groupByPlatform={gamesGroupByPlatform}
+                  groupBy={gamesGroupBy}
                 />
               }
             />

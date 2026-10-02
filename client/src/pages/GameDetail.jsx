@@ -71,6 +71,7 @@ export default function GameDetail() {
             {game.title} {year ? <span className="year">({year})</span> : null}
           </h1>
           {game.platform && <p className="director">{game.platform}</p>}
+          {game.source && <p className="muted"><strong>Store:</strong> {game.source}</p>}
           {game.developer && <p className="muted"><strong>Developer:</strong> {game.developer}</p>}
           {game.publisher && <p className="muted"><strong>Publisher:</strong> {game.publisher}</p>}
           {game.rating && <p className="muted"><strong>Rating:</strong> {game.rating}</p>}

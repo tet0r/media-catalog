@@ -8,6 +8,26 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.6.0 — Group Games by storefront
+- Games can now be grouped by **Store** (Steam, GOG, Epic Games, Amazon
+  Games, ...) as well as by Platform, via a new "Group by Store" toggle
+  next to "Group by Platform" (one grouping at a time). A PC game's
+  platform is just "Windows" regardless of where it came from, so the
+  store is the only way to separate them.
+- The store comes from LaunchBox's own per-game "Source" field, which the
+  sync now reads (stored in a new `games.source` column). Games with no
+  Source set land in a "No Storefront" group.
+- Store groups get everything Platform groups already have: a collage or
+  custom picture (searchable via Wikipedia, or uploaded, and removable),
+  rename, and merge — and a renamed store survives later syncs the same
+  way a renamed platform does. A game's detail page and the HTML export
+  also show its store, and Games search now matches the store name.
+- Existing games have no store until they're synced again: click "Sync
+  from LaunchBox" once to backfill it (automatic syncs deliberately leave
+  already-known games alone, per v1.5.1).
+- Platform and Store group routes in `routes/games.js` are now registered
+  from one shared definition instead of a copy per grouping.
+
 ## v1.5.2 — Shorten "Group by Author" to "Groups" (Audiobooks, Ebooks)
 
 ## v1.5.1 — Automatic Vinyl/Games sync no longer touches existing items' metadata

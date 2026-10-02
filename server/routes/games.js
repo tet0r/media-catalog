@@ -26,8 +26,8 @@ router.get('/', (req, res) => {
   let sql = 'SELECT * FROM games WHERE 1=1';
   const params = [];
   if (q) {
-    sql += ' AND (title LIKE ? OR platform LIKE ?)';
-    params.push(`%${q}%`, `%${q}%`);
+    sql += ' AND (title LIKE ? OR platform LIKE ? OR source LIKE ?)';
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   const col = SORT_COLUMNS.has(sort) ? sort : 'title';
   const direction = dir === 'desc' ? 'DESC' : 'ASC';
@@ -60,81 +60,95 @@ router.post('/clear-all', (req, res) => {
     if (!row.cover_file) continue;
     try { fs.unlinkSync(path.join(DATA_DIR, 'posters', row.cover_file)); } catch { /* already gone, fine */ }
   }
-  for (const coverFile of groupImages.clearAll('game_platform')) {
-    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+  for (const mediaType of ['game_platform', 'game_store']) {
+    for (const coverFile of groupImages.clearAll(mediaType)) {
+      try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+    }
   }
   const info = db.prepare('DELETE FROM games').run();
   res.json({ ok: true, count: info.changes });
 });
 
-// Also defined ahead of /:id — "platforms" would otherwise be swallowed
-// as an :id value.
-router.get('/platforms/images', (req, res) => {
-  res.json(groupImages.getImageMap('game_platform'));
-});
+// Platform groups and Store (LaunchBox "Source") groups work identically —
+// a text column on games shared by many rows, with an optional custom
+// picture per distinct value (group_images) and rename/merge via
+// lib/groupRename.js — so both are registered from one definition. Defined
+// ahead of /:id so these literal paths are never shadowed by the param
+// route.
+//
+// A rename here survives the next "Sync from LaunchBox" too — see
+// gamesSync.js's upsertGame.
+function registerGroupRoutes({ segment, column, mediaType }) {
+  router.get(`/${segment}/images`, (req, res) => {
+    res.json(groupImages.getImageMap(mediaType));
+  });
 
-// A relevant picture to set for a platform group — no free, keyless
-// image API specifically for game-platform art exists, so Wikipedia
-// (a real console/platform almost always has its own page with a photo)
-// is the only source offered here, same fallback every other
-// group-image search also offers alongside its own specialized source.
-router.get('/platforms/search-images', async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q) return res.json([]);
-    res.json(await wikipedia.searchImages(q));
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  // A relevant picture to set for a group — no free, keyless image API
+  // specifically for game platforms or storefronts exists, so Wikipedia (a
+  // real console/platform/store almost always has its own page with a
+  // logo or photo) is the only source offered here, same fallback every
+  // other group-image search also offers alongside its own specialized
+  // source.
+  router.get(`/${segment}/search-images`, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q) return res.json([]);
+      res.json(await wikipedia.searchImages(q));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-// Renaming a single platform (sourceNames.length === 1) and merging
-// several into one (sourceNames.length > 1) are the same operation — see
-// lib/groupRename.js. A rename here survives the next "Sync from
-// LaunchBox" too — see gamesSync.js's upsertGame.
-router.post('/platforms/rename', (req, res) => {
-  const { sourceNames, targetName } = req.body;
-  if (!Array.isArray(sourceNames) || sourceNames.length === 0 || !targetName || !targetName.trim()) {
-    return res.status(400).json({ error: 'sourceNames (a non-empty array) and targetName are required' });
-  }
-  const updated = renameTextColumnGroup('games', 'platform', 'game_platform', sourceNames, targetName.trim());
-  res.json({ ok: true, updated });
-});
+  // Renaming a single group (sourceNames.length === 1) and merging several
+  // into one (sourceNames.length > 1) are the same operation — see
+  // lib/groupRename.js.
+  router.post(`/${segment}/rename`, (req, res) => {
+    const { sourceNames, targetName } = req.body;
+    if (!Array.isArray(sourceNames) || sourceNames.length === 0 || !targetName || !targetName.trim()) {
+      return res.status(400).json({ error: 'sourceNames (a non-empty array) and targetName are required' });
+    }
+    const updated = renameTextColumnGroup('games', column, mediaType, sourceNames, targetName.trim());
+    res.json({ ok: true, updated });
+  });
 
-router.put('/platforms/:name/cover', async (req, res) => {
-  try {
-    const { image_url } = req.body;
-    if (!image_url) return res.status(400).json({ error: 'image_url is required' });
-    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
-    groupImages.setImage('game_platform', req.params.name, filename);
-    res.json({ ok: true, cover_url: `/posters/${filename}` });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  router.put(`/${segment}/:name/cover`, async (req, res) => {
+    try {
+      const { image_url } = req.body;
+      if (!image_url) return res.status(400).json({ error: 'image_url is required' });
+      const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+      groupImages.setImage(mediaType, req.params.name, filename);
+      res.json({ ok: true, cover_url: `/posters/${filename}` });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-router.put('/platforms/:name/cover/upload', express.raw({ type: () => true, limit: '15mb' }), async (req, res) => {
-  try {
-    const contentType = req.headers['content-type'] || '';
-    if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
-    if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
-    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
-    groupImages.setImage('game_platform', req.params.name, filename);
-    res.json({ ok: true, cover_url: `/posters/${filename}` });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  router.put(`/${segment}/:name/cover/upload`, express.raw({ type: () => true, limit: '15mb' }), async (req, res) => {
+    try {
+      const contentType = req.headers['content-type'] || '';
+      if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
+      const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+      groupImages.setImage(mediaType, req.params.name, filename);
+      res.json({ ok: true, cover_url: `/posters/${filename}` });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-// Reverts a platform back to the auto-collage.
-router.delete('/platforms/:name/cover', (req, res) => {
-  const coverFile = groupImages.getImage('game_platform', req.params.name);
-  if (coverFile) {
-    try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
-  }
-  groupImages.deleteImage('game_platform', req.params.name);
-  res.json({ ok: true });
-});
+  // Reverts a platform/store back to the auto-collage.
+  router.delete(`/${segment}/:name/cover`, (req, res) => {
+    const coverFile = groupImages.getImage(mediaType, req.params.name);
+    if (coverFile) {
+      try { fs.unlinkSync(path.join(DATA_DIR, 'posters', coverFile)); } catch { /* already gone, fine */ }
+    }
+    groupImages.deleteImage(mediaType, req.params.name);
+    res.json({ ok: true });
+  });
+}
+
+registerGroupRoutes({ segment: 'platforms', column: 'platform', mediaType: 'game_platform' });
+registerGroupRoutes({ segment: 'stores', column: 'source', mediaType: 'game_store' });
 
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM games WHERE id = ?').get(req.params.id);

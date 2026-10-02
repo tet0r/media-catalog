@@ -599,6 +599,7 @@ ensureColumn('album_ignored', 'disc_paths', 'TEXT');
 ensureColumn('album_scan_pending', 'source', "TEXT DEFAULT 'musicbrainz'");
 ensureColumn('movies', 'tmdb_collection_id', 'INTEGER');
 ensureColumn('backup_status', 'started_at', 'TEXT');
+ensureColumn('games', 'source', 'TEXT');
 // Comics gained Metron and GCD as additional sources alongside ComicVine
 // (see lib/comicSources.js) — generalizing away from the comicvine_issue_id
 // column the same way audiobooks/albums already use metadata_source +

@@ -605,6 +605,28 @@ export const api = {
     }).then(handle),
   deleteGamePlatformCover: (name) => fetch(`${BASE}/games/platforms/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
 
+  listGameStoreImages: () => fetch(`${BASE}/games/stores/images`).then(handle),
+  searchGameStoreImages: (q) => fetch(`${BASE}/games/stores/search-images?q=${encodeURIComponent(q)}`).then(handle),
+  renameGameStores: (sourceNames, targetName) =>
+    fetch(`${BASE}/games/stores/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceNames, targetName }),
+    }).then(handle),
+  setGameStoreCover: (name, imageUrl) =>
+    fetch(`${BASE}/games/stores/${encodeURIComponent(name)}/cover`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }).then(handle),
+  uploadGameStoreCover: (name, file) =>
+    fetch(`${BASE}/games/stores/${encodeURIComponent(name)}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    }).then(handle),
+  deleteGameStoreCover: (name) => fetch(`${BASE}/games/stores/${encodeURIComponent(name)}/cover`, { method: 'DELETE' }).then(handle),
+
   listTvShows: (params = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== '')

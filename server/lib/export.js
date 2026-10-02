@@ -739,6 +739,7 @@ async function exportGames(root, referencedPosters, counts) {
           ${r.platform ? `<p class="director">${escapeHtml(r.platform)}</p>` : ''}
           ${tagList(genres)}
           <div class="stats">
+            ${r.source ? `<span>${escapeHtml(r.source)}</span>` : ''}
             ${r.developer ? `<span>${escapeHtml(r.developer)}</span>` : ''}
             ${r.publisher ? `<span>${escapeHtml(r.publisher)}</span>` : ''}
             ${r.rating ? `<span>${escapeHtml(r.rating)}</span>` : ''}

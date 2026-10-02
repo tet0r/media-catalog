@@ -20,27 +20,58 @@ function letterFor(str) {
   return /[A-Z]/.test(ch) ? ch : '#';
 }
 
-function groupByPlatformName(games) {
+// Games can be grouped two ways — by platform (Nintendo 64, Windows, ...) or
+// by storefront (LaunchBox's "Source": Steam, GOG, Epic Games, ...). Both
+// behave identically (a text column shared by many games, an optional
+// custom picture, rename/merge), so everything that differs between them
+// lives here and the rest of the page is written once against `kind`.
+const GROUP_KINDS = {
+  platform: {
+    field: 'platform',
+    unknown: 'Unknown Platform',
+    listImages: () => api.listGamePlatformImages(),
+    rename: (names, target) => api.renameGamePlatforms(names, target),
+    upload: (name, file) => api.uploadGamePlatformCover(name, file),
+    setUrl: (name, url) => api.setGamePlatformCover(name, url),
+    remove: (name) => api.deleteGamePlatformCover(name),
+    search: (name) => api.searchGamePlatformImages(name),
+    sourceLabel: 'No free, keyless platform-art API exists, so this is the only source — works for almost any well-known console/platform.',
+  },
+  store: {
+    field: 'source',
+    unknown: 'No Storefront',
+    listImages: () => api.listGameStoreImages(),
+    rename: (names, target) => api.renameGameStores(names, target),
+    upload: (name, file) => api.uploadGameStoreCover(name, file),
+    setUrl: (name, url) => api.setGameStoreCover(name, url),
+    remove: (name) => api.deleteGameStoreCover(name),
+    search: (name) => api.searchGameStoreImages(name),
+    sourceLabel: 'No free, keyless storefront-art API exists, so this is the only source — works for any well-known store like Steam or GOG.',
+  },
+};
+
+function groupGames(games, kind) {
   const map = new Map();
   for (const game of games) {
-    const platform = game.platform || 'Unknown Platform';
-    if (!map.has(platform)) map.set(platform, []);
-    map.get(platform).push(game);
+    const name = game[kind.field] || kind.unknown;
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push(game);
   }
-  const groups = [...map.entries()].map(([platform, items]) => ({
-    platform,
+  const groups = [...map.entries()].map(([name, items]) => ({
+    name,
     items,
-    letter: platform === 'Unknown Platform' ? '#' : letterFor(platform),
+    letter: name === kind.unknown ? '#' : letterFor(name),
   }));
   groups.sort((a, b) => {
-    if (a.platform === 'Unknown Platform') return 1;
-    if (b.platform === 'Unknown Platform') return -1;
-    return a.platform.localeCompare(b.platform, undefined, { sensitivity: 'base' });
+    if (a.name === kind.unknown) return 1;
+    if (b.name === kind.unknown) return -1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
   });
   return groups;
 }
 
-export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatform }) {
+export default function GamesLibrary({ q, sort, dir, onSortChange, groupBy }) {
+  const kind = groupBy ? GROUP_KINDS[groupBy] : null;
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,8 +82,8 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
   const groupSel = useBulkSelection();
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(null);
-  const [openPlatform, setOpenPlatform] = useState(null);
-  const [platformImages, setPlatformImages] = useState({});
+  const [openName, setOpenName] = useState(null);
+  const [groupImages, setGroupImages] = useState({});
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   const refreshList = useCallback(() => {
@@ -64,48 +95,56 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
       .finally(() => setLoading(false));
   }, [q, sort, dir]);
 
-  const refreshPlatformImages = useCallback(() => {
-    api.listGamePlatformImages().then(setPlatformImages).catch(() => {});
-  }, []);
+  const refreshGroupImages = useCallback(() => {
+    if (!kind) return;
+    kind.listImages().then(setGroupImages).catch(() => {});
+  }, [kind]);
 
+  // Switching between Platform and Store grouping (or turning grouping off)
+  // starts from a clean slate: a group open under one grouping means
+  // nothing under the other, and the previous grouping's custom pictures
+  // would otherwise briefly show on the wrong cards.
   useEffect(() => {
-    refreshPlatformImages();
-  }, [refreshPlatformImages]);
+    setOpenName(null);
+    setGroupImages({});
+    groupSel.exitSelectMode();
+    refreshGroupImages();
+  }, [groupBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function renamePlatform(oldName, newName) {
-    await api.renameGamePlatforms([oldName], newName);
-    if (openPlatform === oldName) setOpenPlatform(newName);
+  async function renameGroup(oldName, newName) {
+    await kind.rename([oldName], newName);
+    if (openName === oldName) setOpenName(newName);
     refreshList();
-    refreshPlatformImages();
+    refreshGroupImages();
   }
 
-  async function uploadPlatformCover(platformName, file) {
-    await api.uploadGamePlatformCover(platformName, file);
-    refreshPlatformImages();
+  async function uploadGroupCover(name, file) {
+    await kind.upload(name, file);
+    refreshGroupImages();
   }
 
-  async function setPlatformCoverUrl(platformName, url) {
-    await api.setGamePlatformCover(platformName, url);
-    refreshPlatformImages();
+  async function setGroupCoverUrl(name, url) {
+    await kind.setUrl(name, url);
+    refreshGroupImages();
   }
 
-  async function deletePlatformCover(platformName) {
-    await api.deleteGamePlatformCover(platformName);
-    refreshPlatformImages();
+  async function deleteGroupCover(name) {
+    await kind.remove(name);
+    refreshGroupImages();
   }
 
-  function platformImageSearchTabs(platformName) {
+  function groupImageSearchTabs(name) {
     return [
-      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: 'No free, keyless platform-art API exists, so this is the only source — works for almost any well-known console/platform.', fetchOptions: () => api.searchGamePlatformImages(platformName) },
+      { key: 'wikipedia', label: 'Wikipedia', sourceLabel: kind.sourceLabel, fetchOptions: () => kind.search(name) },
     ];
   }
 
-  async function mergePlatforms(targetName) {
-    await api.renameGamePlatforms([...groupSel.selectedIds], targetName);
+  async function mergeGroups(targetName) {
+    await kind.rename([...groupSel.selectedIds], targetName);
     groupSel.exitSelectMode();
     setMergeModalOpen(false);
     refreshList();
-    refreshPlatformImages();
+    refreshGroupImages();
   }
 
   useEffect(() => {
@@ -149,12 +188,12 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
       return;
     }
 
-    if (pendingJump && (groupByPlatform || sort === 'title')) {
+    if (pendingJump && (groupBy || sort === 'title')) {
       const el = document.getElementById(`letter-${pendingJump}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setPendingJump(null);
     }
-  }, [games, loading, sort, groupByPlatform, pendingJump]);
+  }, [games, loading, sort, groupBy, pendingJump]);
 
   async function startSync() {
     setError(null);
@@ -168,7 +207,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
   }
 
   function jumpTo(letter) {
-    if (!groupByPlatform && sort !== 'title') {
+    if (!groupBy && sort !== 'title') {
       setPendingJump(letter);
       onSortChange('title', 'asc');
       return;
@@ -193,10 +232,10 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
     refreshList();
   }
 
-  const groups = groupByPlatform ? groupByPlatformName(games) : null;
-  const openGroup = openPlatform && groups ? groups.find((g) => g.platform === openPlatform) : null;
+  const groups = kind ? groupGames(games, kind) : null;
+  const openGroup = openName && groups ? groups.find((g) => g.name === openName) : null;
   const availableLetters = new Set(
-    groupByPlatform ? groups.map((g) => g.letter) : games.map((g) => letterFor(g.title))
+    groups ? groups.map((g) => g.letter) : games.map((g) => letterFor(g.title))
   );
   const seenLetters = new Set();
 
@@ -222,7 +261,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
 
   return (
     <div className="library-page">
-      {groupByPlatform ? (
+      {groups ? (
         <groupSel.Portal>
           <button
             type="button"
@@ -288,24 +327,24 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
         <p className="empty">
           No games yet. Point <code>LAUNCHBOX_DIR</code> at your LaunchBox folder, then click "Sync from LaunchBox" above.
         </p>
-      ) : groupByPlatform ? (
+      ) : groups ? (
         <div className="grid">
           {groups.map((g) => {
             const isFirst = !seenLetters.has(g.letter);
             if (isFirst) seenLetters.add(g.letter);
             return (
               <GroupCard
-                key={g.platform}
+                key={g.name}
                 id={isFirst ? `letter-${g.letter}` : undefined}
-                label={g.platform}
+                label={g.name}
                 count={g.items.length}
                 countLabel="game"
                 coverUrls={g.items.map((game) => game.cover_url)}
-                customImageUrl={platformImages[g.platform]}
-                onClick={() => setOpenPlatform(g.platform)}
+                customImageUrl={groupImages[g.name]}
+                onClick={() => setOpenName(g.name)}
                 selectMode={groupSel.selectMode}
-                selected={groupSel.selectedIds.has(g.platform)}
-                onToggleSelect={() => groupSel.toggle(g.platform)}
+                selected={groupSel.selectedIds.has(g.name)}
+                onToggleSelect={() => groupSel.toggle(g.name)}
               />
             );
           })}
@@ -339,17 +378,17 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
 
       {openGroup && (
         <GroupDetailModal
-          label={openGroup.platform}
+          label={openGroup.name}
           count={openGroup.items.length}
           countLabel="game"
           coverUrls={openGroup.items.map((game) => game.cover_url)}
-          customImageUrl={platformImages[openGroup.platform]}
-          onClose={() => setOpenPlatform(null)}
-          onRename={(newName) => renamePlatform(openGroup.platform, newName)}
-          onUploadCover={(file) => uploadPlatformCover(openGroup.platform, file)}
-          onSetCoverUrl={(url) => setPlatformCoverUrl(openGroup.platform, url)}
-          onDeleteCover={() => deletePlatformCover(openGroup.platform)}
-          imageSearchTabs={platformImageSearchTabs(openGroup.platform)}
+          customImageUrl={groupImages[openGroup.name]}
+          onClose={() => setOpenName(null)}
+          onRename={(newName) => renameGroup(openGroup.name, newName)}
+          onUploadCover={(file) => uploadGroupCover(openGroup.name, file)}
+          onSetCoverUrl={(url) => setGroupCoverUrl(openGroup.name, url)}
+          onDeleteCover={() => deleteGroupCover(openGroup.name)}
+          imageSearchTabs={groupImageSearchTabs(openGroup.name)}
         >
           {openGroup.items.map((game) => renderCard(game, undefined))}
         </GroupDetailModal>
@@ -358,7 +397,7 @@ export default function GamesLibrary({ q, sort, dir, onSortChange, groupByPlatfo
       {mergeModalOpen && (
         <MergeGroupsModal
           sourceNames={[...groupSel.selectedIds]}
-          onMerge={mergePlatforms}
+          onMerge={mergeGroups}
           onClose={() => setMergeModalOpen(false)}
         />
       )}
