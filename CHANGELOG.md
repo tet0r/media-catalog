@@ -8,6 +8,16 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.6.1 — Alphabetical sorting ignores upper/lower case
+- Every library's A-Z (and Z-A) sort used SQLite's default binary
+  collation, which puts every capital letter before any lowercase one —
+  so "apple pie" sorted after "Cherry" and "Zebra", not between "Apple"
+  and "banana". Sorts now use `COLLATE NOCASE` in Movies, TV Shows,
+  Audiobooks, Comics, Ebooks, Digital, Vinyl, and Games. Numeric and date
+  sorts (year, rating, runtime, ...) are unaffected. Group cards and the
+  in-modal sorts already compared case-insensitively, so they needed no
+  change.
+
 ## v1.6.0 — Group Games by storefront
 - Games can now be grouped by **Store** (Steam, GOG, Epic Games, Amazon
   Games, ...) as well as by Platform, via a new "Group by Store" toggle

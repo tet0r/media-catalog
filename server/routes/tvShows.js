@@ -52,7 +52,7 @@ router.get('/', (req, res) => {
   if (watched === 'false') sql += ' AND watched = 0';
   const col = SORT_COLUMNS.has(sort) ? sort : 'title';
   const direction = dir === 'desc' ? 'DESC' : 'ASC';
-  sql += ` ORDER BY ${col} ${direction}`;
+  sql += ` ORDER BY ${col} COLLATE NOCASE ${direction}`;
 
   const rows = db.prepare(sql).all(...params);
   res.json(rows.map(rowToShow));

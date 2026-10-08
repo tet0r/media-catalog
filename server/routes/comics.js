@@ -35,7 +35,7 @@ router.get('/', (req, res) => {
   const direction = dir === 'desc' ? 'DESC' : 'ASC';
   // Secondary sort by issue_number so a series always lists its issues in
   // order rather than however SQLite happens to break sort ties.
-  sql += ` ORDER BY ${col} ${direction}, CAST(issue_number AS REAL) ASC`;
+  sql += ` ORDER BY ${col} COLLATE NOCASE ${direction}, CAST(issue_number AS REAL) ASC`;
 
   const rows = db.prepare(sql).all(...params);
   res.json(rows.map(rowToComic));
