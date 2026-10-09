@@ -3,3 +3,8 @@ client/dist/
 data/
 .env
 *.log
+
+# Desktop app build output and the server/client copy assembled for packaging
+desktop/node_modules/
+desktop/dist/
+desktop/app-server/

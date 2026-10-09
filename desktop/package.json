@@ -1,0 +1,60 @@
+{
+  "name": "media-catalog-desktop",
+  "productName": "Media Catalog",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Media Catalog — self-hosted media collection cataloger (Windows desktop app)",
+  "author": "tet0r",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "prepare-app": "node scripts/prepare.js",
+    "dist": "node scripts/build.js",
+    "pack": "node scripts/build.js --dir"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "electron": "37.10.3",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.tet0r.mediacatalog",
+    "productName": "Media Catalog",
+    "copyright": "tet0r",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "menu.js",
+      "preload.js",
+      "build/icon.ico",
+      "app-server/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Media Catalog",
+      "artifactName": "Media-Catalog-Setup-${version}.exe",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "Media-Catalog-Portable-${version}.exe"
+    }
+  }
+}

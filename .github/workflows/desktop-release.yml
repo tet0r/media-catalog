@@ -1,0 +1,65 @@
+name: Build desktop app
+
+# Pushing a version tag (v1.8.0, ...) builds the Windows installer and the
+# portable exe and attaches both to that tag's GitHub release. Running it by
+# hand (Actions > Build desktop app > Run workflow) builds them and keeps
+# them as a downloadable workflow artifact, without publishing anything.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The tag is what names the release and the VERSION file is what names
+      # the files and the version the app reports — letting them disagree
+      # would publish an "v1.8.0" release containing 1.7.0 binaries.
+      - name: Check the tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match the VERSION file (v${VERSION}). Bump VERSION or retag."
+            exit 1
+          fi
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+
+      # Builds the client, assembles the bundled server, rebuilds
+      # better-sqlite3 for Electron, and packages both targets.
+      - name: Build installer and portable exe
+        working-directory: desktop
+        run: npm run dist
+
+      - name: Keep the build as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-catalog-windows
+          path: |
+            desktop/dist/Media-Catalog-Setup-*.exe
+            desktop/dist/Media-Catalog-Portable-*.exe
+
+      - name: Attach to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/dist/Media-Catalog-Setup-*.exe
+            desktop/dist/Media-Catalog-Portable-*.exe
+          generate_release_notes: true

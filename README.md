@@ -25,6 +25,43 @@ Assumes Docker and your media files are on the same machine — see
 5. Use each media type's "Scan Library" (or "Sync") button to import your
    collection.
 
+## Windows desktop app
+
+Prefer a normal program over Docker? Every [release](https://github.com/tet0r/media-catalog/releases)
+has two Windows builds of the same app:
+
+- **`Media-Catalog-Setup-<version>.exe`** — the installer. Installs per-user
+  (no admin needed), adds Start Menu/Desktop shortcuts, and keeps your library
+  in `%APPDATA%\Media Catalog`. Uninstalling leaves that folder alone.
+- **`Media-Catalog-Portable-<version>.exe`** — no install. Run it from anywhere
+  (a USB stick works); your library lives in a `MediaCatalogData` folder next to
+  the exe, so moving the exe and that folder moves everything.
+
+Either way it's the same server and UI the Docker image runs, in its own window
+with a native menu (File / Edit / View / Window / Help — scan all libraries,
+back up, export, jump between libraries with Ctrl+1…8, Settings with Ctrl+,).
+Choose each library's folders in **Settings > (that library) > Library folders**
+using the **Browse...** button — there are no environment variables or mounts to
+set up. Light/dark mode is under Settings > Appearance or the sun/moon button.
+
+The app listens on `127.0.0.1` only, so nothing on your network can reach it.
+The builds aren't code-signed, so Windows SmartScreen may warn the first time
+("More info" > "Run anyway").
+
+### Building it yourself
+
+```bash
+cd desktop
+npm install
+npm run dist     # installer + portable exe -> desktop/dist/
+npm run pack     # just an unpacked app folder, faster
+```
+
+`npm run dist` rebuilds the client, bundles the server from `../server`,
+compiles `better-sqlite3` for Electron, and packages both targets. Pushing a
+`v<version>` tag (matching the `VERSION` file) makes the *Build desktop app*
+workflow do the same on GitHub and attach both files to that tag's release.
+
 ## Media types
 
 - **Movies** — [TMDB](https://www.themoviedb.org/). Needs `TMDB_API_KEY`.

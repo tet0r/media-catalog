@@ -8,6 +8,35 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.8.0 — Windows desktop app (installer and portable)
+- **A real Windows app**, built with Electron in the new `desktop/` folder:
+  the same server and UI the Docker image runs, in its own window. Two
+  builds per release — an **installer** (per-user, no admin, Start
+  Menu/Desktop shortcuts, data in `%APPDATA%\Media Catalog`) and a
+  **portable exe** (no install; data lives in a `MediaCatalogData` folder
+  beside it, so the exe + that folder can move together).
+- **Native menu** — File (scan all libraries, back up, export, open the
+  data folder, Settings with Ctrl+,, Exit), Edit, View (jump to each
+  library with Ctrl+1–8, Appearance: System/Light/Dark, zoom, full
+  screen), Window, Help (docs, release notes, check for updates, report an
+  issue, About).
+- **Folders are picked with a native Browse… dialog** in each library's
+  Settings (v1.7.0's folder settings), so there are no environment
+  variables or mounts to configure.
+- The desktop server listens on `127.0.0.1` only, since the API has no
+  authentication — nothing on the network can reach it. (Docker/server
+  installs still bind every interface, as before.)
+- The background server restarts itself if it stops unexpectedly, and
+  retries startup a few times (the native SQLite module has been seen to
+  fail to load sporadically on Windows).
+- **GitHub releases**: pushing a `v<version>` tag (it must match `VERSION`)
+  runs the new *Build desktop app* workflow, which builds on Windows and
+  attaches both files to that tag's release. The builds aren't code-signed,
+  so SmartScreen may warn on first run.
+- The packaged app bundles Electron 37 because `better-sqlite3` 11.x can't
+  compile against newer Electron V8 versions; moving to a newer Electron
+  means moving `better-sqlite3` (server and desktop together) first.
+
 ## v1.7.0 — Settings sidebar, light/dark mode, catalog folders chosen in Settings
 - **Settings layout**: categories now run down a left-hand sidebar with the
   chosen category's options in a main panel to its right (it was a row of

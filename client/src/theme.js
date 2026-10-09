@@ -58,6 +58,8 @@ export function initTheme() {
     .addEventListener('change', () => {
       if (getThemeMode() === 'system') paint('system');
     });
+  // Desktop app only: View > Appearance in the native menu.
+  window.desktop?.onTheme?.((mode) => setThemeMode(mode));
   api
     .getSettings()
     .then((s) => {

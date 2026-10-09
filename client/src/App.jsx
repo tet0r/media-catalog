@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, NavLink, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import Library from './pages/Library.jsx';
 import MovieDetail from './pages/MovieDetail.jsx';
@@ -81,10 +81,16 @@ export default function App() {
   // slide-out drawer instead of the permanent column it is on desktop.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  // Desktop app only: the native menu (View > Movies, File > Settings, ...)
+  // asks the page to go somewhere. window.desktop doesn't exist in a normal
+  // browser, so this is a no-op there.
+  useEffect(() => window.desktop?.onNavigate?.((route) => navigate(route)), [navigate]);
 
   const activeSection = FLAT_SECTIONS.find((s) => location.pathname.startsWith(s.path));
 

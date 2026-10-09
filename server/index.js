@@ -113,6 +113,15 @@ if (fs.existsSync(publicDir)) {
   });
 }
 
-app.listen(PORT, () => {
+// The desktop app only ever serves its own window, and this API has no
+// authentication — so there it binds loopback only rather than exposing
+// the whole library to the LAN. Docker/server installs keep binding every
+// interface, as always.
+const HOST = process.env.HOST || (process.env.MEDIA_CATALOG_DESKTOP ? '127.0.0.1' : undefined);
+const onListening = () => {
   console.log(`Media Catalog listening on port ${PORT}`);
-});
+  // Set when this process was forked by the desktop app, which waits for it.
+  if (process.send) process.send({ type: 'ready', port: Number(PORT) });
+};
+if (HOST) app.listen(PORT, HOST, onListening);
+else app.listen(PORT, onListening);
