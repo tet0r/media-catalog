@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const backupLib = require('../lib/backup');
+const libraryPaths = require('../lib/libraryPaths');
 
 const router = express.Router();
 
@@ -60,7 +61,18 @@ router.get('/', (req, res) => {
     lastfm_api_key_source: map.lastfm_api_key ? 'settings' : (process.env.LASTFM_API_KEY ? 'env' : 'none'),
     games_auto_sync_enabled: map.games_auto_sync_enabled === 'true',
     games_auto_sync_interval_minutes: Number(map.games_auto_sync_interval_minutes) || DEFAULT_AUTO_SCAN_INTERVAL_MINUTES,
-    launchbox_dir_configured: !!process.env.LAUNCHBOX_DIR,
+    launchbox_dir_configured: !!libraryPaths.getLaunchboxDir(),
+    launchbox_dir: libraryPaths.describeLaunchboxDir(),
+    library_dirs: Object.fromEntries(
+      Object.keys(libraryPaths.TYPES).map((type) => [type, libraryPaths.describeLibraryDirs(type)])
+    ),
+    // True when running as the packaged desktop app — the client uses it to
+    // offer a native "Browse..." folder picker and to phrase folder help
+    // for a local path instead of a container mount.
+    desktop: libraryPaths.isDesktop(),
+    // null (never chosen) rather than a default, so the client keeps whatever
+    // it already shows — see client/src/theme.js's initTheme.
+    ui_theme: ['system', 'light', 'dark'].includes(map.ui_theme) ? map.ui_theme : null,
     tvdb_api_key: map.tvdb_api_key || '',
     tvdb_api_key_source: map.tvdb_api_key ? 'settings' : (process.env.TVDB_API_KEY ? 'env' : 'none'),
     tvdb_pin: map.tvdb_pin || '',
@@ -96,6 +108,7 @@ router.put('/', (req, res) => {
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
     tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
     sidebar_hidden, backup_auto_enabled, backup_auto_interval_minutes, backup_retention_count,
+    library_dirs, launchbox_dir, ui_theme,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -139,6 +152,17 @@ router.put('/', (req, res) => {
     const count = Number(backup_retention_count);
     if (Number.isFinite(count) && count > 0) upsert('backup_retention_count', String(Math.round(count)));
   }
+  // Each type's folder list: an array replaces it, null reverts to the
+  // environment/default (see lib/libraryPaths.js).
+  if (library_dirs && typeof library_dirs === 'object') {
+    for (const type of Object.keys(libraryPaths.TYPES)) {
+      if (!(type in library_dirs)) continue;
+      const value = library_dirs[type];
+      if (value === null || Array.isArray(value)) libraryPaths.setLibraryDirs(type, value);
+    }
+  }
+  if (launchbox_dir === null || typeof launchbox_dir === 'string') libraryPaths.setLaunchboxDir(launchbox_dir);
+  if (['system', 'light', 'dark'].includes(ui_theme)) upsert('ui_theme', ui_theme);
   res.json({ ok: true });
 });
 

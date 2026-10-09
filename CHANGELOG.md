@@ -8,6 +8,27 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.7.0 — Settings sidebar, light/dark mode, catalog folders chosen in Settings
+- **Settings layout**: categories now run down a left-hand sidebar with the
+  chosen category's options in a main panel to its right (it was a row of
+  tabs). General is split up — Application: General, Appearance, Backups,
+  Export; Libraries: one per media type — so each panel is a shorter page.
+- **Light and dark mode**: a sun/moon button in the top bar flips between
+  them, and Settings > Appearance adds a "System" option that follows the
+  OS. Dark stays the default (what the app has always looked like). The
+  choice is remembered in the browser and saved server-side too, and the
+  theme is applied before first paint so there's no dark flash.
+- **Catalog folders are now a setting**, not just an environment variable:
+  each library's Settings page has a "Library folders" list (Movies, TV,
+  Audiobooks, Comics, Ebooks, Digital) and Games has a LaunchBox folder
+  field. Scans/syncs read them at run time, so a change applies to the very
+  next scan with no restart. Docker setups lose nothing: `MOVIES_DIR` and
+  friends still work as the fallback, a folder you set in Settings
+  overrides them, and "Use default" reverts. A type with no folders
+  configured now says so instead of silently finding nothing.
+- Saving unrelated settings never freezes an environment-provided folder
+  list into a stored copy — only lists you actually edit are written.
+
 ## v1.6.1 — Alphabetical sorting ignores upper/lower case
 - Every library's A-Z (and Z-A) sort used SQLite's default binary
   collation, which puts every capital letter before any lowercase one —

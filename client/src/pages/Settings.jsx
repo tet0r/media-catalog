@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import FolderList from '../components/FolderList.jsx';
+import { getThemeMode, setThemeMode, subscribeTheme } from '../theme.js';
 
 const INTERVAL_OPTIONS = [
   { label: 'Every 15 minutes', value: 15 },
@@ -19,20 +21,41 @@ const BACKUP_INTERVAL_OPTIONS = [
   { label: 'Weekly', value: 10080 },
 ];
 
-// "General" first and default — anything not specific to one media type
-// (Sidebar, Backups) lives there; the rest mirror the sidebar's own media
-// types one-for-one.
-const SETTINGS_TABS = [
-  { key: 'general', label: 'General' },
-  { key: 'movies', label: 'Movies' },
-  { key: 'audiobooks', label: 'Audiobooks' },
-  { key: 'comics', label: 'Comics' },
-  { key: 'ebooks', label: 'Ebooks' },
-  { key: 'albums', label: 'Digital' },
-  { key: 'vinyl', label: 'Vinyl' },
-  { key: 'games', label: 'Games' },
-  { key: 'tv', label: 'TV Shows' },
+// The left-hand category list. "General" first and default; everything not
+// specific to one media type lives under "Application", and the "Libraries"
+// group mirrors the sidebar's own media types one-for-one.
+const SETTINGS_GROUPS = [
+  {
+    label: 'Application',
+    tabs: [
+      { key: 'general', label: 'General' },
+      { key: 'appearance', label: 'Appearance' },
+      { key: 'backups', label: 'Backups' },
+      { key: 'export', label: 'Export' },
+    ],
+  },
+  {
+    label: 'Libraries',
+    tabs: [
+      { key: 'movies', label: 'Movies' },
+      { key: 'tv', label: 'TV Shows' },
+      { key: 'audiobooks', label: 'Audiobooks' },
+      { key: 'comics', label: 'Comics' },
+      { key: 'ebooks', label: 'Ebooks' },
+      { key: 'albums', label: 'Digital' },
+      { key: 'vinyl', label: 'Vinyl' },
+      { key: 'games', label: 'Games' },
+    ],
+  },
 ];
+
+const THEME_OPTIONS = [
+  { key: 'system', label: 'System', blurb: 'Follow your computer\'s light/dark setting.' },
+  { key: 'light', label: 'Light', blurb: 'Always light.' },
+  { key: 'dark', label: 'Dark', blurb: 'Always dark (the default).' },
+];
+
+const LIBRARY_TYPES = ['movies', 'tv', 'audiobooks', 'comics', 'ebooks', 'albums'];
 
 const SIDEBAR_SECTIONS = [
   { key: 'movies', label: 'Movies' },
@@ -106,7 +129,16 @@ export default function Settings() {
   const [vinylAutoSyncInterval, setVinylAutoSyncInterval] = useState(60);
   const [gamesAutoSyncEnabled, setGamesAutoSyncEnabled] = useState(false);
   const [gamesAutoSyncInterval, setGamesAutoSyncInterval] = useState(60);
-  const [launchboxDirConfigured, setLaunchboxDirConfigured] = useState(false);
+  // Folders each media type is scanned from. Only types the user actually
+  // edits here (tracked in dirsDirty) are written back on Save — saving an
+  // unrelated setting must not freeze an env-var-provided list into a
+  // stored copy of it.
+  const [libraryDirs, setLibraryDirs] = useState({});
+  const [librarySources, setLibrarySources] = useState({});
+  const [launchboxDir, setLaunchboxDir] = useState([]);
+  const [launchboxSource, setLaunchboxSource] = useState('default');
+  const [dirsDirty, setDirsDirty] = useState({});
+  const [themeMode, setThemeModeState] = useState(getThemeMode());
   const [tvdbKey, setTvdbKey] = useState('');
   const [tvdbSource, setTvdbSource] = useState('none');
   const [tvdbPin, setTvdbPin] = useState('');
@@ -183,7 +215,11 @@ export default function Settings() {
         setVinylAutoSyncInterval(s.vinyl_auto_sync_interval_minutes || 60);
         setGamesAutoSyncEnabled(!!s.games_auto_sync_enabled);
         setGamesAutoSyncInterval(s.games_auto_sync_interval_minutes || 60);
-        setLaunchboxDirConfigured(!!s.launchbox_dir_configured);
+        setLibraryDirs(Object.fromEntries(LIBRARY_TYPES.map((t) => [t, s.library_dirs?.[t]?.dirs || []])));
+        setLibrarySources(Object.fromEntries(LIBRARY_TYPES.map((t) => [t, s.library_dirs?.[t]?.source || 'default'])));
+        setLaunchboxDir(s.launchbox_dir?.dir ? [s.launchbox_dir.dir] : []);
+        setLaunchboxSource(s.launchbox_dir?.source || 'default');
+        setDirsDirty({});
         setTvdbKey(s.tvdb_api_key || '');
         setTvdbSource(s.tvdb_api_key_source);
         setTvdbPin(s.tvdb_pin || '');
@@ -204,6 +240,47 @@ export default function Settings() {
 
   function toggleSidebarSection(key) {
     setSidebarHidden((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  useEffect(() => subscribeTheme(setThemeModeState), []);
+
+  function editDirs(type, dirs) {
+    setLibraryDirs((prev) => ({ ...prev, [type]: dirs }));
+    setDirsDirty((prev) => ({ ...prev, [type]: true }));
+  }
+
+  function editLaunchboxDir(dirs) {
+    setLaunchboxDir(dirs);
+    setDirsDirty((prev) => ({ ...prev, launchbox: true }));
+  }
+
+  async function reloadFolders() {
+    const s = await api.getSettings();
+    setLibraryDirs(Object.fromEntries(LIBRARY_TYPES.map((t) => [t, s.library_dirs?.[t]?.dirs || []])));
+    setLibrarySources(Object.fromEntries(LIBRARY_TYPES.map((t) => [t, s.library_dirs?.[t]?.source || 'default'])));
+    setLaunchboxDir(s.launchbox_dir?.dir ? [s.launchbox_dir.dir] : []);
+    setLaunchboxSource(s.launchbox_dir?.source || 'default');
+    setDirsDirty({});
+  }
+
+  async function resetDirs(type) {
+    setError(null);
+    try {
+      await api.updateSettings({ library_dirs: { [type]: null } });
+      await reloadFolders();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function resetLaunchboxDir() {
+    setError(null);
+    try {
+      await api.updateSettings({ launchbox_dir: null });
+      await reloadFolders();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   const refreshBackups = useCallback(() => {
@@ -602,7 +679,12 @@ export default function Settings() {
         backup_auto_enabled: backupAutoEnabled,
         backup_auto_interval_minutes: backupAutoInterval,
         backup_retention_count: backupRetentionCount,
+        library_dirs: Object.fromEntries(
+          LIBRARY_TYPES.filter((t) => dirsDirty[t]).map((t) => [t, libraryDirs[t]])
+        ),
+        ...(dirsDirty.launchbox ? { launchbox_dir: launchboxDir[0] || null } : {}),
       });
+      if (Object.keys(dirsDirty).length) await reloadFolders();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -610,23 +692,46 @@ export default function Settings() {
     }
   }
 
+  function foldersSection(type, help) {
+    return (
+      <>
+        <h2>Library folders</h2>
+        <FolderList
+          dirs={libraryDirs[type] || []}
+          source={librarySources[type] || 'default'}
+          help={help}
+          onChange={(d) => editDirs(type, d)}
+          onReset={() => resetDirs(type)}
+        />
+        <hr />
+      </>
+    );
+  }
+
   return (
-    <div>
+    <div className="settings-page">
       <h1>Settings</h1>
 
-      <div className="picker-tabs" style={{ margin: '16px 0', flexWrap: 'wrap' }}>
-        {SETTINGS_TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`picker-tab${activeTab === t.key ? ' active' : ''}`}
-            onClick={() => setActiveTab(t.key)}
-          >
-            {t.label}
-          </button>
+      <div className="settings-layout">
+      <nav className="settings-nav" aria-label="Settings categories">
+        {SETTINGS_GROUPS.map((group) => (
+          <div key={group.label} className="settings-nav-group">
+            <div className="settings-nav-heading">{group.label}</div>
+            {group.tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`settings-nav-item${activeTab === t.key ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         ))}
-      </div>
+      </nav>
 
+      <div className="settings-panel">
       {activeTab === 'general' && (
         <>
       <h2>Sidebar</h2>
@@ -647,7 +752,36 @@ export default function Settings() {
         ))}
       </div>
 
-      <hr />
+        </>
+      )}
+
+      {activeTab === 'appearance' && (
+        <>
+      <h2>Appearance</h2>
+      <p className="muted">
+        Choose how Media Catalog looks. This applies immediately and is remembered — there's no
+        need to press Save. The sun/moon button in the top bar flips between light and dark
+        without opening Settings.
+      </p>
+      <div className="theme-options">
+        {THEME_OPTIONS.map((o) => (
+          <label key={o.key} className={`theme-option${themeMode === o.key ? ' selected' : ''}`}>
+            <input
+              type="radio"
+              name="theme"
+              checked={themeMode === o.key}
+              onChange={() => setThemeMode(o.key)}
+            />
+            <span className="theme-option-label">{o.label}</span>
+            <span className="muted">{o.blurb}</span>
+          </label>
+        ))}
+      </div>
+        </>
+      )}
+
+      {activeTab === 'backups' && (
+        <>
       <h2>Backups</h2>
       <p className="muted">
         Backs up just the database (your collection, matches, ratings, notes, tags — not cached
@@ -728,7 +862,11 @@ export default function Settings() {
         </div>
       )}
 
-      <hr />
+        </>
+      )}
+
+      {activeTab === 'export' && (
+        <>
       <h2>Library Export</h2>
       <p className="muted">
         A read-only snapshot of your whole collection, separate from Backups above (which is for
@@ -812,6 +950,7 @@ export default function Settings() {
 
       {activeTab === 'movies' && (
         <>
+      {foldersSection('movies', 'Folders scanned for movie files. Subfolders are included; add as many as you like.')}
       <div className="form-grid">
         <label>
           TMDB API Key
@@ -876,6 +1015,7 @@ export default function Settings() {
 
       {activeTab === 'audiobooks' && (
         <>
+      {foldersSection('audiobooks', 'Folders scanned for audiobooks (a book is a single .m4b, or one folder of audio files).')}
       <div className="auto-scan-row">
         <label className="toggle-switch">
           <input
@@ -927,6 +1067,7 @@ export default function Settings() {
 
       {activeTab === 'comics' && (
         <>
+      {foldersSection('comics', 'Folders scanned for comic archives (.cbz, .cbr, .cb7). Each file is matched as one issue.')}
       <div className="form-grid">
         <label>
           ComicVine API Key
@@ -1028,6 +1169,7 @@ export default function Settings() {
 
       {activeTab === 'ebooks' && (
         <>
+      {foldersSection('ebooks', 'Folders scanned for ebooks (.epub, .pdf, .mobi, .azw3).')}
       <div className="auto-scan-row">
         <label className="toggle-switch">
           <input
@@ -1080,6 +1222,8 @@ export default function Settings() {
       {activeTab === 'albums' && (
         <>
       <h2>Music — Digital</h2>
+
+      {foldersSection('albums', 'Folders scanned for your music library — one folder per album, laid out as Artist/Album.')}
 
       <div className="form-grid">
         <label>
@@ -1216,15 +1360,22 @@ export default function Settings() {
         <a href="https://www.launchbox-app.com" target="_blank" rel="noreferrer">LaunchBox</a>{' '}
         installation — LaunchBox has already matched and identified these games, so there's no
         catalog search here, just a read of its <code>Data</code>/<code>Images</code> folders.
-        Since LaunchBox usually runs on a different PC than this server, copy (or keep synced) its{' '}
-        <code>Data</code> folder and <code>Images</code> folder (or just each platform's{' '}
-        <code>Box - Front</code> subfolder, to save space) to somewhere this server's Docker host
-        can reach, then bind-mount that folder and set <code>LAUNCHBOX_DIR</code> to it — see the
-        README's Games section for the exact <code>docker-compose.yml</code> lines.
+        Point this at your LaunchBox folder (the one containing <code>Data</code> and{' '}
+        <code>Images</code>). If LaunchBox runs on a different PC than this app, keep a synced copy
+        of those two folders somewhere reachable — in Docker, bind-mount it and set{' '}
+        <code>LAUNCHBOX_DIR</code>; see the README's Games section.
       </p>
-      <p className="muted">
-        <code>LAUNCHBOX_DIR</code>: {launchboxDirConfigured ? 'configured' : 'not configured'}.
-      </p>
+
+      <h2>LaunchBox folder</h2>
+      <FolderList
+        single
+        dirs={launchboxDir}
+        source={launchboxSource}
+        help="The LaunchBox installation (or synced copy) to mirror your games from."
+        onChange={editLaunchboxDir}
+        onReset={resetLaunchboxDir}
+      />
+      <hr />
 
       <div className="auto-scan-row">
         <label className="toggle-switch">
@@ -1253,6 +1404,7 @@ export default function Settings() {
 
       {activeTab === 'tv' && (
         <>
+      {foldersSection('tv', 'Folders scanned for TV shows. A show is identified by its top-level folder, however many seasons/episodes are inside.')}
       <div className="form-grid">
         <label>
           TheTVDB API Key
@@ -1318,11 +1470,16 @@ export default function Settings() {
         </>
       )}
 
-      <hr />
-      {clearMessage && <p className="muted">{clearMessage}</p>}
-      <button onClick={save}>Save</button>
-      {saved && <span className="muted"> Saved!</span>}
+      {activeTab !== 'appearance' && (
+        <div className="settings-footer">
+          {clearMessage && <p className="muted">{clearMessage}</p>}
+          <button onClick={save}>Save</button>
+          {saved && <span className="muted"> Saved!</span>}
+        </div>
+      )}
       {error && <p className="error">{error}</p>}
+      </div>
+      </div>
     </div>
   );
 }

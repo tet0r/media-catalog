@@ -1,4 +1,5 @@
 const express = require('express');
+const { getLibraryDirs, NO_FOLDERS_MESSAGE } = require('../lib/libraryPaths');
 const fs = require('fs');
 const db = require('../db');
 const tvdb = require('../lib/tvdb');
@@ -9,10 +10,9 @@ const { normalizeForMatch } = require('../lib/titleMatch');
 const router = express.Router();
 
 // Same comma-separated multi-root support as MOVIES_DIR/ALBUMS_DIR/etc.
-const TV_DIRS = (process.env.TV_DIR || '/tv')
-  .split(',')
-  .map((p) => p.trim())
-  .filter(Boolean);
+// Read at scan time (not module load) so a folder changed in Settings is
+// picked up by the very next scan — see lib/libraryPaths.js.
+const dirsNow = () => getLibraryDirs('tv');
 
 function walkAllRoots(dirs) {
   const entries = [];
@@ -41,7 +41,7 @@ function getSetting(key) {
 // blipping to empty shouldn't wipe out the whole TV collection.
 function pruneMissingFiles(entries) {
   const rootsWithFolders = new Set(entries.map((e) => e.root));
-  const healthyRoots = TV_DIRS.filter((root) => rootsWithFolders.has(root));
+  const healthyRoots = dirsNow().filter((root) => rootsWithFolders.has(root));
 
   let removed = 0;
   const shows = db.prepare('SELECT id, file_path FROM tv_shows WHERE file_path IS NOT NULL').all();
@@ -74,7 +74,12 @@ function toCandidateList(results) {
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0 });
   try {
-    const entries = walkAllRoots(TV_DIRS);
+    const dirs = dirsNow();
+    if (dirs.length === 0) {
+      setStatus({ running: 0, message: NO_FOLDERS_MESSAGE });
+      return;
+    }
+    const entries = walkAllRoots(dirs);
     setStatus({ files_found: entries.length, message: `Found ${entries.length} show folders. Matching against TheTVDB...` });
 
     const existingPaths = new Set(

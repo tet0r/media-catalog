@@ -63,6 +63,12 @@ Assumes Docker and your media files are on the same machine — see
   of its `Data`/`Images` folders instead of talking to LaunchBox directly —
   see below.
 
+Each media type's folders can also be chosen in the app itself, under
+Settings > (that type) > Library folders — the environment variables above
+are just the starting point/fallback, and a folder set in Settings
+overrides them (and takes effect on the next scan, no restart needed).
+Settings also has an Appearance page for light/dark mode.
+
 Vinyl and Games both stay in sync one-way: edit your collection on
 Discogs/LaunchBox itself, then click Sync here to catch up. This applies to
 every media type, not just these two: metadata is only ever refreshed by an

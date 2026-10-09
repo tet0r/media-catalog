@@ -6,7 +6,7 @@ const { cacheImageFromLocalFile } = require('./images');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-const LAUNCHBOX_DIR = process.env.LAUNCHBOX_DIR || '';
+const { getLaunchboxDir } = require('./libraryPaths');
 
 const getSyncStatus = db.prepare('SELECT * FROM games_sync_status WHERE id = 1');
 const updateSyncStatus = db.prepare(`UPDATE games_sync_status SET running=@running, last_run=@last_run, total_found=@total_found,
@@ -44,12 +44,15 @@ function setStatus(fields) {
 // flag) keeps doing a full refresh exactly as before — only
 // autoScanScheduler.js's own scheduled tick passes manual: false.
 async function runSync({ manual = true } = {}) {
+  // Read per sync, not at module load, so a folder changed in Settings is
+  // used by the very next sync — see lib/libraryPaths.js.
+  const LAUNCHBOX_DIR = getLaunchboxDir();
   if (!LAUNCHBOX_DIR) {
-    setStatus({ running: 0, message: 'LAUNCHBOX_DIR not configured. Mount your LaunchBox folder and set it in docker-compose.yml.' });
+    setStatus({ running: 0, message: 'LaunchBox folder not configured. Choose it in Settings (Games), or set LAUNCHBOX_DIR in docker-compose.yml.' });
     return;
   }
   if (!fs.existsSync(LAUNCHBOX_DIR)) {
-    setStatus({ running: 0, message: `LAUNCHBOX_DIR (${LAUNCHBOX_DIR}) is not reachable. Check the network share/mount.` });
+    setStatus({ running: 0, message: `LaunchBox folder (${LAUNCHBOX_DIR}) is not reachable. Check the path or network share/mount.` });
     return;
   }
 

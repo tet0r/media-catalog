@@ -13,6 +13,18 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Media Catalog" />
   <title>Media Catalog</title>
+  <!-- Sets the theme before first paint so a light-mode user doesn't see a
+       dark flash while the bundle loads. Mirrors theme.js's getThemeMode. -->
+  <script>
+    (function () {
+      var mode = 'dark';
+      try { mode = localStorage.getItem('theme') || 'dark'; } catch (e) {}
+      if (mode === 'system') {
+        mode = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
+    })();
+  </script>
 </head>
 <body>
   <div id="root"></div>

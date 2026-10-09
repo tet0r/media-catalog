@@ -1,4 +1,5 @@
 const express = require('express');
+const { getLibraryDirs, NO_FOLDERS_MESSAGE } = require('../lib/libraryPaths');
 const fs = require('fs');
 const path = require('path');
 const db = require('../db');
@@ -10,10 +11,9 @@ const { parseSeriesAndIssue } = require('../lib/comicMatch');
 const router = express.Router();
 
 // Same comma-separated multi-root support as the other _DIR vars.
-const COMICS_DIRS = (process.env.COMICS_DIR || '/comics')
-  .split(',')
-  .map((p) => p.trim())
-  .filter(Boolean);
+// Read at scan time (not module load) so a folder changed in Settings is
+// picked up by the very next scan — see lib/libraryPaths.js.
+const dirsNow = () => getLibraryDirs('comics');
 
 function walkAllRoots(dirs) {
   const entries = [];
@@ -43,7 +43,7 @@ function getSetting(key) {
 // safety net as the other scanners' pruneMissingFiles.
 function pruneMissingFiles(entries) {
   const rootsWithFiles = new Set(entries.map((e) => e.root));
-  const healthyRoots = COMICS_DIRS.filter((root) => rootsWithFiles.has(root));
+  const healthyRoots = dirsNow().filter((root) => rootsWithFiles.has(root));
 
   let removed = 0;
   const rows = db.prepare('SELECT id, file_path FROM comics WHERE file_path IS NOT NULL').all();
@@ -79,7 +79,12 @@ const SCAN_MAX_VOLUMES = 3;
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0, errored: 0 });
   try {
-    const entries = walkAllRoots(COMICS_DIRS);
+    const dirs = dirsNow();
+    if (dirs.length === 0) {
+      setStatus({ running: 0, message: NO_FOLDERS_MESSAGE });
+      return;
+    }
+    const entries = walkAllRoots(dirs);
     setStatus({ files_found: entries.length, message: `Found ${entries.length} comics. Matching against ComicVine...` });
 
     const existingPaths = new Set(

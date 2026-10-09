@@ -1,4 +1,5 @@
 const express = require('express');
+const { getLibraryDirs, NO_FOLDERS_MESSAGE } = require('../lib/libraryPaths');
 const fs = require('fs');
 const db = require('../db');
 const musicbrainz = require('../lib/musicbrainz');
@@ -13,10 +14,9 @@ const router = express.Router();
 // Same comma-separated multi-root support as MOVIES_DIR/AUDIOBOOKS_DIR/
 // EBOOKS_DIR — commonly the same network share as those, just a different
 // sub-path.
-const ALBUMS_DIRS = (process.env.ALBUMS_DIR || '/albums')
-  .split(',')
-  .map((p) => p.trim())
-  .filter(Boolean);
+// Read at scan time (not module load) so a folder changed in Settings is
+// picked up by the very next scan — see lib/libraryPaths.js.
+const dirsNow = () => getLibraryDirs('albums');
 
 function setStatus(fields) {
   const cur = db.prepare('SELECT * FROM album_scan_status WHERE id = 1').get();
@@ -34,7 +34,7 @@ function getSetting(key) {
 // safety net as movies'/audiobooks'/ebooks' pruneMissingFiles.
 function pruneMissingFiles(groups) {
   const rootsWithGroups = new Set(groups.map((g) => g.root));
-  const healthyRoots = ALBUMS_DIRS.filter((root) => rootsWithGroups.has(root));
+  const healthyRoots = dirsNow().filter((root) => rootsWithGroups.has(root));
 
   let removed = 0;
   const rows = db.prepare('SELECT id, file_path FROM albums WHERE file_path IS NOT NULL').all();
@@ -85,7 +85,12 @@ function allKnownPaths(rows) {
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0, errored: 0 });
   try {
-    const groups = walkAllRoots(ALBUMS_DIRS);
+    const dirs = dirsNow();
+    if (dirs.length === 0) {
+      setStatus({ running: 0, message: NO_FOLDERS_MESSAGE });
+      return;
+    }
+    const groups = walkAllRoots(dirs);
 
     // Last.fm is the default match source, but scanning shouldn't hard-fail
     // on every single album just because a fresh install hasn't set up a

@@ -34,6 +34,7 @@ import ScanTv from './pages/ScanTv.jsx';
 import Settings from './pages/Settings.jsx';
 import SortMenu from './components/SortMenu.jsx';
 import NotificationBell from './components/NotificationBell.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 const RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
@@ -264,6 +265,7 @@ export default function App() {
             )}
             <NavLink to="/settings">Settings</NavLink>
           </nav>
+          <ThemeToggle />
           <NotificationBell />
         </div>
         {(onMoviesLibrary || onMoviesCollections) && (

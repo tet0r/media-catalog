@@ -1,4 +1,5 @@
 const express = require('express');
+const { getLibraryDirs, NO_FOLDERS_MESSAGE } = require('../lib/libraryPaths');
 const fs = require('fs');
 const db = require('../db');
 const tmdb = require('../lib/tmdb');
@@ -12,10 +13,9 @@ const router = express.Router();
 // split across multiple network shares/mounts can each be their own volume
 // (e.g. /movies, /movies2, /movies3) instead of forcing everything under
 // one mount point.
-const MOVIES_DIRS = (process.env.MOVIES_DIR || '/movies')
-  .split(',')
-  .map((p) => p.trim())
-  .filter(Boolean);
+// Read at scan time (not module load) so a folder changed in Settings is
+// picked up by the very next scan — see lib/libraryPaths.js.
+const dirsNow = () => getLibraryDirs('movies');
 
 function walkAllRoots(dirs) {
   const entries = [];
@@ -48,7 +48,7 @@ function getSetting(key) {
 // a share was temporarily unreachable.
 function pruneMissingFiles(entries) {
   const rootsWithFiles = new Set(entries.map((e) => e.root));
-  const healthyRoots = MOVIES_DIRS.filter((root) => rootsWithFiles.has(root));
+  const healthyRoots = dirsNow().filter((root) => rootsWithFiles.has(root));
 
   let removed = 0;
   const movies = db.prepare('SELECT id, file_path FROM movies WHERE file_path IS NOT NULL').all();
@@ -81,7 +81,12 @@ function toCandidateList(results) {
 async function runScan() {
   setStatus({ running: 1, message: 'Scanning folders...', files_found: 0, matched: 0, pending: 0, skipped: 0, removed: 0 });
   try {
-    const entries = walkAllRoots(MOVIES_DIRS);
+    const dirs = dirsNow();
+    if (dirs.length === 0) {
+      setStatus({ running: 0, message: NO_FOLDERS_MESSAGE });
+      return;
+    }
+    const entries = walkAllRoots(dirs);
     setStatus({ files_found: entries.length, message: `Found ${entries.length} video files. Matching against TMDB...` });
 
     const existingPaths = new Set(
