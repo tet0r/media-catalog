@@ -10,7 +10,7 @@ versioned separately.
 
 ## v1.8.0 — Windows desktop app (installer and portable)
 - **A real Windows app**, built with Electron in the new `desktop/` folder:
-  the same server and UI the Docker image runs, in its own window. Two
+  the same engine and UI the Docker image runs, in its own window. Two
   builds per release — an **installer** (per-user, no admin, Start
   Menu/Desktop shortcuts, data in `%APPDATA%\Media Catalog`) and a
   **portable exe** (no install; data lives in a `MediaCatalogData` folder
@@ -23,12 +23,19 @@ versioned separately.
 - **Folders are picked with a native Browse… dialog** in each library's
   Settings (v1.7.0's folder settings), so there are no environment
   variables or mounts to configure.
-- The desktop server listens on `127.0.0.1` only, since the API has no
-  authentication — nothing on the network can reach it. (Docker/server
-  installs still bind every interface, as before.)
-- The background server restarts itself if it stops unexpectedly, and
-  retries startup a few times (the native SQLite module has been seen to
-  fail to load sporadically on Windows).
+- **Not a server**: the desktop app opens no network port at all, not even
+  a local one. The window loads from a private `app://` address handled
+  inside the app, which hands each request to the engine (the same Express
+  code the Docker image runs) over a private named pipe. Nothing for other
+  devices or other programs to connect to — and because the address never
+  changes, the app also remembers its own settings reliably. (Docker/server
+  installs still listen on a port, as before.)
+- The engine runs as a hidden helper process rather than inside the window's
+  own, because scanning large or networked folders reads the disk
+  synchronously and would otherwise freeze the window and its menus. It
+  restarts itself if it stops unexpectedly, and retries startup a few times
+  (the native SQLite module has been seen to fail to load sporadically on
+  Windows).
 - **GitHub releases**: pushing a `v<version>` tag (it must match `VERSION`)
   runs the new *Build desktop app* workflow, which builds on Windows and
   attaches both files to that tag's release. The builds aren't code-signed,

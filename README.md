@@ -37,16 +37,19 @@ has two Windows builds of the same app:
   (a USB stick works); your library lives in a `MediaCatalogData` folder next to
   the exe, so moving the exe and that folder moves everything.
 
-Either way it's the same server and UI the Docker image runs, in its own window
+Either way it's the same engine and UI the Docker image runs, in its own window
 with a native menu (File / Edit / View / Window / Help — scan all libraries,
 back up, export, jump between libraries with Ctrl+1…8, Settings with Ctrl+,).
 Choose each library's folders in **Settings > (that library) > Library folders**
 using the **Browse...** button — there are no environment variables or mounts to
 set up. Light/dark mode is under Settings > Appearance or the sun/moon button.
 
-The app listens on `127.0.0.1` only, so nothing on your network can reach it.
-The builds aren't code-signed, so Windows SmartScreen may warn the first time
-("More info" > "Run anyway").
+The desktop app isn't a web server: it opens no network port at all (not even
+a local one), so there's nothing for other devices — or other programs on your
+PC — to connect to. The window loads its pages through a private `app://`
+address handled inside the app. (The Docker image is the server version, for
+reaching your library from other devices.) The builds aren't code-signed, so
+Windows SmartScreen may warn the first time ("More info" > "Run anyway").
 
 ### Building it yourself
 
