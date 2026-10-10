@@ -4,6 +4,8 @@ A self-hosted, Docker-deployable media collection cataloger — Movies, TV
 Shows, Audiobooks, Comics, Ebooks, Music (Digital + Vinyl), and Games. Each
 media type gets its own sidebar tab, library scanner, and Settings section.
 
+![Media Catalog's movie library](docs/screenshot.webp)
+
 The running app's version shows next to its name in the nav bar (from the
 `VERSION` file) and at `GET /api/health` — handy for confirming a Portainer
 redeploy actually picked up a new image. See
