@@ -27,43 +27,13 @@ Assumes Docker and your media files are on the same machine — see
 
 ## Windows desktop app
 
-Prefer a normal program over Docker? Every [release](https://github.com/tet0r/media-catalog/releases)
-has two Windows builds of the same app:
+Media Catalog is also available as a Windows app, in two versions. Download
+either from the [releases page](https://github.com/tet0r/media-catalog/releases):
 
-- **`Media-Catalog-Setup-<version>.exe`** — the installer. Installs per-user
-  (no admin needed), adds Start Menu/Desktop shortcuts, and keeps your library
-  in `%APPDATA%\Media Catalog`. Uninstalling leaves that folder alone.
-- **`Media-Catalog-Portable-<version>.exe`** — no install. Run it from anywhere
-  (a USB stick works); your library lives in a `MediaCatalogData` folder next to
-  the exe, so moving the exe and that folder moves everything.
-
-Either way it's the same engine and UI the Docker image runs, in its own window
-with a native menu (File / Edit / View / Window / Help — scan all libraries,
-back up, export, jump between libraries with Ctrl+1…8, Settings with Ctrl+,).
-Choose each library's folders in **Settings > (that library) > Library folders**
-using the **Browse...** button — there are no environment variables or mounts to
-set up. Light/dark mode is under Settings > Appearance or the sun/moon button.
-
-The desktop app isn't a web server: it opens no network port at all (not even
-a local one), so there's nothing for other devices — or other programs on your
-PC — to connect to. The window loads its pages through a private `app://`
-address handled inside the app. (The Docker image is the server version, for
-reaching your library from other devices.) The builds aren't code-signed, so
-Windows SmartScreen may warn the first time ("More info" > "Run anyway").
-
-### Building it yourself
-
-```bash
-cd desktop
-npm install
-npm run dist     # installer + portable exe -> desktop/dist/
-npm run pack     # just an unpacked app folder, faster
-```
-
-`npm run dist` rebuilds the client, bundles the server from `../server`,
-compiles `better-sqlite3` for Electron, and packages both targets. Pushing a
-`v<version>` tag (matching the `VERSION` file) makes the *Build desktop app*
-workflow do the same on GitHub and attach both files to that tag's release.
+- **Installer** (`Media-Catalog-Setup-<version>.exe`) — installs like any other
+  program, with Start Menu and Desktop shortcuts.
+- **Portable** (`Media-Catalog-Portable-<version>.exe`) — nothing to install; run
+  it from anywhere, including a USB drive.
 
 ## Media types
 
