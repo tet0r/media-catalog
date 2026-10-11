@@ -163,19 +163,3 @@ site that visually matches the app itself (library grids + a detail page
 per item) but with no Settings/Add/Scan functionality — open its
 `index.html` directly, or download it as a `.zip`. Both land in
 `BACKUP_DIR/exports/` (text/ and html/ subfolders), alongside your backups.
-
-## Local development (without Docker)
-
-```bash
-# terminal 1 — API server
-cd server
-npm install
-TMDB_API_KEY=your_key DATA_DIR=./data MOVIES_DIR=/path/to/movies AUDIOBOOKS_DIR=/path/to/audiobooks COMICS_DIR=/path/to/comics EBOOKS_DIR=/path/to/ebooks ALBUMS_DIR=/path/to/albums node index.js
-
-# terminal 2 — frontend dev server (proxies /api to :8080)
-cd client
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173.
