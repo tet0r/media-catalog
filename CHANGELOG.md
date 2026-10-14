@@ -8,6 +8,27 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.10.0 — Warning when the data folder isn't on a persistent volume
+- When the app is running in a container and its data folder (or its
+  backup folder) isn't on storage that survives the container being
+  recreated, a warning banner now shows across the top of every page. That
+  is the "I rebooted and my whole library was gone" failure: everything the
+  app keeps lives in one folder, and if that folder is just part of the
+  container's own disposable filesystem, the next redeploy, update or stack
+  change quietly starts it over empty.
+- It recognises the three ways this happens: no mount at all (the folder is
+  inside the container), an **anonymous Docker volume** (the image declares
+  `VOLUME /data`, so an unmounted `/data` silently gets one — it survives a
+  restart but is orphaned the moment the container is recreated), and
+  memory-backed storage (tmpfs, including a host folder that is itself RAM).
+  A bind mount or named volume is fine, and so is anything that isn't a
+  container at all (a normal install, the Windows app) — it never warns on
+  a guess.
+- A backup folder that's separately at risk gets its own warning; one that
+  shares the data folder's storage is covered by the first.
+- Each banner can be dismissed for the current browser session; it returns
+  next session until the volume is fixed.
+
 ## v1.9.0 — Refetch All Images
 - **Settings > General > Refetch All Images (every library)**, and a
   **Refetch All Images** button in each library's own settings page

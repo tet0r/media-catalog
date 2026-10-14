@@ -2,8 +2,10 @@ const express = require('express');
 const db = require('../db');
 const backupLib = require('../lib/backup');
 const libraryPaths = require('../lib/libraryPaths');
+const dataVolume = require('../lib/dataVolume');
 
 const router = express.Router();
+const DATA_DIR = process.env.DATA_DIR || require('path').join(__dirname, '..', 'data');
 
 const DEFAULT_AUTO_SCAN_INTERVAL_MINUTES = 60;
 const DEFAULT_BACKUP_INTERVAL_MINUTES = 1440; // daily
@@ -87,6 +89,10 @@ router.get('/', (req, res) => {
     backup_retention_count: Number(map.backup_retention_count) || DEFAULT_BACKUP_RETENTION_COUNT,
     backup_dir_configured: !!process.env.BACKUP_DIR,
     backup_dir: backupLib.BACKUP_DIR,
+    // Non-empty only when running in a container whose data (or backup)
+    // folder won't survive the container being recreated — the app shows
+    // these as a banner. See lib/dataVolume.js.
+    storage_warnings: dataVolume.getStorageWarnings(DATA_DIR, backupLib.BACKUP_DIR),
   });
 });
 

@@ -511,3 +511,16 @@ textarea { font-family: inherit; resize: vertical; }
   .settings-nav-item { width: auto; padding: 6px 12px; }
   .settings-panel { padding: 16px; }
 }
+
+/* Shown across the top when the server reports the data folder isn't on a
+   persistent volume (see server/lib/dataVolume.js). Loud on purpose: the
+   alternative is silently losing a whole library. */
+.storage-warning {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px 24px; background: rgba(224, 138, 60, 0.16);
+  border-bottom: 1px solid var(--warning); color: var(--text); font-size: 0.9rem; line-height: 1.4;
+}
+.storage-warning button { flex-shrink: 0; }
+@media (max-width: 768px) {
+  .storage-warning { padding: 10px 14px; flex-direction: column; align-items: flex-start; gap: 8px; }
+}

@@ -73,6 +73,21 @@ export default function App() {
   const [version, setVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [hiddenSections, setHiddenSections] = useState({});
+  // Set by the server when the data folder isn't on storage that survives
+  // the container being recreated — see server/lib/dataVolume.js.
+  const [storageWarnings, setStorageWarnings] = useState([]);
+  const [dismissedWarnings, setDismissedWarnings] = useState(() => {
+    const dismissed = new Set();
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k && k.startsWith('dismissed-storage-warning:')) dismissed.add(k.slice('dismissed-storage-warning:'.length));
+      }
+    } catch {
+      /* storage blocked — nothing is pre-dismissed */
+    }
+    return dismissed;
+  });
   // Which sidebar groups (Music, so far) are manually expanded — a group
   // containing the active page is always shown regardless of this, so
   // this only matters for collapsing/expanding while browsing elsewhere.
@@ -182,9 +197,25 @@ export default function App() {
           hidden[key] = !!s[`sidebar_hidden_${key}`];
         }
         setHiddenSections(hidden);
+        setStorageWarnings(s.storage_warnings || []);
       })
       .catch(() => {});
   }, [location.pathname]);
+
+  const visibleStorageWarnings = storageWarnings.filter((w) => !dismissedWarnings.has(`${w.kind}:${w.code}`));
+
+  // Dismissing only lasts for this browser session — the problem is real
+  // until the volume is fixed, so it comes back next time rather than being
+  // silenced forever.
+  function dismissWarning(w) {
+    const key = `${w.kind}:${w.code}`;
+    try {
+      sessionStorage.setItem(`dismissed-storage-warning:${key}`, '1');
+    } catch {
+      /* storage blocked — it just stays dismissed until reload */
+    }
+    setDismissedWarnings((prev) => new Set(prev).add(key));
+  }
 
   function toggleGroup(key) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -428,6 +459,12 @@ export default function App() {
           </div>
         )}
       </header>
+      {visibleStorageWarnings.map((w) => (
+        <div key={`${w.kind}:${w.code}`} className="storage-warning" role="alert">
+          <span>⚠ {w.message}</span>
+          <button type="button" className="muted-btn" onClick={() => dismissWarning(w)}>Dismiss</button>
+        </div>
+      ))}
       <div className="app-body">
         {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
         <nav className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`} aria-label="Media type">

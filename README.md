@@ -148,7 +148,10 @@ Everything (the database and cached posters/covers) lives under `./data`.
 resolves to a folder Portainer manages for you, and some stack changes can
 cause it to get silently recreated from scratch — abandoning your existing
 collection with no warning. Point `./data` at an explicit host path you
-control instead if you want stronger protection than backups alone.
+control instead if you want stronger protection than backups alone. If the
+app detects it's running in a container whose data folder isn't on a
+persistent volume (no mount, an anonymous volume, or memory-backed storage),
+it shows a warning banner across the top of every page.
 
 Settings has a Backups section (manual "Back Up Now" plus an optional
 schedule, with retention) that snapshots just the database, and a Restore
