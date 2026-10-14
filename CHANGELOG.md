@@ -8,6 +8,32 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.11.0 — Image backups
+- **Settings > Backups > Image Backups**: a plain folder copy of the cached
+  cover/poster images, in `BACKUP_DIR/images/` beside the database backups.
+  No zip. It has its own settings, separate from the database backup:
+  an "Automatically back up images" toggle and its own interval (6 hours to
+  weekly), plus "Back Up Images Now".
+- Database backups hold only the database, so a restored library used to
+  come back with every image missing (Refetch All Images, v1.9.0, can
+  download them again — this is the way to not need to). Images you picked
+  or uploaded yourself, and the pictures chosen for groups, can *only* be
+  recovered from a copy like this one.
+- One folder kept up to date rather than a new full copy each run: the
+  first run copies everything and later runs copy only what's new or
+  changed, so it stays cheap even for a big library and doesn't pile up a
+  folder of copies in the backup location.
+- **It never deletes anything from the backup.** A backup that mirrored its
+  source's deletions would, the moment the data folder was ever wiped,
+  wipe itself on its next automatic run — exactly when it's needed. The
+  trade-off is that an image the app later replaces or removes stays in the
+  backup folder.
+- **Restore Missing Images** copies back any image that's in the backup but
+  not in the app, and never overwrites one that's already there.
+- Copies are written under a temporary name and renamed, so an interrupted
+  copy (a network share dropping mid-file) can't leave a truncated image
+  that a later run would mistake for done.
+
 ## v1.10.0 — Warning when the data folder isn't on a persistent volume
 - When the app is running in a container and its data folder (or its
   backup folder) isn't on storage that survives the container being

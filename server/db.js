@@ -183,6 +183,17 @@ CREATE TABLE IF NOT EXISTS backup_status (
   message TEXT
 );
 
+-- Image backups (a copy of the cached cover/poster folder) run on their own
+-- schedule, separate from the database backup above — same shape so
+-- autoScanScheduler.js can drive it the same way.
+CREATE TABLE IF NOT EXISTS image_backup_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  running INTEGER DEFAULT 0,
+  last_run TEXT,
+  started_at TEXT,
+  message TEXT
+);
+
 -- Same shape as backup_status, but one row per export kind ('text'/'html')
 -- rather than a single id=1 row, since the two run independently of each
 -- other (starting a text export while an HTML export is running, or vice
@@ -623,6 +634,7 @@ db.prepare('INSERT OR IGNORE INTO vinyl_sync_status (id, running) VALUES (1, 0)'
 db.prepare('INSERT OR IGNORE INTO games_sync_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO tv_scan_status (id, running) VALUES (1, 0)').run();
 db.prepare('INSERT OR IGNORE INTO backup_status (id, running) VALUES (1, 0)').run();
+db.prepare('INSERT OR IGNORE INTO image_backup_status (id, running) VALUES (1, 0)').run();
 db.prepare("INSERT OR IGNORE INTO export_status (type, running) VALUES ('text', 0)").run();
 db.prepare("INSERT OR IGNORE INTO export_status (type, running) VALUES ('html', 0)").run();
 
@@ -636,7 +648,7 @@ db.prepare("INSERT OR IGNORE INTO export_status (type, running) VALUES ('html', 
 // safe to reset unconditionally every time this module loads.
 const STATUS_TABLES = [
   'scan_status', 'audiobook_scan_status', 'ebook_scan_status', 'comic_scan_status', 'album_scan_status',
-  'vinyl_sync_status', 'games_sync_status', 'tv_scan_status', 'backup_status',
+  'vinyl_sync_status', 'games_sync_status', 'tv_scan_status', 'backup_status', 'image_backup_status',
 ];
 for (const table of STATUS_TABLES) {
   db.prepare(

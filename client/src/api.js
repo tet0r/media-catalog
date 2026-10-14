@@ -708,6 +708,10 @@ export const api = {
   backupDownloadUrl: (filename) => `${BASE}/backups/${encodeURIComponent(filename)}/download`,
   deleteBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(handle),
   restoreBackup: (filename) => fetch(`${BASE}/backups/${encodeURIComponent(filename)}/restore`, { method: 'POST' }).then(handle),
+  imageBackupInfo: () => fetch(`${BASE}/image-backups`).then(handle),
+  imageBackupStatus: () => fetch(`${BASE}/image-backups/status`).then(handle),
+  startImageBackup: () => fetch(`${BASE}/image-backups`, { method: 'POST' }).then(handle),
+  restoreImages: () => fetch(`${BASE}/image-backups/restore`, { method: 'POST' }).then(handle),
 
   listTextExports: () => fetch(`${BASE}/exports/text`).then(handle),
   textExportStatus: () => fetch(`${BASE}/exports/text/status`).then(handle),

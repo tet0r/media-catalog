@@ -21,6 +21,7 @@ const tvScanRouter = require('./routes/tvScan');
 const { runSync: runVinylSync } = require('./lib/vinylSync');
 const { runSync: runGamesSync } = require('./lib/gamesSync');
 const { runBackup } = require('./lib/backup');
+const { runImageBackup } = require('./lib/imageBackup');
 
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/collections', require('./routes/collections'));
@@ -42,6 +43,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/backups', require('./routes/backups'));
+app.use('/api/image-backups', require('./routes/imageBackups'));
 app.use('/api/exports', require('./routes/exports'));
 app.use('/api/refetch-images', require('./routes/refetchImages'));
 app.use('/api/version-check', require('./routes/version'));
@@ -102,6 +104,12 @@ require('./lib/autoScanScheduler').start([
     enabledKey: 'backup_auto_enabled',
     intervalKey: 'backup_auto_interval_minutes',
     statusTable: 'backup_status',
+  },
+  {
+    runScan: runImageBackup,
+    enabledKey: 'image_backup_auto_enabled',
+    intervalKey: 'image_backup_auto_interval_minutes',
+    statusTable: 'image_backup_status',
   },
 ]);
 

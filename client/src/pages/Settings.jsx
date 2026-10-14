@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import FolderList from '../components/FolderList.jsx';
 import { getThemeMode, setThemeMode, subscribeTheme } from '../theme.js';
@@ -160,6 +160,10 @@ export default function Settings() {
   const [backupDir, setBackupDir] = useState('');
   const [backups, setBackups] = useState([]);
   const [backupStatus, setBackupStatus] = useState(null);
+  const [imageBackupAutoEnabled, setImageBackupAutoEnabled] = useState(false);
+  const [imageBackupAutoInterval, setImageBackupAutoInterval] = useState(1440);
+  const [imageBackupInfo, setImageBackupInfo] = useState(null);
+  const [imageBackupStatus, setImageBackupStatus] = useState(null);
   const [backingUp, setBackingUp] = useState(false);
   const [restoringFilename, setRestoringFilename] = useState(null);
   const [restoreWaitMessage, setRestoreWaitMessage] = useState(null);
@@ -239,6 +243,8 @@ export default function Settings() {
         setBackupAutoEnabled(!!s.backup_auto_enabled);
         setBackupAutoInterval(s.backup_auto_interval_minutes || 1440);
         setBackupRetentionCount(s.backup_retention_count || 14);
+        setImageBackupAutoEnabled(!!s.image_backup_auto_enabled);
+        setImageBackupAutoInterval(s.image_backup_auto_interval_minutes || 1440);
         setBackupDirConfigured(!!s.backup_dir_configured);
         setBackupDir(s.backup_dir || '');
       })
@@ -250,6 +256,62 @@ export default function Settings() {
   }
 
   useEffect(() => subscribeTheme(setThemeModeState), []);
+
+  // Image backups run on the server (on their own schedule, or when asked);
+  // this watches progress and refreshes the folder summary when one finishes.
+  const refreshImageBackupInfo = useCallback(() => {
+    api.imageBackupInfo().then(setImageBackupInfo).catch(() => {});
+  }, []);
+
+  // Every status update goes through here — the poll AND the buttons, which
+  // fetch the status themselves right after starting a run. A small backup
+  // can start and finish before either looks, so "it was running and now
+  // isn't" would miss it; a changed finish time catches that case too.
+  const lastImageBackupRun = useRef(undefined);
+  const applyImageBackupStatus = useCallback(
+    (next) => {
+      const prevRun = lastImageBackupRun.current;
+      lastImageBackupRun.current = next.last_run;
+      setImageBackupStatus(next);
+      if (prevRun !== undefined && prevRun !== next.last_run) refreshImageBackupInfo();
+    },
+    [refreshImageBackupInfo]
+  );
+
+  useEffect(() => {
+    refreshImageBackupInfo();
+    const poll = () => api.imageBackupStatus().then(applyImageBackupStatus).catch(() => {});
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [refreshImageBackupInfo, applyImageBackupStatus]);
+
+  async function backUpImagesNow() {
+    setError(null);
+    try {
+      await api.startImageBackup();
+      applyImageBackupStatus(await api.imageBackupStatus());
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function restoreImagesNow() {
+    if (
+      !confirm(
+        'Copy back every image that is in the image backup but missing from the app?\n\nImages that already exist are left alone — nothing is overwritten.'
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await api.restoreImages();
+      applyImageBackupStatus(await api.imageBackupStatus());
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   // "Refetch All Images" runs in the background on the server (one at a time,
   // any mix of media types); this just watches its progress.
@@ -736,6 +798,8 @@ It can take a while for a big library.`
         backup_auto_enabled: backupAutoEnabled,
         backup_auto_interval_minutes: backupAutoInterval,
         backup_retention_count: backupRetentionCount,
+        image_backup_auto_enabled: imageBackupAutoEnabled,
+        image_backup_auto_interval_minutes: imageBackupAutoInterval,
         library_dirs: Object.fromEntries(
           LIBRARY_TYPES.filter((t) => dirsDirty[t]).map((t) => [t, libraryDirs[t]])
         ),
@@ -928,6 +992,44 @@ It can take a while for a big library.`
           ))}
         </div>
       )}
+
+      <hr />
+      <h2>Image Backups</h2>
+      <p className="muted">
+        A plain folder copy of your cached cover/poster images, kept in{' '}
+        <code>{imageBackupInfo?.dir || '...'}</code> — separate from the database backup above,
+        which doesn't include them. The first run copies everything; after that each one only
+        copies what's new or changed. It never deletes anything from the backup folder, so even
+        if the app's own data folder is wiped, its next automatic run can't wipe the backup too.
+      </p>
+
+      <div className="auto-scan-row">
+        <label className="toggle-switch">
+          <input type="checkbox" checked={imageBackupAutoEnabled} onChange={(e) => setImageBackupAutoEnabled(e.target.checked)} />
+          <span className="toggle-slider" />
+        </label>
+        <span className="auto-scan-label">Automatically back up images</span>
+        <IntervalSelect value={imageBackupAutoInterval} onChange={setImageBackupAutoInterval} disabled={!imageBackupAutoEnabled} options={BACKUP_INTERVAL_OPTIONS} />
+      </div>
+      <p className="muted">Remember to press Save below after changing the schedule.</p>
+
+      <button onClick={backUpImagesNow} disabled={!!imageBackupStatus?.running}>
+        {imageBackupStatus?.running ? 'Working...' : 'Back Up Images Now'}
+      </button>{' '}
+      <button className="muted-btn" onClick={restoreImagesNow} disabled={!!imageBackupStatus?.running}>
+        Restore Missing Images
+      </button>
+      {imageBackupStatus?.message && (
+        <p className="muted">
+          {imageBackupStatus.message}
+          {!!imageBackupStatus.running && <ElapsedTimer startedAt={imageBackupStatus.started_at} />}
+        </p>
+      )}
+      <p className="muted">
+        {imageBackupInfo && imageBackupInfo.file_count > 0
+          ? `In the backup folder now: ${imageBackupInfo.file_count} image${imageBackupInfo.file_count === 1 ? '' : 's'}, ${(imageBackupInfo.total_bytes / 1024 / 1024).toFixed(1)} MB.`
+          : 'No image backup yet.'}
+      </p>
 
         </>
       )}

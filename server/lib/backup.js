@@ -34,7 +34,9 @@ function setStatus(fields) {
 // that also copied cached posters/covers alongside the database (first as
 // a zip, then as a plain folder copy) was tried and dropped both times —
 // once for crashing production, once for just being clutter in the backup
-// folder — so this stays database-only.
+// folder — so this stays database-only. Images are backed up separately, as
+// their own job with their own schedule, into a single folder of their own
+// (lib/imageBackup.js) rather than alongside these files.
 function listBackups() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   return fs

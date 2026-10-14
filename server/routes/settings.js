@@ -87,6 +87,8 @@ router.get('/', (req, res) => {
     backup_auto_enabled: map.backup_auto_enabled === 'true',
     backup_auto_interval_minutes: Number(map.backup_auto_interval_minutes) || DEFAULT_BACKUP_INTERVAL_MINUTES,
     backup_retention_count: Number(map.backup_retention_count) || DEFAULT_BACKUP_RETENTION_COUNT,
+    image_backup_auto_enabled: map.image_backup_auto_enabled === 'true',
+    image_backup_auto_interval_minutes: Number(map.image_backup_auto_interval_minutes) || DEFAULT_BACKUP_INTERVAL_MINUTES,
     backup_dir_configured: !!process.env.BACKUP_DIR,
     backup_dir: backupLib.BACKUP_DIR,
     // Non-empty only when running in a container whose data (or backup)
@@ -114,7 +116,7 @@ router.put('/', (req, res) => {
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
     tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
     sidebar_hidden, backup_auto_enabled, backup_auto_interval_minutes, backup_retention_count,
-    library_dirs, launchbox_dir, ui_theme,
+    library_dirs, launchbox_dir, ui_theme, image_backup_auto_enabled, image_backup_auto_interval_minutes,
   } = req.body;
   if (typeof tmdb_api_key === 'string') upsert('tmdb_api_key', tmdb_api_key);
   if (typeof auto_scan_enabled === 'boolean') upsert('auto_scan_enabled', auto_scan_enabled ? 'true' : 'false');
@@ -154,6 +156,8 @@ router.put('/', (req, res) => {
   }
   if (typeof backup_auto_enabled === 'boolean') upsert('backup_auto_enabled', backup_auto_enabled ? 'true' : 'false');
   upsertInterval('backup_auto_interval_minutes', backup_auto_interval_minutes);
+  if (typeof image_backup_auto_enabled === 'boolean') upsert('image_backup_auto_enabled', image_backup_auto_enabled ? 'true' : 'false');
+  upsertInterval('image_backup_auto_interval_minutes', image_backup_auto_interval_minutes);
   if (backup_retention_count !== undefined && backup_retention_count !== null && backup_retention_count !== '') {
     const count = Number(backup_retention_count);
     if (Number.isFinite(count) && count > 0) upsert('backup_retention_count', String(Math.round(count)));
