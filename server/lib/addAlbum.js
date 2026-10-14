@@ -96,4 +96,10 @@ async function rematchAlbum(albumId, source, externalId) {
   return db.prepare('SELECT * FROM albums WHERE id = ?').get(albumId);
 }
 
-module.exports = { addAlbumFromExternalId, refreshAlbumMetadata, rematchAlbum, extractMetadata };
+// Just the cover's URL for an already-matched album — for "Refetch All
+// Images", which wants the image again without touching any metadata.
+async function fetchCoverUrl(source, externalId) {
+  return (await fetchDetails(source, externalId)).cover_url || null;
+}
+
+module.exports = { addAlbumFromExternalId, refreshAlbumMetadata, rematchAlbum, extractMetadata, fetchCoverUrl };

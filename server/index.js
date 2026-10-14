@@ -43,6 +43,7 @@ app.use('/api/images', require('./routes/images'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/backups', require('./routes/backups'));
 app.use('/api/exports', require('./routes/exports'));
+app.use('/api/refetch-images', require('./routes/refetchImages'));
 app.use('/api/version-check', require('./routes/version'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));

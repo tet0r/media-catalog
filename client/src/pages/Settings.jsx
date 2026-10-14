@@ -57,6 +57,13 @@ const THEME_OPTIONS = [
 
 const LIBRARY_TYPES = ['movies', 'tv', 'audiobooks', 'comics', 'ebooks', 'albums'];
 
+// Every media type "Refetch All Images" can run for.
+const REFETCH_TYPES = ['movies', 'tv', 'audiobooks', 'comics', 'ebooks', 'albums', 'vinyl', 'games'];
+const LIBRARY_LABELS = {
+  movies: 'Movies', tv: 'TV Shows', audiobooks: 'Audiobooks', comics: 'Comics',
+  ebooks: 'Ebooks', albums: 'Digital', vinyl: 'Vinyl', games: 'Games',
+};
+
 const SIDEBAR_SECTIONS = [
   { key: 'movies', label: 'Movies' },
   { key: 'audiobooks', label: 'Audiobooks' },
@@ -243,6 +250,56 @@ export default function Settings() {
   }
 
   useEffect(() => subscribeTheme(setThemeModeState), []);
+
+  // "Refetch All Images" runs in the background on the server (one at a time,
+  // any mix of media types); this just watches its progress.
+  const [refetchStatus, setRefetchStatus] = useState(null);
+  useEffect(() => {
+    const poll = () => api.refetchImagesStatus().then(setRefetchStatus).catch(() => {});
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function startRefetch(types) {
+    const everything = types.length > 1;
+    const what = everything ? 'every library' : LIBRARY_LABELS[types[0]];
+    if (
+      !confirm(
+        `Re-download the images for ${what}?
+
+This replaces every cover/poster with the one from its source — including any you picked or uploaded yourself. Anything whose source can't be reached keeps its current image. Pictures you chose for author/series/artist/platform groups aren't touched.
+
+It can take a while for a big library.`
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await api.startRefetchImages(types);
+      setRefetchStatus(await api.refetchImagesStatus());
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // The button + live status for one or more media types. The status line
+  // shows whenever the current (or last) run included any of these types.
+  function refetchControls(types, buttonLabel = 'Refetch All Images') {
+    const involved = !!refetchStatus && (refetchStatus.types || []).some((t) => types.includes(t));
+    const running = !!refetchStatus?.running;
+    return (
+      <>
+        <button onClick={() => startRefetch(types)} disabled={running}>
+          {running && involved ? 'Refetching...' : buttonLabel}
+        </button>
+        {involved && refetchStatus.message && refetchStatus.message !== 'Idle' && (
+          <p className="muted"> {refetchStatus.message}</p>
+        )}
+      </>
+    );
+  }
 
   function editDirs(type, dirs) {
     setLibraryDirs((prev) => ({ ...prev, [type]: dirs }));
@@ -752,6 +809,16 @@ export default function Settings() {
         ))}
       </div>
 
+      <h2>Images</h2>
+      <p className="muted">
+        Re-download the cover/poster for every item in every library, from wherever each one was
+        matched. Useful when images are missing — a database backup doesn't include them, so
+        after restoring one they need fetching again. This replaces every image, including ones
+        you picked or uploaded yourself; pictures chosen for author/series/artist/platform
+        groups aren't touched. You can also do one library at a time from its own settings page.
+      </p>
+      {refetchControls(REFETCH_TYPES, 'Refetch All Images (every library)')}
+
         </>
       )}
 
@@ -1004,6 +1071,12 @@ export default function Settings() {
       </button>
       {bulkStatus && bulkStatus.message !== 'Idle' && <p className="muted"> {bulkStatus.message}</p>}
 
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every movie's poster and backdrop from TMDB. Handy if images are missing — a restored database backup, for example, doesn't include them. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['movies'])}
+
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every movie in your collection, along with their cached posters/backdrops.</p>
       <button className="danger" onClick={clearMovies} disabled={clearingMovies}>
@@ -1055,6 +1128,12 @@ export default function Settings() {
         {audiobookBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
       </button>
       {audiobookBulkStatus && audiobookBulkStatus.message !== 'Idle' && <p className="muted"> {audiobookBulkStatus.message}</p>}
+
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every audiobook's cover from where it was matched (Audible or Apple Books). Handy if covers are missing after restoring a backup. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['audiobooks'])}
 
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every audiobook in your collection, along with their cached covers.</p>
@@ -1158,6 +1237,12 @@ export default function Settings() {
       </button>
       {comicBulkStatus && comicBulkStatus.message !== 'Idle' && <p className="muted"> {comicBulkStatus.message}</p>}
 
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every comic's cover from where it was matched (ComicVine, Metron or GCD). ComicVine rate-limits, so a large library may need more than one run — anything that fails keeps its current cover. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['comics'])}
+
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every comic in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearComics} disabled={clearingComics}>
@@ -1209,6 +1294,12 @@ export default function Settings() {
         {ebookBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
       </button>
       {ebookBulkStatus && ebookBulkStatus.message !== 'Idle' && <p className="muted"> {ebookBulkStatus.message}</p>}
+
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every ebook's cover from Open Library. Handy if covers are missing after restoring a backup. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['ebooks'])}
 
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every ebook in your collection, along with their cached covers.</p>
@@ -1287,6 +1378,12 @@ export default function Settings() {
       </button>
       {albumBulkStatus && albumBulkStatus.message !== 'Idle' && <p className="muted"> {albumBulkStatus.message}</p>}
 
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every album's cover art from where it was matched (MusicBrainz or Last.fm). Handy if covers are missing after restoring a backup. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['albums'])}
+
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every album in your collection, along with their cached covers.</p>
       <button className="danger" onClick={clearAlbums} disabled={clearingAlbums}>
@@ -1341,6 +1438,12 @@ export default function Settings() {
         <IntervalSelect value={vinylAutoSyncInterval} onChange={setVinylAutoSyncInterval} disabled={!vinylAutoSyncEnabled} />
       </div>
 
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every record's cover from your Discogs collection. Handy if covers are missing after restoring a backup. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['vinyl'])}
+
       <h3>Danger Zone</h3>
       <p className="muted">
         Deletes the local copy of your vinyl collection, along with their cached covers. It comes back
@@ -1389,6 +1492,12 @@ export default function Settings() {
         <span className="auto-scan-label">Automatically sync with LaunchBox</span>
         <IntervalSelect value={gamesAutoSyncInterval} onChange={setGamesAutoSyncInterval} disabled={!gamesAutoSyncEnabled} />
       </div>
+
+      <h3>Images</h3>
+      <p className="muted">
+        Re-copies every game's cover from your LaunchBox folder. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['games'])}
 
       <h3>Danger Zone</h3>
       <p className="muted">
@@ -1460,6 +1569,12 @@ export default function Settings() {
         {tvBulkStatus?.running ? 'Refreshing...' : 'Refresh All Metadata'}
       </button>
       {tvBulkStatus && tvBulkStatus.message !== 'Idle' && <p className="muted"> {tvBulkStatus.message}</p>}
+
+      <h3>Images</h3>
+      <p className="muted">
+        Re-downloads every show's poster and backdrop from TheTVDB. Handy if images are missing after restoring a backup. Replaces any picture you chose yourself.
+      </p>
+      {refetchControls(['tv'])}
 
       <h3>Danger Zone</h3>
       <p className="muted">Permanently deletes every TV show in your collection, along with their cached posters/backdrops.</p>

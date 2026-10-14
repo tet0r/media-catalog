@@ -154,7 +154,9 @@ Settings has a Backups section (manual "Back Up Now" plus an optional
 schedule, with retention) that snapshots just the database, and a Restore
 button for it. Point `BACKUP_SYNC_PATH` somewhere genuinely independent of
 `./data` — a different disk or share — so a backup isn't wiped out by the
-same event that could reset `./data`.
+same event that could reset `./data`. Backups hold only the database, not the
+cached cover/poster images, so after a restore use **Settings > General >
+Refetch All Images** to download them all again.
 
 The same Settings section also has a Library Export: "Export to Text" writes
 one plain-text file (a section per media type, sorted alphabetically) for

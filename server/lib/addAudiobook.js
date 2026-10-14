@@ -143,7 +143,13 @@ async function rematchAudiobook(audiobookId, source, externalId) {
   return db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(audiobookId);
 }
 
+// Just the cover's URL for an already-matched audiobook — for "Refetch All
+// Images", which wants the image again without touching any metadata.
+async function fetchCoverUrl(source, externalId) {
+  return (await fetchAndExtract(source, externalId)).coverUrl;
+}
+
 module.exports = {
-  addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook,
+  addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook, fetchCoverUrl,
   extractMetadataFromAudnexus, extractMetadataFromApple, stripHtml,
 };

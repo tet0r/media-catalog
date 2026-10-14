@@ -720,4 +720,11 @@ export const api = {
   startHtmlExport: () => fetch(`${BASE}/exports/html`, { method: 'POST' }).then(handle),
   htmlExportDownloadUrl: (name) => `${BASE}/exports/html/${encodeURIComponent(name)}/download`,
   deleteHtmlExport: (name) => fetch(`${BASE}/exports/html/${encodeURIComponent(name)}`, { method: 'DELETE' }).then(handle),
+  startRefetchImages: (types) =>
+    fetch(`${BASE}/refetch-images`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ types }),
+    }).then(handle),
+  refetchImagesStatus: () => fetch(`${BASE}/refetch-images/status`).then(handle),
 };

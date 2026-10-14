@@ -8,6 +8,30 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.9.0 — Refetch All Images
+- **Settings > General > Refetch All Images (every library)**, and a
+  **Refetch All Images** button in each library's own settings page
+  (under a new "Images" heading): re-downloads every cover/poster/backdrop
+  from the source each item was matched to — TMDB, TheTVDB, Audible/Apple
+  Books, ComicVine/Metron/GCD, Open Library, MusicBrainz/Last.fm, Discogs —
+  and, for Games, re-copies them from the LaunchBox folder.
+- Exists mainly for **recovering after a restore**: a database backup holds
+  only the database, not the cached image files, so a restored library comes
+  back with every cover missing. This puts them back (settings such as API
+  keys come back with the database, so it works straight away).
+- Unlike "Refresh All Metadata" (which leaves images alone), this
+  **replaces every image, including ones you picked or uploaded yourself** —
+  the confirmation says so. Pictures chosen for author/series/artist/
+  platform/store groups and Movies collections are never touched.
+- Safe by construction: a new image is only swapped in once it's been
+  fetched and checked to be a real image, so anything whose source can't be
+  reached, returns an error page, or has no image keeps what it has (and
+  the run reports how many failed so they can be retried). Replaced files
+  nothing else uses are deleted rather than left behind.
+- One run at a time, in the background with live progress. A missing
+  setting (no TMDB key, no Discogs login, no LaunchBox folder) stops that
+  library with an explanation instead of failing every item.
+
 ## v1.8.0 — Windows desktop app (installer and portable)
 - **A real Windows app**, built with Electron in the new `desktop/` folder:
   the same engine and UI the Docker image runs, in its own window. Two
