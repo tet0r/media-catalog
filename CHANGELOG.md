@@ -13,6 +13,10 @@ versioned separately.
   collections (the automatic ones like "Star Wars Collection") from TMDB; before,
   only the movies' own posters and backdrops were refreshed. Collections you
   created yourself have no source to refetch from and are left alone.
+- The **Collections** tab now has its own **Refetch Posters** button that refreshes
+  only the collection posters.
+- Fixed: the Select / Merge buttons never appeared on the Collections tab (the
+  toolbar slot they render into only existed on the Movies tab).
 
 ## v1.11.1 — Gentler on Audible and Apple Books
 - Fixed: running **Refetch All Images** over a large audiobook library could

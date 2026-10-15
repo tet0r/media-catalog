@@ -328,6 +328,7 @@ export default function App() {
                 <div id="bulk-actions-slot" />
               </>
             )}
+            {onMoviesCollections && <div id="bulk-actions-slot" />}
           </div>
         )}
         {onAudiobooksLibrary && (
