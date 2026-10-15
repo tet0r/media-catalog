@@ -1175,7 +1175,7 @@ It can take a while for a big library.`
 
       <h3>Images</h3>
       <p className="muted">
-        Re-downloads every movie's poster and backdrop from TMDB. Handy if images are missing — a restored database backup, for example, doesn't include them. Replaces any picture you chose yourself.
+        Re-downloads every movie's poster and backdrop, and the posters of your franchise collections (Star Wars Collection, ...), from TMDB. Collections you made yourself aren't touched. Handy if images are missing — a restored database backup, for example, doesn't include them. Replaces any picture you chose yourself.
       </p>
       {refetchControls(['movies'])}
 

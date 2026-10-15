@@ -70,6 +70,23 @@ const DEFS = {
     },
   },
 
+  // Franchise collections ("Star Wars Collection", ...) take their poster
+  // from TMDB. Manual collections have no source — they're the auto-collage
+  // or a picture the user chose — so they're left alone. Runs whenever
+  // Movies does (see startRefetch).
+  collections: {
+    label: 'Movie collections',
+    table: 'collections',
+    delayMs: 300,
+    rows: () => db.prepare("SELECT id, tmdb_collection_id FROM collections WHERE type = 'franchise' AND tmdb_collection_id IS NOT NULL").all(),
+    async refetch(row) {
+      const details = await tmdb.getCollectionDetails(db, row.tmdb_collection_id);
+      if (!details.poster_path) return null;
+      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true });
+      return poster ? { poster_file: poster } : null;
+    },
+  },
+
   tv: {
     label: 'TV Shows',
     table: 'tv_shows',
@@ -189,7 +206,7 @@ const DEFS = {
   },
 };
 
-const TYPE_ORDER = ['movies', 'tv', 'audiobooks', 'comics', 'ebooks', 'albums', 'vinyl', 'games'];
+const TYPE_ORDER = ['movies', 'collections', 'tv', 'audiobooks', 'comics', 'ebooks', 'albums', 'vinyl', 'games'];
 
 // ---- orphan cleanup ---------------------------------------------------
 // When an item's image moves to a differently-named file (the source's URL
@@ -326,7 +343,9 @@ async function runRefetch(types) {
 
 function startRefetch(requested) {
   if (status.running) return false;
-  const types = TYPE_ORDER.filter((t) => requested.includes(t));
+  // Movie collection posters come with the movies — one button for both.
+  const wanted = requested.includes('movies') ? [...requested, 'collections'] : requested;
+  const types = TYPE_ORDER.filter((t) => wanted.includes(t));
   if (!types.length) throw new Error('No valid media types given');
   runRefetch(types);
   return true;

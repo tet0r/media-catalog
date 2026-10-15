@@ -54,6 +54,16 @@ async function getMovieDetails(db, tmdbId) {
   return res.json();
 }
 
+async function getCollectionDetails(db, collectionId) {
+  const apiKey = getApiKey(db);
+  if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
+  const url = new URL(`${BASE}/collection/${collectionId}`);
+  url.searchParams.set('api_key', apiKey);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TMDB collection details failed: ${res.status}`);
+  return res.json();
+}
+
 async function findByImdbId(db, imdbId) {
   const apiKey = getApiKey(db);
   if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
@@ -75,4 +85,4 @@ async function getMovieImages(db, tmdbId) {
   return res.json();
 }
 
-module.exports = { searchMovies, searchCollections, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };
+module.exports = { searchMovies, searchCollections, getCollectionDetails, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };

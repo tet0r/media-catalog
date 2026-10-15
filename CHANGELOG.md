@@ -8,6 +8,12 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.11.2 — Refresh movie collection posters
+- **Refetch All Images** for Movies now also re-downloads the posters of franchise
+  collections (the automatic ones like "Star Wars Collection") from TMDB; before,
+  only the movies' own posters and backdrops were refreshed. Collections you
+  created yourself have no source to refetch from and are left alone.
+
 ## v1.11.1 — Gentler on Audible and Apple Books
 - Fixed: running **Refetch All Images** over a large audiobook library could
   get your connection rate-limited or blocked by Audnexus/Apple, after which
