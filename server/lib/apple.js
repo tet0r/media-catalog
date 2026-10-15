@@ -55,4 +55,20 @@ async function getAudiobookById(id) {
   return result;
 }
 
-module.exports = { searchAudiobooks, getAudiobookById, cleanCollectionName, upsizeArtwork };
+// One request for many ids — the lookup endpoint takes a comma-separated
+// list, which is how a bulk job should talk to a rate-limited API. Returns a
+// Map of collectionId (string) -> raw result; ids Apple doesn't know are
+// simply absent.
+async function getAudiobooksByIds(ids) {
+  const out = new Map();
+  if (!ids.length) return out;
+  const url = new URL(LOOKUP_BASE);
+  url.searchParams.set('id', ids.join(','));
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Apple Books lookup failed: ${res.status}`);
+  const data = await res.json();
+  for (const r of data.results || []) out.set(String(r.collectionId), r);
+  return out;
+}
+
+module.exports = { searchAudiobooks, getAudiobookById, getAudiobooksByIds, cleanCollectionName, upsizeArtwork };

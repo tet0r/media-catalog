@@ -18,6 +18,9 @@ async function runBulkRefresh() {
       status.failed++;
     }
     status.message = `Refreshed ${status.done + status.failed} of ${status.total}...`;
+    // Paced: Apple's lookup API allows only ~20 requests a minute, and getting
+    // an IP throttled breaks searching and adding for everyone on it.
+    await new Promise((resolve) => setTimeout(resolve, book.metadata_source === 'apple' ? 3500 : 300));
   }
 
   status.running = false;

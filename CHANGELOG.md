@@ -8,6 +8,18 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.11.1 — Gentler on Audible and Apple Books
+- Fixed: running **Refetch All Images** over a large audiobook library could
+  get your connection rate-limited or blocked by Audnexus/Apple, after which
+  Audible and Apple Books lookups (searching, adding, rematching) failed for a
+  while. The job fired requests back-to-back with no pause.
+- Refetch All Images is now paced per source, retries a rate-limited request
+  after a growing wait, and stops a type after 5 failures in a row with the
+  last error shown, instead of running on against a service that's refusing.
+- Apple-matched audiobooks are looked up in batches (one request per 100
+  books instead of one per book).
+- "Refresh All Metadata" for audiobooks is paced the same way.
+
 ## v1.11.0 — Image backups
 - **Settings > Backups > Image Backups**: a plain folder copy of the cached
   cover/poster images, in `BACKUP_DIR/images/` beside the database backups.

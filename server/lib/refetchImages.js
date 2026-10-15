@@ -7,6 +7,7 @@ const openlibrary = require('./openlibrary');
 const comicSources = require('./comicSources');
 const discogs = require('./discogs');
 const launchbox = require('./launchboxLibrary');
+const apple = require('./apple');
 const { getLaunchboxDir } = require('./libraryPaths');
 const { fetchCoverUrl: fetchAudiobookCoverUrl } = require('./addAudiobook');
 const { fetchCoverUrl: fetchAlbumCoverUrl } = require('./addAlbum');
@@ -36,6 +37,18 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 class FatalForType extends Error {}
 
+// A bulk job that hammers a free API gets the user's IP throttled or blocked
+// — which then breaks everything else that uses that API (searching, adding,
+// rescanning) for a while. So every type is paced, a rate-limited-looking
+// failure is retried after a growing wait, and a run of consecutive failures
+// stops the type instead of carrying on against a service that's saying no.
+const DEFAULT_DELAY_MS = 300;
+const RETRY_WAITS_MS = [5000, 20000, 60000];
+const MAX_CONSECUTIVE_FAILURES = 5;
+const looksRateLimited = (err) => /\b(429|403|5\d\d)\b|rate.?limit|too many|timed? ?out|ECONNRESET|fetch failed/i.test(err.message || '');
+// Test hook: scale all waits down.
+const waitScale = () => Number(process.env.REFETCH_WAIT_SCALE ?? 1);
+
 // ---- per-type definitions ----------------------------------------------
 // rows(ctx): the items to process. refetch(row, ctx): resolves to
 // { column: newFilename } for each image column it successfully refetched
@@ -44,6 +57,7 @@ const DEFS = {
   movies: {
     label: 'Movies',
     table: 'movies',
+    delayMs: 300, // TMDB allows far more; this is just politeness
     rows: () => db.prepare('SELECT id, tmdb_id FROM movies WHERE tmdb_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await tmdb.getMovieDetails(db, row.tmdb_id);
@@ -76,9 +90,24 @@ const DEFS = {
   audiobooks: {
     label: 'Audiobooks',
     table: 'audiobooks',
-    rows: () => db.prepare('SELECT id, asin, metadata_source FROM audiobooks WHERE asin IS NOT NULL').all(),
-    async refetch(row) {
-      const url = await fetchAudiobookCoverUrl(row.metadata_source || 'audible', row.asin);
+    // Audnexus allows 300 requests/minute; Apple's lookup is far stricter
+    // (~20/minute), so Apple-matched books are looked up in batches up front
+    // — one request per 100 books — and only the image downloads remain.
+    delayMs: 300,
+    async rows(ctx) {
+      const rows = db.prepare('SELECT id, asin, metadata_source FROM audiobooks WHERE asin IS NOT NULL').all();
+      const appleIds = rows.filter((r) => r.metadata_source === 'apple').map((r) => r.asin);
+      ctx.appleCovers = new Map();
+      for (let i = 0; i < appleIds.length; i += 100) {
+        if (i) await sleep(3500 * waitScale());
+        const found = await withRetry(() => apple.getAudiobooksByIds(appleIds.slice(i, i + 100)));
+        for (const [id, result] of found) ctx.appleCovers.set(id, apple.upsizeArtwork(result.artworkUrl100));
+      }
+      return rows;
+    },
+    async refetch(row, ctx) {
+      const source = row.metadata_source || 'audible';
+      const url = source === 'apple' ? ctx.appleCovers.get(String(row.asin)) : await fetchAudiobookCoverUrl(source, row.asin);
       return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true }) } : null;
     },
   },
@@ -86,6 +115,7 @@ const DEFS = {
   comics: {
     label: 'Comics',
     table: 'comics',
+    delayMs: 1000, // ComicVine rate-limits aggressively
     rows: () => db.prepare('SELECT id, external_id, metadata_source FROM comics WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await comicSources.getIssueDetails(db, row.metadata_source || 'comicvine', row.external_id);
@@ -96,6 +126,7 @@ const DEFS = {
   ebooks: {
     label: 'Ebooks',
     table: 'ebooks',
+    delayMs: 500,
     rows: () => db.prepare('SELECT id, external_id FROM ebooks WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await openlibrary.getBookByKey(row.external_id);
@@ -106,6 +137,7 @@ const DEFS = {
   albums: {
     label: 'Digital',
     table: 'albums',
+    delayMs: 1100, // MusicBrainz asks for at most ~1 request per second
     rows: () => db.prepare('SELECT id, external_id, metadata_source FROM albums WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const url = await fetchAlbumCoverUrl(row.metadata_source || 'musicbrainz', row.external_id);
@@ -119,6 +151,7 @@ const DEFS = {
   vinyl: {
     label: 'Vinyl',
     table: 'vinyl_records',
+    delayMs: 500,
     async rows(ctx) {
       const username = discogs.getUsername(db);
       const token = discogs.getApiKey(db);
@@ -141,6 +174,7 @@ const DEFS = {
   games: {
     label: 'Games',
     table: 'games',
+    delayMs: 0, // local files only
     rows(ctx) {
       const dir = getLaunchboxDir();
       if (!dir) throw new FatalForType('LaunchBox folder not configured. Choose it in Settings (Games).');
@@ -187,6 +221,17 @@ function removeIfUnreferenced(file) {
   }
 }
 
+async function withRetry(fn) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt >= RETRY_WAITS_MS.length || !looksRateLimited(err)) throw err;
+      await sleep(RETRY_WAITS_MS[attempt] * waitScale());
+    }
+  }
+}
+
 // ---- runner ------------------------------------------------------------
 // In-memory, like the bulk metadata refreshes: an occasional maintenance
 // action, safe to simply re-run if the app restarts partway.
@@ -216,10 +261,14 @@ async function runType(type, ctx, summary) {
   status.message = progressMessage();
 
   let aborted = null;
+  let consecutiveFailures = 0;
+  const delayMs = def.delayMs ?? DEFAULT_DELAY_MS;
+  status.lastError = null;
 
   for (const row of rows) {
     try {
-      const updates = await def.refetch(row, ctx);
+      const updates = await withRetry(() => def.refetch(row, ctx));
+      consecutiveFailures = 0;
       const entries = Object.entries(updates || {}).filter(([, file]) => file);
       if (!entries.length) {
         status.skipped++;
@@ -241,16 +290,24 @@ async function runType(type, ctx, summary) {
         break;
       }
       status.failed++;
+      status.lastError = err.message;
+      if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        aborted = `stopped after ${MAX_CONSECUTIVE_FAILURES} failures in a row (last error: ${err.message}). The source may be rate-limiting or blocking requests — wait a while and run it again. Items already done are kept.`;
+        break;
+      }
     }
     status.message = progressMessage();
-    // Yield so a long run of purely local work (Games) can't starve requests.
-    await new Promise((resolve) => setImmediate(resolve));
+    // Pace requests, and yield so a long run of purely local work (Games)
+    // can't starve other requests.
+    if (delayMs) await sleep(delayMs * waitScale());
+    else await new Promise((resolve) => setImmediate(resolve));
   }
 
   const parts = [`${status.done} refetched`];
   if (status.skipped) parts.push(`${status.skipped} skipped (no image at the source)`);
   if (status.failed) parts.push(`${status.failed} failed — their existing images were kept, run it again to retry`);
-  summary.push(`${def.label}: ${aborted ? aborted : parts.join(', ')}`);
+  if (status.lastError && !aborted && status.failed) parts.push(`last error: ${status.lastError}`);
+  summary.push(`${def.label}: ${aborted ? `${status.done} refetched, ${aborted}` : parts.join(', ')}`);
 }
 
 async function runRefetch(types) {
