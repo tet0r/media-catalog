@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import MovieCard from './MovieCard.jsx';
 import SortMenu from './SortMenu.jsx';
 import ImagePicker from './ImagePicker.jsx';
+import CollectionSuggestions from './CollectionSuggestions.jsx';
 
 const TYPE_BLURB = {
   franchise: 'Franchise collection — membership follows TMDB automatically, and you can also add other movies to it by hand below.',
@@ -244,6 +245,8 @@ export default function CollectionDetailModal({ id, onClose }) {
               </>
             )}
             <p className="count">{collection.movies.length} movie{collection.movies.length === 1 ? '' : 's'}</p>
+
+            <CollectionSuggestions collectionId={id} onAdded={setCollection} />
 
             <div className="pending-item" style={{ marginTop: 20 }}>
               <strong>Add Movies</strong>

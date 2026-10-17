@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../db');
 const { getMemberMovies } = require('../lib/collections');
+const { getSuggestions } = require('../lib/collectionSuggestions');
 const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
 const tmdb = require('../lib/tmdb');
 const wikipedia = require('../lib/wikipedia');
@@ -83,6 +84,7 @@ router.post('/merge', (req, res) => {
       if (!source) continue;
       for (const movie of getMemberMovies(source)) insertMovie.run(targetId, movie.id);
       db.prepare('DELETE FROM collection_movies WHERE collection_id = ?').run(id);
+      db.prepare('DELETE FROM collection_suggestion_skips WHERE collection_id = ?').run(id);
       db.prepare('DELETE FROM collections WHERE id = ?').run(id);
     }
     db.prepare('UPDATE collections SET name = ? WHERE id = ?').run(targetName.trim(), targetId);
@@ -180,6 +182,7 @@ router.put('/:id', (req, res) => {
 // still matches it next time metadata syncs).
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM collection_movies WHERE collection_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM collection_suggestion_skips WHERE collection_id = ?').run(req.params.id);
   db.prepare('DELETE FROM collections WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
@@ -197,6 +200,34 @@ router.post('/:id/movies', (req, res) => {
   if (!movie) return res.status(404).json({ error: 'Movie not found' });
   db.prepare('INSERT OR IGNORE INTO collection_movies (collection_id, movie_id) VALUES (?, ?)').run(row.id, movie_id);
   res.status(201).json(rowToCollection(row, { includeAllMovies: true }));
+});
+
+// Movies that look like they belong here: ones already in the library but
+// not yet in the collection, and ones TMDB lists in the same franchise that
+// aren't in the library at all. See lib/collectionSuggestions.js.
+router.get('/:id/suggestions', async (req, res) => {
+  const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  try {
+    res.json(await getSuggestions(row));
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+router.post('/:id/suggestions/skip', (req, res) => {
+  const row = db.prepare('SELECT id FROM collections WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  const tmdbId = Number(req.body && req.body.tmdb_id);
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) return res.status(400).json({ error: 'tmdb_id is required' });
+  db.prepare('INSERT OR IGNORE INTO collection_suggestion_skips (collection_id, tmdb_id) VALUES (?, ?)').run(row.id, tmdbId);
+  res.status(204).end();
+});
+
+// Brings every skipped suggestion for this collection back.
+router.delete('/:id/suggestions/skips', (req, res) => {
+  db.prepare('DELETE FROM collection_suggestion_skips WHERE collection_id = ?').run(req.params.id);
+  res.status(204).end();
 });
 
 // Only ever removes a manual addition (collection_movies) — a movie TMDB

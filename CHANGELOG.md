@@ -8,6 +8,19 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.12.0 — Suggested movies for collections
+- A collection's pop-over now has a **Suggested Movies** section with a dropdown
+  to switch between two lists, worked out from TMDB's franchise data:
+  - **In your library** — movies you own that look like they belong but aren't in
+    the collection yet, each with **Add Now** and **Skip**.
+  - **Not in your library** — movies TMDB lists in the same franchise that you
+    don't own, with **Skip**.
+- **Skip** takes a movie off that collection's suggestions for good (a "N skipped"
+  line with "Show skipped again" brings them back).
+- Franchise collections use their own TMDB collection. Hand-made collections use
+  the TMDB collection(s) their movies already belong to, or — if none do — the
+  TMDB collection whose name matches the collection's name.
+
 ## v1.11.3 — Collection movie search says what it found
 - Fixed: in a collection's **Add Movies** box, a search with no usable results
   (nothing in your library matched, or every match was already in the collection)

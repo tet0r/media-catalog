@@ -80,6 +80,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ movie_id: movieId }),
     }).then(handle),
+  getCollectionSuggestions: (id) => fetch(`${BASE}/collections/${id}/suggestions`).then(handle),
+  skipCollectionSuggestion: (id, tmdbId) =>
+    fetch(`${BASE}/collections/${id}/suggestions/skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tmdb_id: tmdbId }),
+    }).then(handle),
+  clearCollectionSuggestionSkips: (id) => fetch(`${BASE}/collections/${id}/suggestions/skips`, { method: 'DELETE' }).then(handle),
   removeMovieFromCollection: (id, movieId) =>
     fetch(`${BASE}/collections/${id}/movies/${movieId}`, { method: 'DELETE' }).then(handle),
   searchCollectionImages: (q, source) =>

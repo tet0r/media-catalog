@@ -54,6 +54,21 @@ async function getMovieDetails(db, tmdbId) {
   return res.json();
 }
 
+// The single best TMDB collection for a name, or null. Used to work out
+// what a hand-made collection is "about" when none of its movies belong to
+// a TMDB collection yet.
+async function findCollectionByName(db, name) {
+  const apiKey = getApiKey(db);
+  if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
+  const url = new URL(`${BASE}/search/collection`);
+  url.searchParams.set('api_key', apiKey);
+  url.searchParams.set('query', name);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
+  const data = await res.json();
+  return (data.results || [])[0] || null;
+}
+
 async function getCollectionDetails(db, collectionId) {
   const apiKey = getApiKey(db);
   if (!apiKey) throw new Error('TMDB API key not configured. Add it in Settings.');
@@ -85,4 +100,4 @@ async function getMovieImages(db, tmdbId) {
   return res.json();
 }
 
-module.exports = { searchMovies, searchCollections, getCollectionDetails, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };
+module.exports = { searchMovies, searchCollections, findCollectionByName, getCollectionDetails, getMovieDetails, getMovieImages, findByImdbId, getApiKey, IMG_BASE };

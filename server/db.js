@@ -564,6 +564,15 @@ CREATE TABLE IF NOT EXISTS collection_movies (
   PRIMARY KEY (collection_id, movie_id)
 );
 
+-- Movies the user dismissed from a collection's suggestions (keyed by TMDB
+-- movie id, since a suggestion may be for a movie that isn't in the library
+-- and so has no row of its own) — see lib/collectionSuggestions.js.
+CREATE TABLE IF NOT EXISTS collection_suggestion_skips (
+  collection_id INTEGER NOT NULL,
+  tmdb_id INTEGER NOT NULL,
+  PRIMARY KEY (collection_id, tmdb_id)
+);
+
 -- A custom picture for a "group by author/series" card (see
 -- client/src/components/GroupCard.jsx and lib/groupImages.js) — unlike
 -- collections, an author/series isn't its own entity with an id; it's
