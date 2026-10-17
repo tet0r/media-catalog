@@ -32,6 +32,10 @@ export default function CollectionDetailModal({ id, onClose }) {
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  // What the last search found, so an empty result can say why instead of
+  // just showing nothing: { query, matched } — matched is how many library
+  // movies fit, including ones already in this collection.
+  const [searched, setSearched] = useState(null);
   const [searching, setSearching] = useState(false);
   const [addingId, setAddingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
@@ -75,6 +79,7 @@ export default function CollectionDetailModal({ id, onClose }) {
       const r = await api.listMovies({ q: query });
       const memberIds = new Set(collection.movies.map((m) => m.id));
       setResults(r.filter((m) => !memberIds.has(m.id)));
+      setSearched({ query: query.trim(), matched: r.length });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -89,6 +94,7 @@ export default function CollectionDetailModal({ id, onClose }) {
       const updated = await api.addMovieToCollection(id, movieId);
       setCollection(updated);
       setResults((prev) => prev.filter((m) => m.id !== movieId));
+      setSearched((prev) => prev && { ...prev, matched: Math.max(prev.matched, 1) });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -245,6 +251,15 @@ export default function CollectionDetailModal({ id, onClose }) {
                 <input placeholder="Search your movie library..." value={query} onChange={(e) => setQuery(e.target.value)} />
                 <button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</button>
               </form>
+              {searched && results.length === 0 && (
+                <p className="muted" style={{ marginTop: 10 }}>
+                  {searched.matched === 0
+                    ? `No movies in your library match "${searched.query}". This searches movies you already have — add a new one from Add Movie first.`
+                    : searched.query
+                      ? `Every movie matching "${searched.query}" is already in this collection.`
+                      : 'Every movie in your library is already in this collection.'}
+                </p>
+              )}
               {results.length > 0 && (
                 <div className="candidates">
                   {results.map((m) => (

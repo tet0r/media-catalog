@@ -8,6 +8,11 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.11.3 — Collection movie search says what it found
+- Fixed: in a collection's **Add Movies** box, a search with no usable results
+  (nothing in your library matched, or every match was already in the collection)
+  just flashed and showed nothing. It now says which it was.
+
 ## v1.11.2 — Refresh movie collection posters
 - **Refetch All Images** for Movies now also re-downloads the posters of franchise
   collections (the automatic ones like "Star Wars Collection") from TMDB; before,
