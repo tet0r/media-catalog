@@ -75,6 +75,8 @@ router.get('/', (req, res) => {
     // null (never chosen) rather than a default, so the client keeps whatever
     // it already shows — see client/src/theme.js's initTheme.
     ui_theme: ['system', 'light', 'dark'].includes(map.ui_theme) ? map.ui_theme : null,
+    steamgriddb_api_key: map.steamgriddb_api_key || '',
+    steamgriddb_api_key_source: map.steamgriddb_api_key ? 'settings' : (process.env.STEAMGRIDDB_API_KEY ? 'env' : 'none'),
     tvdb_api_key: map.tvdb_api_key || '',
     tvdb_api_key_source: map.tvdb_api_key ? 'settings' : (process.env.TVDB_API_KEY ? 'env' : 'none'),
     tvdb_pin: map.tvdb_pin || '',
@@ -114,7 +116,7 @@ router.put('/', (req, res) => {
     album_auto_scan_enabled, album_auto_scan_interval_minutes, album_auto_prune_missing,
     discogs_username, discogs_token, vinyl_auto_sync_enabled, vinyl_auto_sync_interval_minutes,
     lastfm_api_key, games_auto_sync_enabled, games_auto_sync_interval_minutes,
-    tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
+    steamgriddb_api_key, tvdb_api_key, tvdb_pin, tv_auto_scan_enabled, tv_auto_scan_interval_minutes, tv_auto_prune_missing,
     sidebar_hidden, backup_auto_enabled, backup_auto_interval_minutes, backup_retention_count,
     library_dirs, launchbox_dir, ui_theme, image_backup_auto_enabled, image_backup_auto_interval_minutes,
   } = req.body;
@@ -144,6 +146,7 @@ router.put('/', (req, res) => {
   if (typeof lastfm_api_key === 'string') upsert('lastfm_api_key', lastfm_api_key);
   if (typeof games_auto_sync_enabled === 'boolean') upsert('games_auto_sync_enabled', games_auto_sync_enabled ? 'true' : 'false');
   upsertInterval('games_auto_sync_interval_minutes', games_auto_sync_interval_minutes);
+  if (typeof steamgriddb_api_key === 'string') upsert('steamgriddb_api_key', steamgriddb_api_key);
   if (typeof tvdb_api_key === 'string') upsert('tvdb_api_key', tvdb_api_key);
   if (typeof tvdb_pin === 'string') upsert('tvdb_pin', tvdb_pin);
   if (typeof tv_auto_scan_enabled === 'boolean') upsert('tv_auto_scan_enabled', tv_auto_scan_enabled ? 'true' : 'false');

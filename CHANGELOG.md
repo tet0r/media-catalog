@@ -8,6 +8,15 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.13.0 — Choose game covers
+- A game's page now works like a movie's for covers: click the cover (or **Change
+  Cover...**) to open a picker that pulls options from a source, or **Upload Image...**
+  to use your own file.
+- Sources: **Steam** (the store's own art — no setup, but only games sold on Steam)
+  and **SteamGridDB** (community cover art for games on any platform or store; needs
+  a free API key, entered under Settings > Games > Cover art search).
+- Picking a cover downloads it into your library, so it survives the source going away.
+
 ## v1.12.0 — Suggested movies for collections
 - A collection's pop-over now has a **Suggested Movies** section with a dropdown
   to switch between two lists, worked out from TMDB's franchise data:

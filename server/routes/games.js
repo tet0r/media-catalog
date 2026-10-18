@@ -7,6 +7,8 @@ const { runSync } = require('../lib/gamesSync');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
 const wikipedia = require('../lib/wikipedia');
+const steam = require('../lib/steam');
+const steamgriddb = require('../lib/steamgriddb');
 
 const router = express.Router();
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -154,6 +156,27 @@ router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM games WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
   res.json(rowToGame(row));
+});
+
+// Cover choices for the picker on a game's page, one source per request (the
+// picker loads each tab lazily): Steam's store art (no key) or SteamGridDB
+// (free key, every platform/store). Wikipedia was tried and dropped — its
+// page images for games are publisher/franchise photos, not box art.
+router.get('/:id/search-images', async (req, res) => {
+  const row = db.prepare('SELECT title FROM games WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  try {
+    switch (req.query.source) {
+      case 'steam':
+        return res.json(await steam.searchCovers(row.title));
+      case 'steamgriddb':
+        return res.json(await steamgriddb.searchCovers(db, row.title));
+      default:
+        return res.status(400).json({ error: 'source must be steam or steamgriddb' });
+    }
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 router.put('/:id/cover', async (req, res) => {

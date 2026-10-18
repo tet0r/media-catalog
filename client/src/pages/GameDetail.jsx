@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import ImagePicker from '../components/ImagePicker.jsx';
 
 export default function GameDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [game, setGame] = useState(null);
   const [error, setError] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     api.getGame(id).then(setGame).catch((err) => setError(err.message));
@@ -23,20 +23,9 @@ export default function GameDetail() {
     navigate('/games');
   }
 
-  async function handleCoverFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      setGame(await api.uploadGameCover(id, file));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setUploading(false);
-    }
-  }
+  // Both throw on failure so the picker can show the error and stay open.
+  const applyCover = async (url) => setGame(await api.setGameCover(id, url));
+  const uploadCover = async (file) => setGame(await api.uploadGameCover(id, file));
 
   const year = game.release_date ? new Date(game.release_date).getFullYear() : null;
 
@@ -49,21 +38,14 @@ export default function GameDetail() {
               src={game.cover_url}
               alt={game.title}
               className="cover clickable"
-              title="Click to upload a different cover"
-              onClick={() => fileInputRef.current?.click()}
+              title="Click to choose a different cover"
+              onClick={() => setPickerOpen(true)}
             />
           ) : (
-            <div className="no-poster large cover clickable" onClick={() => fileInputRef.current?.click()}>{game.title}</div>
+            <div className="no-poster large cover clickable" onClick={() => setPickerOpen(true)}>{game.title}</div>
           )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleCoverFile}
-          />
-          <button type="button" className="muted-btn cover-upload-btn" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-            {uploading ? 'Uploading...' : 'Upload Cover...'}
+          <button type="button" className="muted-btn cover-upload-btn" onClick={() => setPickerOpen(true)}>
+            Change Cover...
           </button>
         </div>
         <div className="detail-info">
@@ -90,6 +72,29 @@ export default function GameDetail() {
           {error && <p className="error">{error}</p>}
         </div>
       </div>
+
+      {pickerOpen && (
+        <ImagePicker
+          title="Choose a Cover"
+          tabs={[
+            {
+              key: 'steam',
+              label: 'Steam',
+              sourceLabel: "Via Steam's store art — only finds games sold on Steam.",
+              fetchOptions: () => api.searchGameCovers(id, 'steam'),
+            },
+            {
+              key: 'steamgriddb',
+              label: 'SteamGridDB',
+              sourceLabel: 'Via SteamGridDB — community cover art for games on any platform or store. Needs a free API key (Settings > Games).',
+              fetchOptions: () => api.searchGameCovers(id, 'steamgriddb'),
+            },
+          ]}
+          onSelect={applyCover}
+          onUpload={uploadCover}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -146,6 +146,8 @@ export default function Settings() {
   const [launchboxSource, setLaunchboxSource] = useState('default');
   const [dirsDirty, setDirsDirty] = useState({});
   const [themeMode, setThemeModeState] = useState(getThemeMode());
+  const [steamgriddbKey, setSteamgriddbKey] = useState('');
+  const [steamgriddbSource, setSteamgriddbSource] = useState('none');
   const [tvdbKey, setTvdbKey] = useState('');
   const [tvdbSource, setTvdbSource] = useState('none');
   const [tvdbPin, setTvdbPin] = useState('');
@@ -231,6 +233,8 @@ export default function Settings() {
         setLaunchboxDir(s.launchbox_dir?.dir ? [s.launchbox_dir.dir] : []);
         setLaunchboxSource(s.launchbox_dir?.source || 'default');
         setDirsDirty({});
+        setSteamgriddbKey(s.steamgriddb_api_key || '');
+        setSteamgriddbSource(s.steamgriddb_api_key_source || 'none');
         setTvdbKey(s.tvdb_api_key || '');
         setTvdbSource(s.tvdb_api_key_source);
         setTvdbPin(s.tvdb_pin || '');
@@ -789,6 +793,7 @@ It can take a while for a big library.`
         vinyl_auto_sync_interval_minutes: vinylAutoSyncInterval,
         games_auto_sync_enabled: gamesAutoSyncEnabled,
         games_auto_sync_interval_minutes: gamesAutoSyncInterval,
+        steamgriddb_api_key: steamgriddbKey,
         tvdb_api_key: tvdbKey,
         tvdb_pin: tvdbPin,
         tv_auto_scan_enabled: tvAutoScanEnabled,
@@ -1594,6 +1599,32 @@ It can take a while for a big library.`
         <span className="auto-scan-label">Automatically sync with LaunchBox</span>
         <IntervalSelect value={gamesAutoSyncInterval} onChange={setGamesAutoSyncInterval} disabled={!gamesAutoSyncEnabled} />
       </div>
+
+      <h3>Cover art search</h3>
+      <p className="muted">
+        On a game's page, click its cover to search for a different one, or upload your own. Steam's
+        store art needs nothing set up but only covers games sold on Steam. For games on any other
+        platform or store, add a free SteamGridDB key.
+      </p>
+      <div className="form-grid">
+        <label>
+          SteamGridDB API Key (optional)
+          <input value={steamgriddbKey} onChange={(e) => setSteamgriddbKey(e.target.value)} placeholder="From your SteamGridDB profile preferences, under API" />
+        </label>
+      </div>
+      <p className="muted">
+        Current source:{' '}
+        {steamgriddbSource === 'env'
+          ? 'environment variable (STEAMGRIDDB_API_KEY)'
+          : steamgriddbSource === 'settings'
+          ? 'saved here'
+          : 'not configured'}
+        . Create a free account at{' '}
+        <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank" rel="noreferrer">
+          steamgriddb.com
+        </a>
+        .
+      </p>
 
       <h3>Images</h3>
       <p className="muted">

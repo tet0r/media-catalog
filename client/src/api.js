@@ -580,6 +580,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_url: imageUrl }),
     }).then(handle),
+  searchGameCovers: (id, source) => fetch(`${BASE}/games/${id}/search-images?source=${source}`).then(handle),
   uploadGameCover: (id, file) =>
     fetch(`${BASE}/games/${id}/cover/upload`, {
       method: 'PUT',
