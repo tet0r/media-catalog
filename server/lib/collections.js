@@ -1,6 +1,6 @@
 const path = require('path');
 const db = require('../db');
-const { cachePoster } = require('./images');
+const { cachePoster, IMAGE_FOLDERS } = require('./images');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -14,7 +14,7 @@ async function syncFranchiseCollection(details) {
   if (!bc) return;
   const existing = db.prepare('SELECT id FROM collections WHERE type = ? AND tmdb_collection_id = ?').get('franchise', bc.id);
   if (existing) return;
-  const posterFile = await cachePoster(DATA_DIR, bc.poster_path);
+  const posterFile = await cachePoster(DATA_DIR, bc.poster_path, { folder: IMAGE_FOLDERS.movieCollection });
   db.prepare('INSERT INTO collections (name, type, tmdb_collection_id, poster_file) VALUES (?, ?, ?, ?)')
     .run(bc.name, 'franchise', bc.id, posterFile);
 }

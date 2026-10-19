@@ -1,7 +1,7 @@
 const db = require('../db');
 const comicSources = require('./comicSources');
 const path = require('path');
-const { cacheImageFromUrl } = require('./images');
+const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -35,7 +35,7 @@ async function fetchCoverFile(coverUrl) {
   // this is non-fatal (a missing cover, not an aborted add) rather than a
   // thrown error.
   try {
-    return await cacheImageFromUrl(DATA_DIR, coverUrl);
+    return await cacheImageFromUrl(DATA_DIR, coverUrl, { folder: IMAGE_FOLDERS.comic });
   } catch {
     return null;
   }

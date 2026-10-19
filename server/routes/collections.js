@@ -4,7 +4,7 @@ const fs = require('fs');
 const db = require('../db');
 const { getMemberMovies } = require('../lib/collections');
 const { getSuggestions } = require('../lib/collectionSuggestions');
-const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
+const { cacheImageFromUrl, cacheImageBuffer, IMAGE_FOLDERS } = require('../lib/images');
 const tmdb = require('../lib/tmdb');
 const wikipedia = require('../lib/wikipedia');
 
@@ -122,7 +122,7 @@ router.put('/:id/cover', async (req, res) => {
     if (!image_url) return res.status(400).json({ error: 'image_url is required' });
     const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
-    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url, { folder: IMAGE_FOLDERS.movieCollection });
     db.prepare('UPDATE collections SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
     res.json(rowToCollection({ ...row, poster_file: filename }, { includeAllMovies: true }));
   } catch (err) {
@@ -143,7 +143,7 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
     const row = db.prepare('SELECT * FROM collections WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
-    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType, { folder: IMAGE_FOLDERS.movieCollection });
     db.prepare('UPDATE collections SET poster_file = ? WHERE id = ?').run(filename, req.params.id);
     res.json(rowToCollection({ ...row, poster_file: filename }, { includeAllMovies: true }));
   } catch (err) {

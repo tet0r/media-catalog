@@ -62,15 +62,22 @@ function copyFile(srcPath, destPath, srcStat) {
   }
 }
 
-function listFiles(dir) {
+// Every image under a folder — images sit in per-type subfolders
+// (Movies/Posters, ...) — as paths relative to it with forward slashes.
+function listFiles(dir, prefix = '') {
+  let entries;
   try {
-    return fs
-      .readdirSync(dir, { withFileTypes: true })
-      .filter((e) => e.isFile() && !e.name.endsWith('.part') && !e.name.includes('.tmp-'))
-      .map((e) => e.name);
+    entries = fs.readdirSync(path.join(dir, ...(prefix ? prefix.split('/') : [])), { withFileTypes: true });
   } catch {
     return [];
   }
+  const files = [];
+  for (const e of entries) {
+    const rel = prefix ? `${prefix}/${e.name}` : e.name;
+    if (e.isDirectory()) files.push(...listFiles(dir, rel));
+    else if (e.isFile() && !e.name.endsWith('.part') && !e.name.includes('.tmp-')) files.push(rel);
+  }
+  return files;
 }
 
 // Shared by backup and restore: copy what's missing from `to`, and — for
@@ -83,14 +90,15 @@ async function syncFolder(from, to, { overwriteChanged, verb }) {
 
   for (let i = 0; i < names.length; i++) {
     const name = names[i];
-    const src = path.join(from, name);
-    const dest = path.join(to, name);
+    const src = path.join(from, ...name.split('/'));
+    const dest = path.join(to, ...name.split('/'));
     try {
       const stat = fs.statSync(src);
       const present = fs.existsSync(dest);
       if (present && (!overwriteChanged || upToDate(stat, dest))) {
         totals.skipped++;
       } else {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
         copyFile(src, dest, stat);
         totals.copied++;
         totals.bytes += stat.size;
@@ -151,7 +159,7 @@ function getImageBackupInfo() {
   let bytes = 0;
   for (const name of names) {
     try {
-      bytes += fs.statSync(path.join(IMAGE_BACKUP_DIR, name)).size;
+      bytes += fs.statSync(path.join(IMAGE_BACKUP_DIR, ...name.split('/'))).size;
     } catch {
       /* vanished mid-walk — fine */
     }

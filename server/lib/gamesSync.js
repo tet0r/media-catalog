@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const launchbox = require('./launchboxLibrary');
-const { cacheImageFromLocalFile } = require('./images');
+const { cacheImageFromLocalFile, IMAGE_FOLDERS } = require('./images');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -79,7 +79,7 @@ async function runSync({ manual = true } = {}) {
         let coverFile = existing?.cover_file || null;
         if (!coverFile && game.cover_path) {
           try {
-            coverFile = cacheImageFromLocalFile(DATA_DIR, game.cover_path);
+            coverFile = cacheImageFromLocalFile(DATA_DIR, game.cover_path, { folder: IMAGE_FOLDERS.game });
           } catch {
             coverFile = null;
           }

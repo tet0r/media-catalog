@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const discogs = require('./discogs');
-const { cacheImageFromUrl } = require('./images');
+const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -87,7 +87,7 @@ async function runSync({ manual = true } = {}) {
         let coverFile = existing?.cover_file || null;
         if (isNew && item.cover_url) {
           try {
-            coverFile = await cacheImageFromUrl(DATA_DIR, item.cover_url);
+            coverFile = await cacheImageFromUrl(DATA_DIR, item.cover_url, { folder: IMAGE_FOLDERS.vinyl });
           } catch {
             coverFile = null;
           }

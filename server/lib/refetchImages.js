@@ -11,7 +11,7 @@ const apple = require('./apple');
 const { getLaunchboxDir } = require('./libraryPaths');
 const { fetchCoverUrl: fetchAudiobookCoverUrl } = require('./addAudiobook');
 const { fetchCoverUrl: fetchAlbumCoverUrl } = require('./addAlbum');
-const { cachePoster, cacheImageFromUrl, cacheImageFromLocalFile } = require('./images');
+const { cachePoster, cacheImageFromUrl, cacheImageFromLocalFile, IMAGE_FOLDERS } = require('./images');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const POSTERS_DIR = path.join(DATA_DIR, 'posters');
@@ -62,9 +62,9 @@ const DEFS = {
     async refetch(row) {
       const details = await tmdb.getMovieDetails(db, row.tmdb_id);
       const out = {};
-      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true });
+      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true, folder: IMAGE_FOLDERS.moviePoster });
       if (poster) out.poster_file = poster;
-      const backdrop = await cachePoster(DATA_DIR, details.backdrop_path, { force: true });
+      const backdrop = await cachePoster(DATA_DIR, details.backdrop_path, { force: true, folder: IMAGE_FOLDERS.movieBackdrop });
       if (backdrop) out.backdrop_file = backdrop;
       return out;
     },
@@ -82,7 +82,7 @@ const DEFS = {
     async refetch(row) {
       const details = await tmdb.getCollectionDetails(db, row.tmdb_collection_id);
       if (!details.poster_path) return null;
-      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true });
+      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true, folder: IMAGE_FOLDERS.movieCollection });
       return poster ? { poster_file: poster } : null;
     },
   },
@@ -94,10 +94,10 @@ const DEFS = {
     async refetch(row) {
       const details = await tvdb.getSeriesDetails(db, row.tvdb_id);
       const out = {};
-      if (details.image) out.poster_file = await cacheImageFromUrl(DATA_DIR, details.image, { force: true });
+      if (details.image) out.poster_file = await cacheImageFromUrl(DATA_DIR, details.image, { force: true, folder: IMAGE_FOLDERS.tvPoster });
       const backdropUrl = await tvdb.getBackdropUrl(db, details).catch(() => null);
       if (backdropUrl) {
-        const backdrop = await cacheImageFromUrl(DATA_DIR, backdropUrl, { force: true }).catch(() => null);
+        const backdrop = await cacheImageFromUrl(DATA_DIR, backdropUrl, { force: true, folder: IMAGE_FOLDERS.tvBackdrop }).catch(() => null);
         if (backdrop) out.backdrop_file = backdrop;
       }
       return out;
@@ -125,7 +125,7 @@ const DEFS = {
     async refetch(row, ctx) {
       const source = row.metadata_source || 'audible';
       const url = source === 'apple' ? ctx.appleCovers.get(String(row.asin)) : await fetchAudiobookCoverUrl(source, row.asin);
-      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true }) } : null;
+      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: IMAGE_FOLDERS.audiobook }) } : null;
     },
   },
 
@@ -136,7 +136,7 @@ const DEFS = {
     rows: () => db.prepare('SELECT id, external_id, metadata_source FROM comics WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await comicSources.getIssueDetails(db, row.metadata_source || 'comicvine', row.external_id);
-      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true }) } : null;
+      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: IMAGE_FOLDERS.comic }) } : null;
     },
   },
 
@@ -147,7 +147,7 @@ const DEFS = {
     rows: () => db.prepare('SELECT id, external_id FROM ebooks WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await openlibrary.getBookByKey(row.external_id);
-      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true }) } : null;
+      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: IMAGE_FOLDERS.ebook }) } : null;
     },
   },
 
@@ -158,7 +158,7 @@ const DEFS = {
     rows: () => db.prepare('SELECT id, external_id, metadata_source FROM albums WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const url = await fetchAlbumCoverUrl(row.metadata_source || 'musicbrainz', row.external_id);
-      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true }) } : null;
+      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: IMAGE_FOLDERS.album }) } : null;
     },
   },
 
@@ -182,7 +182,7 @@ const DEFS = {
     },
     async refetch(row, ctx) {
       const url = ctx.vinylCovers.get(row.discogs_instance_id);
-      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true }) } : null;
+      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: IMAGE_FOLDERS.vinyl }) } : null;
     },
   },
 
@@ -201,7 +201,7 @@ const DEFS = {
     },
     async refetch(row, ctx) {
       const src = ctx.gameCovers.get(row.launchbox_id);
-      return src ? { cover_file: cacheImageFromLocalFile(DATA_DIR, src, { force: true }) } : null;
+      return src ? { cover_file: cacheImageFromLocalFile(DATA_DIR, src, { force: true, folder: IMAGE_FOLDERS.game }) } : null;
     },
   },
 };
@@ -228,11 +228,11 @@ function isReferenced(file) {
 }
 
 function removeIfUnreferenced(file) {
-  if (!file) return;
-  const base = path.basename(file);
-  if (isReferenced(base)) return;
+  // \`file\` is a path relative to the posters folder ('Movies/Posters/x.jpg').
+  if (!file || file.includes('..') || file.includes('\\')) return;
+  if (isReferenced(file)) return;
   try {
-    fs.unlinkSync(path.join(POSTERS_DIR, base));
+    fs.unlinkSync(path.join(POSTERS_DIR, ...file.split('/')));
   } catch {
     /* already gone — fine */
   }

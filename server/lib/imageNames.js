@@ -1,22 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../db');
+const { IMAGE_FOLDERS, groupImageFolder } = require('./images');
 
 // Cached images used to be named by hash (custom-9f2c….jpg) or by TMDB's own
-// random file names, so a posters folder — or an image backup of it — said
-// nothing about what each picture is. This gives every image a name built
-// from the item it belongs to and what kind of image it is:
+// random file names, all in one folder, so a posters folder — or an image
+// backup of it — said nothing about what each picture is. Every image now sits
+// in a folder for its media type and kind of image, under a name built from the
+// item it belongs to:
 //
-//   the-matrix-1999-poster.jpg        the-matrix-1999-backdrop.jpg
-//   project-hail-mary-2021-cover.jpg  pink-floyd-the-wall-cover.jpg
-//   star-wars-collection-poster.jpg   brandon-sanderson-audiobook-author-cover.jpg
+//   Movies/Posters/the-matrix-1999-poster.jpg    Movies/Backdrops/the-matrix-1999-backdrop.jpg
+//   Games/Covers/zelda-ii-the-adventure-of-link-nes-cover.jpg
+//   Audiobooks/Covers/project-hail-mary-2021-cover.jpg   Movies/Collections/star-wars-collection-poster.jpg
 //
-// It's done as a separate pass over the database rather than inside the ~80
-// places that fetch, upload, or copy an image: every one of those still
-// stores whatever name it likes, and this pass then renames the file to its
-// proper name and updates the row — so a new item, an edited title, a freshly
+// New images are written straight into the right folder by lib/images.js
+// (the folder is chosen where the image is fetched, uploaded, or copied). The
+// name comes from the item, so it's put on by a separate pass over the
+// database: it renames the file and updates the row. That same pass also moves
+// anything that's in the wrong place, which is how a library from before the
+// folders existed gets sorted — so a new item, an edited title, a freshly
 // chosen or uploaded picture, and every image that predates this feature all
-// end up named the same way. It runs at startup (the one-time migration), a
+// end up in the same layout. It runs at startup (the one-time migration), a
 // moment after any change made through the API, and every half minute to catch
 // background scans and syncs.
 //
@@ -52,22 +56,24 @@ const BACKUP_UNUSED_MIN_AGE_MS = 60 * 60 * 1000;
 // has hyphens and ends in -poster/-backdrop/-cover, so neither can match.
 const OLD_STYLE_NAME = /^(custom-[0-9a-f]{40}|[A-Za-z0-9]{20,})\.[A-Za-z0-9]+$/;
 
-// table, column, what the image is, the name parts for the item's slug, and
-// the word used in the slug if all the parts are empty.
+// table, column, which folder the image belongs in (a fixed folder, or a
+// function of the row), what the image is, the name parts for the item's slug,
+// and the word used in the slug if all the parts are empty.
 const TARGETS = [
-  { table: 'movies', column: 'poster_file', category: 'poster', fallback: 'movie', parts: (r) => [r.title, r.year] },
-  { table: 'movies', column: 'backdrop_file', category: 'backdrop', fallback: 'movie', parts: (r) => [r.title, r.year] },
-  { table: 'tv_shows', column: 'poster_file', category: 'poster', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
-  { table: 'tv_shows', column: 'backdrop_file', category: 'backdrop', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
-  { table: 'audiobooks', column: 'cover_file', category: 'cover', fallback: 'audiobook', parts: (r) => [r.title, r.year] },
-  { table: 'ebooks', column: 'cover_file', category: 'cover', fallback: 'ebook', parts: (r) => [r.title, r.year] },
-  { table: 'comics', column: 'cover_file', category: 'cover', fallback: 'comic', parts: (r) => [r.series || r.title, r.issue_number, r.year] },
-  { table: 'albums', column: 'cover_file', category: 'cover', fallback: 'album', parts: (r) => [r.artist, r.title] },
-  { table: 'vinyl_records', column: 'cover_file', category: 'cover', fallback: 'vinyl', parts: (r) => [r.artist, r.title, r.year] },
-  { table: 'games', column: 'cover_file', category: 'cover', fallback: 'game', parts: (r) => [r.title, r.platform] },
-  { table: 'collections', column: 'poster_file', category: 'poster', fallback: 'collection', parts: (r) => [r.name], collection: true },
+  { table: 'movies', column: 'poster_file', folder: IMAGE_FOLDERS.moviePoster, category: 'poster', fallback: 'movie', parts: (r) => [r.title, r.year] },
+  { table: 'movies', column: 'backdrop_file', folder: IMAGE_FOLDERS.movieBackdrop, category: 'backdrop', fallback: 'movie', parts: (r) => [r.title, r.year] },
+  { table: 'tv_shows', column: 'poster_file', folder: IMAGE_FOLDERS.tvPoster, category: 'poster', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
+  { table: 'tv_shows', column: 'backdrop_file', folder: IMAGE_FOLDERS.tvBackdrop, category: 'backdrop', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
+  { table: 'audiobooks', column: 'cover_file', folder: IMAGE_FOLDERS.audiobook, category: 'cover', fallback: 'audiobook', parts: (r) => [r.title, r.year] },
+  { table: 'ebooks', column: 'cover_file', folder: IMAGE_FOLDERS.ebook, category: 'cover', fallback: 'ebook', parts: (r) => [r.title, r.year] },
+  { table: 'comics', column: 'cover_file', folder: IMAGE_FOLDERS.comic, category: 'cover', fallback: 'comic', parts: (r) => [r.series || r.title, r.issue_number, r.year] },
+  { table: 'albums', column: 'cover_file', folder: IMAGE_FOLDERS.album, category: 'cover', fallback: 'album', parts: (r) => [r.artist, r.title] },
+  { table: 'vinyl_records', column: 'cover_file', folder: IMAGE_FOLDERS.vinyl, category: 'cover', fallback: 'vinyl', parts: (r) => [r.artist, r.title, r.year] },
+  { table: 'games', column: 'cover_file', folder: IMAGE_FOLDERS.game, category: 'cover', fallback: 'game', parts: (r) => [r.title, r.platform] },
+  { table: 'collections', column: 'poster_file', folder: IMAGE_FOLDERS.movieCollection, category: 'poster', fallback: 'collection', parts: (r) => [r.name], collection: true },
   {
     table: 'group_images', column: 'cover_file', fallback: 'group', parts: (r) => [r.group_key],
+    folder: (r) => groupImageFolder(r.media_type),
     category: (r) => `${String(r.media_type || 'group').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-cover`,
   },
 ];
@@ -93,15 +99,22 @@ function describe(target, row) {
   let category = typeof target.category === 'function' ? target.category(row) : target.category;
   // "star-wars-collection" + "collection-poster" would read twice.
   if (target.collection) category = slug.endsWith('-collection') || slug === 'collection' ? 'poster' : 'collection-poster';
-  return { slug, category };
+  const folder = typeof target.folder === 'function' ? target.folder(row) : target.folder;
+  return { slug, category, folder };
 }
 
 function readRows(target) {
   return db.prepare(`SELECT rowid AS _rid, * FROM ${target.table} WHERE ${target.column} IS NOT NULL AND ${target.column} != ''`).all();
 }
 
-// Works out what each image should be renamed to, without touching anything.
-// Returns [{ target, rid, from, to }].
+// Stored paths are relative to the posters folder with forward slashes
+// ('Movies/Posters/the-matrix-1999-poster.jpg'). Anything that could point
+// outside it is never touched.
+const isSafeRelativePath = (p) => typeof p === 'string' && p !== '' && !p.includes('\\') && !p.startsWith('/') && !p.split('/').some((seg) => seg === '..' || seg === '');
+const fullPath = (postersDir, rel) => path.join(postersDir, ...rel.split('/'));
+
+// Works out where each image should be — its folder, and a name built from the
+// item — without touching anything. Returns [{ target, rid, from, to, shared }].
 function planRenames() {
   const postersDir = POSTERS_DIR();
   if (!fs.existsSync(postersDir)) return [];
@@ -119,17 +132,17 @@ function planRenames() {
   for (const { target, rows } of allRows) {
     for (const row of rows) {
       const from = row[target.column];
-      if (from.includes('/') || from.includes('\\')) continue;
-      const { slug, category } = describe(target, row);
+      if (!isSafeRelativePath(from)) continue;
+      const { slug, category, folder } = describe(target, row);
       const ext = path.extname(from).toLowerCase() || '.jpg';
-      const alreadyNamed = new RegExp(`^${escapeRegExp(slug)}(-\\d+)?-${escapeRegExp(category)}(-\\d+)?${escapeRegExp(ext)}$`);
-      if (alreadyNamed.test(from)) continue;
+      const alreadyThere = new RegExp(`^${escapeRegExp(folder)}/${escapeRegExp(slug)}(-\\d+)?-${escapeRegExp(category)}(-\\d+)?${escapeRegExp(ext)}$`);
+      if (alreadyThere.test(from)) continue;
       // Nothing on disk to rename (e.g. images lost to a wiped data folder) —
       // leave the row alone; Refetch All Images / a restore can fill it in.
-      if (!fs.existsSync(path.join(postersDir, from))) continue;
+      if (!fs.existsSync(fullPath(postersDir, from))) continue;
 
-      const candidates = [`${slug}-${category}${ext}`, `${slug}-${row._rid}-${category}${ext}`];
-      for (let n = 2; n < 50; n++) candidates.push(`${slug}-${row._rid}-${category}-${n}${ext}`);
+      const candidates = [`${folder}/${slug}-${category}${ext}`, `${folder}/${slug}-${row._rid}-${category}${ext}`];
+      for (let n = 2; n < 50; n++) candidates.push(`${folder}/${slug}-${row._rid}-${category}-${n}${ext}`);
       const to = candidates.find((name) => !refs.get(name));
       if (!to) continue;
 
@@ -156,7 +169,7 @@ function sweepPendingDeletes() {
   for (const file of pendingDeletes) {
     pendingDeletes.delete(file);
     try {
-      if (!isReferenced(file)) fs.unlinkSync(path.join(POSTERS_DIR(), file));
+      if (!isReferenced(file)) fs.unlinkSync(fullPath(POSTERS_DIR(), file));
     } catch {
       /* already gone — fine */
     }
@@ -178,8 +191,9 @@ function scheduleDelete(file) {
 // references is a leftover — a custom image replacing the item's old picture
 // lands exactly here — and is overwritten.
 function moveOrCopy(postersDir, op) {
-  const src = path.join(postersDir, op.from);
-  const dest = path.join(postersDir, op.to);
+  const src = fullPath(postersDir, op.from);
+  const dest = fullPath(postersDir, op.to);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
   const old = Date.now() - fs.statSync(src).mtimeMs > OLD_FILE_GRACE_MS;
   if (op.shared || !old) {
     fs.copyFileSync(src, dest);
@@ -206,9 +220,9 @@ async function applyRenames(ops) {
       if (info.changes === 0) {
         // The row changed while this pass was running — put things back.
         if (keepOld) {
-          if (!isReferenced(to)) fs.unlinkSync(path.join(postersDir, to));
-        } else if (!fs.existsSync(path.join(postersDir, from))) {
-          fs.renameSync(path.join(postersDir, to), path.join(postersDir, from));
+          if (!isReferenced(to)) fs.unlinkSync(fullPath(postersDir, to));
+        } else if (!fs.existsSync(fullPath(postersDir, from))) {
+          fs.renameSync(fullPath(postersDir, to), fullPath(postersDir, from));
         }
         continue;
       }
@@ -223,7 +237,8 @@ async function applyRenames(ops) {
   return renamed;
 }
 
-// Every file name some item currently uses.
+// Every file some item currently uses (as stored: a path relative to the
+// posters folder).
 function referencedFiles() {
   const files = new Set();
   for (const t of TARGETS) {
@@ -234,17 +249,26 @@ function referencedFiles() {
   return files;
 }
 
-function listFiles(dir) {
+// Every file under a folder, as paths relative to it with forward slashes.
+function listFilesRecursive(dir, prefix = '') {
+  let entries;
   try {
-    return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
+    entries = fs.readdirSync(path.join(dir, prefix), { withFileTypes: true });
   } catch {
     return [];
   }
+  const files = [];
+  for (const e of entries) {
+    const rel = prefix ? `${prefix}/${e.name}` : e.name;
+    if (e.isDirectory()) files.push(...listFilesRecursive(dir, rel));
+    else if (e.isFile()) files.push(rel);
+  }
+  return files;
 }
 
-function removeIfOlderThan(dir, name, minAgeMs) {
+function removeIfOlderThan(dir, rel, minAgeMs) {
   try {
-    const full = path.join(dir, name);
+    const full = fullPath(dir, rel);
     if (Date.now() - fs.statSync(full).mtimeMs < minAgeMs) return false;
     fs.unlinkSync(full);
     return true;
@@ -259,10 +283,12 @@ function removeIfOlderThan(dir, name, minAgeMs) {
 // (UNUSED_MIN_AGE_MS) — the old hash-named originals left behind by the
 // renaming, replaced pictures, deleted items' pictures.
 //
-// In the image backup folder: ONLY unused files with an old-style name (the
-// leftovers of the renaming), and only after a longer wait. The backup is
-// otherwise add-only on purpose — it exists to survive the data folder being
-// wiped — so it never loses an image that merely isn't referenced right now.
+// In the image backup folder: ONLY unused files left over from before the
+// current layout — old hash-style names, and loose files in the top level that
+// now have a copy in a folder (the flat names from before images were sorted
+// into folders) — and only after a longer wait. The backup is otherwise
+// add-only on purpose, since it exists to survive the data folder being
+// wiped, so it never loses an image that merely isn't referenced right now.
 //
 // Both are skipped outright when no item uses any image at all: an empty
 // database next to a full folder looks like a database that was lost or
@@ -274,16 +300,19 @@ function removeUnusedImages() {
   if (referenced.size === 0) return result;
 
   const postersDir = POSTERS_DIR();
-  for (const name of listFiles(postersDir)) {
+  for (const rel of listFilesRecursive(postersDir)) {
     // Half-written temp files, and old names still inside their grace period.
-    if (referenced.has(name) || pendingDeletes.has(name) || name.includes('.tmp-') || name.endsWith('.part')) continue;
-    if (removeIfOlderThan(postersDir, name, UNUSED_MIN_AGE_MS)) result.posters++;
+    if (referenced.has(rel) || pendingDeletes.has(rel) || rel.includes('.tmp-') || rel.endsWith('.part')) continue;
+    if (removeIfOlderThan(postersDir, rel, UNUSED_MIN_AGE_MS)) result.posters++;
   }
 
   const backupDir = require('./imageBackup').IMAGE_BACKUP_DIR;
-  for (const name of listFiles(backupDir)) {
-    if (referenced.has(name) || !OLD_STYLE_NAME.test(name)) continue;
-    if (removeIfOlderThan(backupDir, name, BACKUP_UNUSED_MIN_AGE_MS)) result.backup++;
+  const backupFiles = listFilesRecursive(backupDir);
+  const inFolders = new Set(backupFiles.filter((f) => f.includes('/')).map((f) => path.posix.basename(f)));
+  for (const rel of backupFiles) {
+    if (rel.includes('/') || referenced.has(rel) || rel.includes('.tmp-') || rel.endsWith('.part')) continue;
+    if (!OLD_STYLE_NAME.test(rel) && !inFolders.has(rel)) continue;
+    if (removeIfOlderThan(backupDir, rel, BACKUP_UNUSED_MIN_AGE_MS)) result.backup++;
   }
   return result;
 }
@@ -307,19 +336,19 @@ async function runPass() {
   try {
     const ops = planRenames();
     if (!ops.length) return 0;
-    // The first big batch is the one-time migration of an existing library.
-    // It only renames files and rewrites file names in the database, but
-    // that's still a bulk change to the database, so take a backup first —
-    // once.
+    // The first big batch is the one-time migration of an existing library
+    // (into folders, with names built from the items). It only moves files and
+    // rewrites file paths in the database, but that's still a bulk change to
+    // the database, so take a backup first — once.
     if (ops.length >= BACKUP_THRESHOLD) {
-      const flag = db.prepare("SELECT value FROM settings WHERE key = 'image_rename_backup_done'").get();
+      const flag = db.prepare("SELECT value FROM settings WHERE key = 'image_folders_backup_done'").get();
       if (!flag) {
         try {
           await require('./backup').createBackup();
         } catch {
-          /* a failed safety copy shouldn't stop the rename; it's reversible by Refetch/restore */
+          /* a failed safety copy shouldn't stop the move; it's reversible by Refetch/restore */
         }
-        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('image_rename_backup_done', '1')").run();
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('image_folders_backup_done', '1')").run();
       }
     }
     return await applyRenames(planRenames());

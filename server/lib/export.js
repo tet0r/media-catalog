@@ -306,7 +306,11 @@ ${bodyHtml}
 function posterBlock(coverFile, title, referencedPosters) {
   if (coverFile) {
     referencedPosters.add(coverFile);
-    return `<div class="poster"><img src="../posters/${encodeURIComponent(coverFile)}" alt="" /></div>`;
+    // Images sit in per-type subfolders ("Movies/Posters/x.jpg"), so each path
+    // segment is encoded on its own — encoding the whole thing would turn the
+    // slashes into %2F.
+    const href = coverFile.split('/').map(encodeURIComponent).join('/');
+    return `<div class="poster"><img src="../posters/${href}" alt="" /></div>`;
   }
   return `<div class="poster"><div class="no-poster">${escapeHtml(title)}</div></div>`;
 }
@@ -384,9 +388,11 @@ async function runHtmlExport() {
     await exportGames(root, referencedPosters, counts);
 
     for (const file of referencedPosters) {
-      const src = path.join(POSTERS_DIR, file);
+      const src = path.join(POSTERS_DIR, ...file.split('/'));
       try {
-        fs.copyFileSync(src, path.join(root, 'posters', file));
+        const dest = path.join(root, 'posters', ...file.split('/'));
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
       } catch {
         // Cover file referenced in the DB but missing on disk — skip it
         // rather than fail the whole export; the page just shows its

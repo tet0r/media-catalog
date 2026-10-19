@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { cacheImageFromUrl, cacheImageBuffer } = require('../lib/images');
+const { cacheImageFromUrl, cacheImageBuffer, IMAGE_FOLDERS, groupImageFolder } = require('../lib/images');
 const { runSync } = require('../lib/gamesSync');
 const groupImages = require('../lib/groupImages');
 const { renameTextColumnGroup } = require('../lib/groupRename');
@@ -117,7 +117,7 @@ function registerGroupRoutes({ segment, column, mediaType }) {
     try {
       const { image_url } = req.body;
       if (!image_url) return res.status(400).json({ error: 'image_url is required' });
-      const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+      const filename = await cacheImageFromUrl(DATA_DIR, image_url, { folder: groupImageFolder(mediaType) });
       groupImages.setImage(mediaType, req.params.name, filename);
       res.json({ ok: true, cover_url: `/posters/${filename}` });
     } catch (err) {
@@ -130,7 +130,7 @@ function registerGroupRoutes({ segment, column, mediaType }) {
       const contentType = req.headers['content-type'] || '';
       if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
       if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
-      const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+      const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType, { folder: groupImageFolder(mediaType) });
       groupImages.setImage(mediaType, req.params.name, filename);
       res.json({ ok: true, cover_url: `/posters/${filename}` });
     } catch (err) {
@@ -183,7 +183,7 @@ router.put('/:id/cover', async (req, res) => {
   try {
     const { image_url } = req.body;
     if (!image_url) return res.status(400).json({ error: 'image_url is required' });
-    const filename = await cacheImageFromUrl(DATA_DIR, image_url);
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url, { folder: IMAGE_FOLDERS.game });
     db.prepare('UPDATE games SET cover_file = ? WHERE id = ?').run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM games WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
@@ -200,7 +200,7 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
     const contentType = req.headers['content-type'] || '';
     if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
-    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType);
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType, { folder: IMAGE_FOLDERS.game });
     db.prepare('UPDATE games SET cover_file = ? WHERE id = ?').run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM games WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });

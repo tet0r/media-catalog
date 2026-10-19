@@ -1,7 +1,7 @@
 const path = require('path');
 const db = require('../db');
 const tvdb = require('./tvdb');
-const { cacheImageFromUrl } = require('./images');
+const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -64,9 +64,9 @@ const INSERT_SQL = `INSERT INTO tv_shows
 
 async function addTvShowFromTvdbId(tvdbId, { filePath = null, format = null } = {}) {
   const details = await tvdb.getSeriesDetails(db, tvdbId);
-  const posterFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image).catch(() => null) : null;
+  const posterFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image, { folder: IMAGE_FOLDERS.tvPoster }).catch(() => null) : null;
   const backdropUrl = await tvdb.getBackdropUrl(db, details).catch(() => null);
-  const backdropFile = backdropUrl ? await cacheImageFromUrl(DATA_DIR, backdropUrl).catch(() => null) : null;
+  const backdropFile = backdropUrl ? await cacheImageFromUrl(DATA_DIR, backdropUrl, { folder: IMAGE_FOLDERS.tvBackdrop }).catch(() => null) : null;
   const meta = extractMetadata(details);
 
   const info = db.prepare(INSERT_SQL).run({
@@ -104,9 +104,9 @@ async function refreshTvShowMetadata(showId, tvdbId) {
 // different metadata.
 async function rematchTvShow(showId, tvdbId) {
   const details = await tvdb.getSeriesDetails(db, tvdbId);
-  const posterFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image).catch(() => null) : null;
+  const posterFile = details.image ? await cacheImageFromUrl(DATA_DIR, details.image, { folder: IMAGE_FOLDERS.tvPoster }).catch(() => null) : null;
   const backdropUrl = await tvdb.getBackdropUrl(db, details).catch(() => null);
-  const backdropFile = backdropUrl ? await cacheImageFromUrl(DATA_DIR, backdropUrl).catch(() => null) : null;
+  const backdropFile = backdropUrl ? await cacheImageFromUrl(DATA_DIR, backdropUrl, { folder: IMAGE_FOLDERS.tvBackdrop }).catch(() => null) : null;
   const meta = extractMetadata(details);
   const fields = { ...meta, tvdb_id: details.id, poster_file: posterFile, backdrop_file: backdropFile };
   const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');

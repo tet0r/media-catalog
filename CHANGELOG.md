@@ -8,6 +8,23 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.15.0 — Images sorted into folders by type
+- The images folder is now organised by media type and kind of image instead of one
+  big pile: `Movies/Posters`, `Movies/Backdrops`, `Movies/Collections`,
+  `TV Shows/Posters`, `TV Shows/Backdrops`, `Audiobooks/Covers`, `Ebooks/Covers`,
+  `Comics/Covers`, `Music/Covers`, `Vinyl/Covers`, `Games/Covers`, plus a `Groups`
+  folder per library for the pictures chosen for author/series/artist/platform/store
+  cards (for example `Games/Groups`).
+- New images are written straight into the right folder when they're downloaded,
+  picked or uploaded — they aren't dropped in a pile and sorted later. The
+  file name is still built from the item (`Movies/Posters/the-matrix-1999-poster.jpg`).
+- Existing images are moved into their folders automatically on first start, with
+  a database backup taken first (the stored paths change). Anything already named
+  from v1.14.0 keeps its name and just moves.
+- Image backups and the HTML export both keep the same folder layout.
+- The image backup's cleanup also removes the old loose, unsorted copies once the same
+  image exists in its folder.
+
 ## v1.14.1 — Unused images are removed automatically
 - Image files that no item uses any more are now deleted on their own: the old
   hash-named originals left behind by the v1.14.0 renaming, pictures that were
