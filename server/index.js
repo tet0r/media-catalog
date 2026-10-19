@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { readCurrentVersion } = require('./lib/version');
+const imageNames = require('./lib/imageNames');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -11,6 +12,13 @@ const VERSION = readCurrentVersion();
 app.use(express.json());
 
 app.use('/posters', express.static(path.join(DATA_DIR, 'posters')));
+
+// Anything that changes data may have added or replaced an image — a moment
+// after the response, give it its proper name (see lib/imageNames.js).
+app.use('/api', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') res.on('finish', imageNames.scheduleSoon);
+  next();
+});
 
 const scanRouter = require('./routes/scan');
 const audiobookScanRouter = require('./routes/audiobookScan');
@@ -129,6 +137,7 @@ if (fs.existsSync(publicDir)) {
 const PIPE = process.env.LISTEN_PIPE;
 const onListening = () => {
   console.log(PIPE ? 'Media Catalog engine ready' : `Media Catalog listening on port ${PORT}`);
+  imageNames.start();
   // Set when this process was forked by the desktop app, which waits for it.
   if (process.send) process.send({ type: 'ready' });
 };

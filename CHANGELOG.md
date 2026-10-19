@@ -8,6 +8,25 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.14.0 — Image files named after what they are
+- Every cached image is now named after the item it belongs to and what kind of
+  image it is, instead of a hash: `the-matrix-1999-poster.jpg`,
+  `the-matrix-1999-backdrop.jpg`, `project-hail-mary-2021-cover.jpg`,
+  `pink-floyd-the-wall-cover.jpg`, `star-wars-collection-poster.jpg`. It covers
+  every media type and every image category (posters, backdrops, covers, collection
+  posters, and the pictures chosen for author/series/artist/platform/store groups).
+  Two items that would get the same name get the item's number added.
+- Existing images are renamed automatically, once, on first start of this version.
+  Because that rewrites file names in the database for the whole library, a database
+  backup is taken first.
+- Names stay in step with the item: edit a title and its images are renamed; add,
+  scan, or sync items and their images are named within seconds.
+- A custom image (one you pick or upload) always replaces the item's previous image
+  and takes over its name.
+- Image backups mirror the new names. They never delete, so the copies under the old
+  names stay in your backup folder; they're safe to delete by hand once you've seen
+  the new ones appear.
+
 ## v1.13.0 — Choose game covers
 - A game's page now works like a movie's for covers: click the cover (or **Change
   Cover...**) to open a picker that pulls options from a source, or **Upload Image...**

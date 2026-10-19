@@ -143,7 +143,8 @@ breaks the mount option string, so avoid that.
 
 ## Data & backups
 
-Everything (the database and cached posters/covers) lives under `./data`.
+Everything (the database and cached posters/covers) lives under `./data`; images are named
+after what they are (`the-matrix-1999-poster.jpg`, `pink-floyd-the-wall-cover.jpg`).
 **If deploying via Portainer's web editor**, a relative path like `./data`
 resolves to a folder Portainer manages for you, and some stack changes can
 cause it to get silently recreated from scratch — abandoning your existing
