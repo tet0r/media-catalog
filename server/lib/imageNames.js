@@ -22,6 +22,11 @@ const db = require('../db');
 //
 // A custom image (one picked or uploaded by the user) always wins: it takes
 // the item's proper name and overwrites whatever file was there before.
+//
+// The same pass-and-sweep approach also cleans up after itself: any image file
+// that no item uses any more — the old hash-named files once they've been
+// renamed, a picture that was replaced, one whose item was deleted — is
+// removed (see removeUnusedImages).
 
 const POSTERS_DIR = () => path.join(process.env.DATA_DIR || path.join(__dirname, '..', 'data'), 'posters');
 
@@ -35,6 +40,17 @@ const OLD_FILE_GRACE_MS = 2 * 60 * 1000;
 // How many renames in one pass counts as "the migration" worth taking a
 // database backup before — see runPass.
 const BACKUP_THRESHOLD = 25;
+// Unused-image cleanup. A file only counts as unused if it's been sitting
+// there a while: a scan caches an image a moment before it records it in the
+// database, and that file must never be caught in between.
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+const UNUSED_MIN_AGE_MS = 10 * 60 * 1000;
+// The image backup is held to a stricter standard (see removeUnusedImages).
+const BACKUP_UNUSED_MIN_AGE_MS = 60 * 60 * 1000;
+// What the old naming scheme produced: custom-<sha1>.ext for anything
+// picked/uploaded/copied, or TMDB's own 27-character names. Every new name
+// has hyphens and ends in -poster/-backdrop/-cover, so neither can match.
+const OLD_STYLE_NAME = /^(custom-[0-9a-f]{40}|[A-Za-z0-9]{20,})\.[A-Za-z0-9]+$/;
 
 // table, column, what the image is, the name parts for the item's slug, and
 // the word used in the slug if all the parts are empty.
@@ -207,6 +223,82 @@ async function applyRenames(ops) {
   return renamed;
 }
 
+// Every file name some item currently uses.
+function referencedFiles() {
+  const files = new Set();
+  for (const t of TARGETS) {
+    for (const row of db.prepare(`SELECT DISTINCT ${t.column} AS f FROM ${t.table} WHERE ${t.column} IS NOT NULL AND ${t.column} != ''`).all()) {
+      files.add(row.f);
+    }
+  }
+  return files;
+}
+
+function listFiles(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
+
+function removeIfOlderThan(dir, name, minAgeMs) {
+  try {
+    const full = path.join(dir, name);
+    if (Date.now() - fs.statSync(full).mtimeMs < minAgeMs) return false;
+    fs.unlinkSync(full);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Deletes image files nothing uses.
+//
+// In the posters folder: every file no item points at, once it's old enough
+// (UNUSED_MIN_AGE_MS) — the old hash-named originals left behind by the
+// renaming, replaced pictures, deleted items' pictures.
+//
+// In the image backup folder: ONLY unused files with an old-style name (the
+// leftovers of the renaming), and only after a longer wait. The backup is
+// otherwise add-only on purpose — it exists to survive the data folder being
+// wiped — so it never loses an image that merely isn't referenced right now.
+//
+// Both are skipped outright when no item uses any image at all: an empty
+// database next to a full folder looks like a database that was lost or
+// swapped, not a library with nothing in it, and "nothing is in use" must
+// never be allowed to mean "delete everything".
+function removeUnusedImages() {
+  const referenced = referencedFiles();
+  const result = { posters: 0, backup: 0 };
+  if (referenced.size === 0) return result;
+
+  const postersDir = POSTERS_DIR();
+  for (const name of listFiles(postersDir)) {
+    // Half-written temp files, and old names still inside their grace period.
+    if (referenced.has(name) || pendingDeletes.has(name) || name.includes('.tmp-') || name.endsWith('.part')) continue;
+    if (removeIfOlderThan(postersDir, name, UNUSED_MIN_AGE_MS)) result.posters++;
+  }
+
+  const backupDir = require('./imageBackup').IMAGE_BACKUP_DIR;
+  for (const name of listFiles(backupDir)) {
+    if (referenced.has(name) || !OLD_STYLE_NAME.test(name)) continue;
+    if (removeIfOlderThan(backupDir, name, BACKUP_UNUSED_MIN_AGE_MS)) result.backup++;
+  }
+  return result;
+}
+
+function runCleanup() {
+  try {
+    const removed = removeUnusedImages();
+    if (removed.posters || removed.backup) {
+      console.log(`Removed unused images: ${removed.posters} from the library, ${removed.backup} old-named copies from the image backup.`);
+    }
+  } catch (err) {
+    console.error('Removing unused images failed:', err.message);
+  }
+}
+
 let running = false;
 
 async function runPass() {
@@ -252,8 +344,11 @@ function scheduleSoon() {
 }
 
 function start() {
-  runPass();
+  // Cleanup waits for the first pass so the migration has finished before
+  // anything is judged unused.
+  runPass().then(runCleanup);
   setInterval(runPass, PASS_INTERVAL_MS).unref();
+  setInterval(runCleanup, CLEANUP_INTERVAL_MS).unref();
 }
 
-module.exports = { start, scheduleSoon, runPass, planRenames, applyRenames, slugify, TARGETS };
+module.exports = { start, scheduleSoon, runPass, planRenames, applyRenames, removeUnusedImages, slugify, TARGETS };

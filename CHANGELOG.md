@@ -8,6 +8,21 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.14.1 — Unused images are removed automatically
+- Image files that no item uses any more are now deleted on their own: the old
+  hash-named originals left behind by the v1.14.0 renaming, pictures that were
+  replaced, and pictures of items that were deleted. It runs a little after startup
+  and every ten minutes, and only touches files that have been unused for at least
+  ten minutes, so an image that a scan has just downloaded is never caught
+  mid-import.
+- The image backup folder loses only its leftover copies under old hash names that
+  nothing uses (after an hour). Every other file there is kept, since the backup is
+  meant to survive your data folder being wiped. Note: a database backup taken
+  before v1.14.0 refers to the old names, so restoring one of those needs
+  **Refetch All Images** to bring its pictures back.
+- Safety: nothing is deleted at all while no item uses any image (an empty or
+  swapped-out database next to a full images folder is not "everything is unused").
+
 ## v1.14.0 — Image files named after what they are
 - Every cached image is now named after the item it belongs to and what kind of
   image it is, instead of a hash: `the-matrix-1999-poster.jpg`,
