@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const { IMAGE_FOLDERS, groupImageFolder } = require('./images');
+const { folderFor } = require('./imageFolders');
 
 // Cached images used to be named by hash (custom-9f2c….jpg) or by TMDB's own
 // random file names, all in one folder, so a posters folder — or an image
@@ -60,14 +61,14 @@ const OLD_STYLE_NAME = /^(custom-[0-9a-f]{40}|[A-Za-z0-9]{20,})\.[A-Za-z0-9]+$/;
 // function of the row), what the image is, the name parts for the item's slug,
 // and the word used in the slug if all the parts are empty.
 const TARGETS = [
-  { table: 'movies', column: 'poster_file', folder: IMAGE_FOLDERS.moviePoster, category: 'poster', fallback: 'movie', parts: (r) => [r.title, r.year] },
-  { table: 'movies', column: 'backdrop_file', folder: IMAGE_FOLDERS.movieBackdrop, category: 'backdrop', fallback: 'movie', parts: (r) => [r.title, r.year] },
-  { table: 'tv_shows', column: 'poster_file', folder: IMAGE_FOLDERS.tvPoster, category: 'poster', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
-  { table: 'tv_shows', column: 'backdrop_file', folder: IMAGE_FOLDERS.tvBackdrop, category: 'backdrop', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
-  { table: 'audiobooks', column: 'cover_file', folder: IMAGE_FOLDERS.audiobook, category: 'cover', fallback: 'audiobook', parts: (r) => [r.title, r.year] },
-  { table: 'ebooks', column: 'cover_file', folder: IMAGE_FOLDERS.ebook, category: 'cover', fallback: 'ebook', parts: (r) => [r.title, r.year] },
-  { table: 'comics', column: 'cover_file', folder: IMAGE_FOLDERS.comic, category: 'cover', fallback: 'comic', parts: (r) => [r.series || r.title, r.issue_number, r.year] },
-  { table: 'albums', column: 'cover_file', folder: IMAGE_FOLDERS.album, category: 'cover', fallback: 'album', parts: (r) => [r.artist, r.title] },
+  { table: 'movies', column: 'poster_file', folder: (r) => folderFor(IMAGE_FOLDERS.moviePoster, 'movies', r.file_path), category: 'poster', fallback: 'movie', parts: (r) => [r.title, r.year] },
+  { table: 'movies', column: 'backdrop_file', folder: (r) => folderFor(IMAGE_FOLDERS.movieBackdrop, 'movies', r.file_path), category: 'backdrop', fallback: 'movie', parts: (r) => [r.title, r.year] },
+  { table: 'tv_shows', column: 'poster_file', folder: (r) => folderFor(IMAGE_FOLDERS.tvPoster, 'tv_shows', r.file_path), category: 'poster', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
+  { table: 'tv_shows', column: 'backdrop_file', folder: (r) => folderFor(IMAGE_FOLDERS.tvBackdrop, 'tv_shows', r.file_path), category: 'backdrop', fallback: 'tv-show', parts: (r) => [r.title, r.year] },
+  { table: 'audiobooks', column: 'cover_file', folder: (r) => folderFor(IMAGE_FOLDERS.audiobook, 'audiobooks', r.file_path), category: 'cover', fallback: 'audiobook', parts: (r) => [r.title, r.year] },
+  { table: 'ebooks', column: 'cover_file', folder: (r) => folderFor(IMAGE_FOLDERS.ebook, 'ebooks', r.file_path), category: 'cover', fallback: 'ebook', parts: (r) => [r.title, r.year] },
+  { table: 'comics', column: 'cover_file', folder: (r) => folderFor(IMAGE_FOLDERS.comic, 'comics', r.file_path), category: 'cover', fallback: 'comic', parts: (r) => [r.series || r.title, r.issue_number, r.year] },
+  { table: 'albums', column: 'cover_file', folder: (r) => folderFor(IMAGE_FOLDERS.album, 'albums', r.file_path), category: 'cover', fallback: 'album', parts: (r) => [r.artist, r.title] },
   { table: 'vinyl_records', column: 'cover_file', folder: IMAGE_FOLDERS.vinyl, category: 'cover', fallback: 'vinyl', parts: (r) => [r.artist, r.title, r.year] },
   { table: 'games', column: 'cover_file', folder: IMAGE_FOLDERS.game, category: 'cover', fallback: 'game', parts: (r) => [r.title, r.platform] },
   { table: 'collections', column: 'poster_file', folder: IMAGE_FOLDERS.movieCollection, category: 'poster', fallback: 'collection', parts: (r) => [r.name], collection: true },
@@ -266,6 +267,27 @@ function listFilesRecursive(dir, prefix = '') {
   return files;
 }
 
+// Removes folders left empty (images moved to another folder, deleted items).
+// Only ones that have sat untouched for a while: a download creates its folder
+// a moment before it writes the file into it.
+function removeEmptyFolders(dir, isRoot = true) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) removeEmptyFolders(path.join(dir, e.name), false);
+  }
+  if (isRoot) return;
+  try {
+    if (fs.readdirSync(dir).length === 0 && Date.now() - fs.statSync(dir).mtimeMs > UNUSED_MIN_AGE_MS) fs.rmdirSync(dir);
+  } catch {
+    /* in use or already gone — fine */
+  }
+}
+
 function removeIfOlderThan(dir, rel, minAgeMs) {
   try {
     const full = fullPath(dir, rel);
@@ -305,6 +327,7 @@ function removeUnusedImages() {
     if (referenced.has(rel) || pendingDeletes.has(rel) || rel.includes('.tmp-') || rel.endsWith('.part')) continue;
     if (removeIfOlderThan(postersDir, rel, UNUSED_MIN_AGE_MS)) result.posters++;
   }
+  removeEmptyFolders(postersDir);
 
   const backupDir = require('./imageBackup').IMAGE_BACKUP_DIR;
   const backupFiles = listFilesRecursive(backupDir);

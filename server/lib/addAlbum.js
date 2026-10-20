@@ -3,6 +3,7 @@ const musicbrainz = require('./musicbrainz');
 const lastfm = require('./lastfm');
 const path = require('path');
 const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
+const { folderFor, folderForItem } = require('./imageFolders');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -39,7 +40,7 @@ async function addAlbumFromExternalId(source, externalId, { filePath = null, dis
   let coverFile = null;
   if (details.cover_url) {
     try {
-      coverFile = await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: IMAGE_FOLDERS.album });
+      coverFile = await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: folderFor(IMAGE_FOLDERS.album, 'albums', filePath) });
     } catch {
       coverFile = null;
     }
@@ -83,7 +84,7 @@ async function rematchAlbum(albumId, source, externalId) {
   let coverFile = null;
   if (details.cover_url) {
     try {
-      coverFile = await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: IMAGE_FOLDERS.album });
+      coverFile = await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: folderForItem(IMAGE_FOLDERS.album, 'albums', albumId) });
     } catch {
       coverFile = null;
     }

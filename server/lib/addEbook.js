@@ -2,6 +2,7 @@ const db = require('../db');
 const openlibrary = require('./openlibrary');
 const path = require('path');
 const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
+const { folderFor, folderForItem } = require('./imageFolders');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -30,7 +31,7 @@ const INSERT_SQL = `INSERT INTO ebooks
 
 async function addEbookFromExternalId(externalId, { filePath = null, fileFormat = null } = {}) {
   const details = await openlibrary.getBookByKey(externalId);
-  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: IMAGE_FOLDERS.ebook }) : null;
+  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: folderFor(IMAGE_FOLDERS.ebook, 'ebooks', filePath) }) : null;
 
   const info = db.prepare(INSERT_SQL).run({
     ...extractMetadata(details),
@@ -64,7 +65,7 @@ async function refreshEbookMetadata(ebookId, externalId) {
 // it's still the same file on disk, just re-pointed at different metadata.
 async function rematchEbook(ebookId, externalId) {
   const details = await openlibrary.getBookByKey(externalId);
-  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: IMAGE_FOLDERS.ebook }) : null;
+  const coverFile = details.cover_url ? await cacheImageFromUrl(DATA_DIR, details.cover_url, { folder: folderForItem(IMAGE_FOLDERS.ebook, 'ebooks', ebookId) }) : null;
   const meta = extractMetadata(details);
   const fields = { ...meta, external_id: externalId, cover_file: coverFile };
   const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');

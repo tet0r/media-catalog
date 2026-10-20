@@ -8,6 +8,23 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.16.0 — Images separated by library folder
+- When a media type has more than one library folder configured (Settings > that type >
+  Library folders — for example `/movies1` and `/movies2`, or two network shares), its
+  images are now also separated by which folder the item came from:
+  `Movies/movies1/Posters`, `Movies/movies2/Posters`, `Audiobooks/<folder>/Covers`, and
+  so on. It applies to Movies, TV Shows, Audiobooks, Ebooks, Comics and Music.
+- With only one library folder for a type there's nothing to separate, so its images
+  stay in the plain `Movies/Posters`-style folder. Adding a second folder moves that
+  type's existing images into per-folder subfolders; removing it moves them back.
+- Items that aren't under any configured library folder (added by hand, or from a folder
+  since removed from Settings), Vinyl, Games, collections and group pictures stay in
+  the plain folders.
+- Two configured folders with the same name (`D:\Movies` and `E:\Movies`) are told apart
+  by including their parent folder in the name.
+- New images are written straight into the right subfolder when they're downloaded,
+  picked or uploaded. Image folders left empty by a move are removed automatically.
+
 ## v1.15.0 — Images sorted into folders by type
 - The images folder is now organised by media type and kind of image instead of one
   big pile: `Movies/Posters`, `Movies/Backdrops`, `Movies/Collections`,

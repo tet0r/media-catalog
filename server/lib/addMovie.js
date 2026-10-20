@@ -2,6 +2,7 @@ const path = require('path');
 const db = require('../db');
 const tmdb = require('./tmdb');
 const { cachePoster, IMAGE_FOLDERS } = require('./images');
+const { folderFor, folderForItem } = require('./imageFolders');
 const notifications = require('./notifications');
 const { syncFranchiseCollection } = require('./collections');
 
@@ -71,8 +72,8 @@ const INSERT_SQL = `INSERT INTO movies
 
 async function addMovieFromTmdbId(tmdbId, { filePath = null, format = null } = {}) {
   const details = await tmdb.getMovieDetails(db, tmdbId);
-  const posterFile = await cachePoster(DATA_DIR, details.poster_path, { folder: IMAGE_FOLDERS.moviePoster });
-  const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path, { folder: IMAGE_FOLDERS.movieBackdrop });
+  const posterFile = await cachePoster(DATA_DIR, details.poster_path, { folder: folderFor(IMAGE_FOLDERS.moviePoster, 'movies', filePath) });
+  const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path, { folder: folderFor(IMAGE_FOLDERS.movieBackdrop, 'movies', filePath) });
   const meta = extractMetadata(details);
   await syncFranchiseCollection(details);
 
@@ -112,8 +113,8 @@ async function refreshMovieMetadata(movieId, tmdbId) {
 async function rematchMovie(movieId, tmdbId) {
   const details = await tmdb.getMovieDetails(db, tmdbId);
   await syncFranchiseCollection(details);
-  const posterFile = await cachePoster(DATA_DIR, details.poster_path, { folder: IMAGE_FOLDERS.moviePoster });
-  const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path, { folder: IMAGE_FOLDERS.movieBackdrop });
+  const posterFile = await cachePoster(DATA_DIR, details.poster_path, { folder: folderForItem(IMAGE_FOLDERS.moviePoster, 'movies', movieId) });
+  const backdropFile = await cachePoster(DATA_DIR, details.backdrop_path, { folder: folderForItem(IMAGE_FOLDERS.movieBackdrop, 'movies', movieId) });
   const meta = extractMetadata(details);
   const fields = { ...meta, tmdb_id: details.id, poster_file: posterFile, backdrop_file: backdropFile };
   const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');

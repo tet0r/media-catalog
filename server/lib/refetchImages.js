@@ -9,6 +9,7 @@ const discogs = require('./discogs');
 const launchbox = require('./launchboxLibrary');
 const apple = require('./apple');
 const { getLaunchboxDir } = require('./libraryPaths');
+const { folderFor } = require('./imageFolders');
 const { fetchCoverUrl: fetchAudiobookCoverUrl } = require('./addAudiobook');
 const { fetchCoverUrl: fetchAlbumCoverUrl } = require('./addAlbum');
 const { cachePoster, cacheImageFromUrl, cacheImageFromLocalFile, IMAGE_FOLDERS } = require('./images');
@@ -58,13 +59,13 @@ const DEFS = {
     label: 'Movies',
     table: 'movies',
     delayMs: 300, // TMDB allows far more; this is just politeness
-    rows: () => db.prepare('SELECT id, tmdb_id FROM movies WHERE tmdb_id IS NOT NULL').all(),
+    rows: () => db.prepare('SELECT id, tmdb_id, file_path FROM movies WHERE tmdb_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await tmdb.getMovieDetails(db, row.tmdb_id);
       const out = {};
-      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true, folder: IMAGE_FOLDERS.moviePoster });
+      const poster = await cachePoster(DATA_DIR, details.poster_path, { force: true, folder: folderFor(IMAGE_FOLDERS.moviePoster, 'movies', row.file_path) });
       if (poster) out.poster_file = poster;
-      const backdrop = await cachePoster(DATA_DIR, details.backdrop_path, { force: true, folder: IMAGE_FOLDERS.movieBackdrop });
+      const backdrop = await cachePoster(DATA_DIR, details.backdrop_path, { force: true, folder: folderFor(IMAGE_FOLDERS.movieBackdrop, 'movies', row.file_path) });
       if (backdrop) out.backdrop_file = backdrop;
       return out;
     },
@@ -90,14 +91,14 @@ const DEFS = {
   tv: {
     label: 'TV Shows',
     table: 'tv_shows',
-    rows: () => db.prepare('SELECT id, tvdb_id FROM tv_shows WHERE tvdb_id IS NOT NULL').all(),
+    rows: () => db.prepare('SELECT id, tvdb_id, file_path FROM tv_shows WHERE tvdb_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await tvdb.getSeriesDetails(db, row.tvdb_id);
       const out = {};
-      if (details.image) out.poster_file = await cacheImageFromUrl(DATA_DIR, details.image, { force: true, folder: IMAGE_FOLDERS.tvPoster });
+      if (details.image) out.poster_file = await cacheImageFromUrl(DATA_DIR, details.image, { force: true, folder: folderFor(IMAGE_FOLDERS.tvPoster, 'tv_shows', row.file_path) });
       const backdropUrl = await tvdb.getBackdropUrl(db, details).catch(() => null);
       if (backdropUrl) {
-        const backdrop = await cacheImageFromUrl(DATA_DIR, backdropUrl, { force: true, folder: IMAGE_FOLDERS.tvBackdrop }).catch(() => null);
+        const backdrop = await cacheImageFromUrl(DATA_DIR, backdropUrl, { force: true, folder: folderFor(IMAGE_FOLDERS.tvBackdrop, 'tv_shows', row.file_path) }).catch(() => null);
         if (backdrop) out.backdrop_file = backdrop;
       }
       return out;
@@ -112,7 +113,7 @@ const DEFS = {
     // — one request per 100 books — and only the image downloads remain.
     delayMs: 300,
     async rows(ctx) {
-      const rows = db.prepare('SELECT id, asin, metadata_source FROM audiobooks WHERE asin IS NOT NULL').all();
+      const rows = db.prepare('SELECT id, asin, metadata_source, file_path FROM audiobooks WHERE asin IS NOT NULL').all();
       const appleIds = rows.filter((r) => r.metadata_source === 'apple').map((r) => r.asin);
       ctx.appleCovers = new Map();
       for (let i = 0; i < appleIds.length; i += 100) {
@@ -125,7 +126,7 @@ const DEFS = {
     async refetch(row, ctx) {
       const source = row.metadata_source || 'audible';
       const url = source === 'apple' ? ctx.appleCovers.get(String(row.asin)) : await fetchAudiobookCoverUrl(source, row.asin);
-      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: IMAGE_FOLDERS.audiobook }) } : null;
+      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: folderFor(IMAGE_FOLDERS.audiobook, 'audiobooks', row.file_path) }) } : null;
     },
   },
 
@@ -133,10 +134,10 @@ const DEFS = {
     label: 'Comics',
     table: 'comics',
     delayMs: 1000, // ComicVine rate-limits aggressively
-    rows: () => db.prepare('SELECT id, external_id, metadata_source FROM comics WHERE external_id IS NOT NULL').all(),
+    rows: () => db.prepare('SELECT id, external_id, metadata_source, file_path FROM comics WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await comicSources.getIssueDetails(db, row.metadata_source || 'comicvine', row.external_id);
-      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: IMAGE_FOLDERS.comic }) } : null;
+      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: folderFor(IMAGE_FOLDERS.comic, 'comics', row.file_path) }) } : null;
     },
   },
 
@@ -144,10 +145,10 @@ const DEFS = {
     label: 'Ebooks',
     table: 'ebooks',
     delayMs: 500,
-    rows: () => db.prepare('SELECT id, external_id FROM ebooks WHERE external_id IS NOT NULL').all(),
+    rows: () => db.prepare('SELECT id, external_id, file_path FROM ebooks WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const details = await openlibrary.getBookByKey(row.external_id);
-      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: IMAGE_FOLDERS.ebook }) } : null;
+      return details.cover_url ? { cover_file: await cacheImageFromUrl(DATA_DIR, details.cover_url, { force: true, folder: folderFor(IMAGE_FOLDERS.ebook, 'ebooks', row.file_path) }) } : null;
     },
   },
 
@@ -155,10 +156,10 @@ const DEFS = {
     label: 'Digital',
     table: 'albums',
     delayMs: 1100, // MusicBrainz asks for at most ~1 request per second
-    rows: () => db.prepare('SELECT id, external_id, metadata_source FROM albums WHERE external_id IS NOT NULL').all(),
+    rows: () => db.prepare('SELECT id, external_id, metadata_source, file_path FROM albums WHERE external_id IS NOT NULL').all(),
     async refetch(row) {
       const url = await fetchAlbumCoverUrl(row.metadata_source || 'musicbrainz', row.external_id);
-      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: IMAGE_FOLDERS.album }) } : null;
+      return url ? { cover_file: await cacheImageFromUrl(DATA_DIR, url, { force: true, folder: folderFor(IMAGE_FOLDERS.album, 'albums', row.file_path) }) } : null;
     },
   },
 

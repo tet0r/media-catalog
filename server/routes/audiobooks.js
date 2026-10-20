@@ -4,6 +4,7 @@ const fs = require('fs');
 const db = require('../db');
 const { addAudiobookFromExternalId, refreshAudiobookMetadata, rematchAudiobook } = require('../lib/addAudiobook');
 const { cacheImageFromUrl, cacheImageBuffer, IMAGE_FOLDERS, groupImageFolder } = require('../lib/images');
+const { folderForItem } = require('../lib/imageFolders');
 const bulkRefresh = require('../lib/bulkRefreshAudiobooks');
 const groupImages = require('../lib/groupImages');
 const { renameAuthorGroup } = require('../lib/groupRename');
@@ -185,7 +186,7 @@ router.put('/:id/cover', async (req, res) => {
   try {
     const { image_url } = req.body;
     if (!image_url) return res.status(400).json({ error: 'image_url is required' });
-    const filename = await cacheImageFromUrl(DATA_DIR, image_url, { folder: IMAGE_FOLDERS.audiobook });
+    const filename = await cacheImageFromUrl(DATA_DIR, image_url, { folder: folderForItem(IMAGE_FOLDERS.audiobook, 'audiobooks', req.params.id) });
     db.prepare('UPDATE audiobooks SET cover_file = ? WHERE id = ?').run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
@@ -202,7 +203,7 @@ router.put('/:id/cover/upload', express.raw({ type: () => true, limit: '15mb' })
     const contentType = req.headers['content-type'] || '';
     if (!contentType.startsWith('image/')) return res.status(400).json({ error: 'Uploaded file must be an image' });
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'No image data received' });
-    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType, { folder: IMAGE_FOLDERS.audiobook });
+    const filename = await cacheImageBuffer(DATA_DIR, req.body, contentType, { folder: folderForItem(IMAGE_FOLDERS.audiobook, 'audiobooks', req.params.id) });
     db.prepare('UPDATE audiobooks SET cover_file = ? WHERE id = ?').run(filename, req.params.id);
     const row = db.prepare('SELECT * FROM audiobooks WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });

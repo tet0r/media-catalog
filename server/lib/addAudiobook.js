@@ -3,6 +3,7 @@ const audible = require('./audible');
 const apple = require('./apple');
 const path = require('path');
 const { cacheImageFromUrl, IMAGE_FOLDERS } = require('./images');
+const { folderFor, folderForItem } = require('./imageFolders');
 const notifications = require('./notifications');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -99,7 +100,7 @@ const INSERT_SQL = `INSERT INTO audiobooks
 
 async function addAudiobookFromExternalId(source, externalId, { filePath = null, fileParts = null, sourceFormat = null } = {}) {
   const { meta, coverUrl, resolvedId } = await fetchAndExtract(source, externalId);
-  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl, { folder: IMAGE_FOLDERS.audiobook }) : null;
+  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl, { folder: folderFor(IMAGE_FOLDERS.audiobook, 'audiobooks', filePath) }) : null;
 
   const info = db.prepare(INSERT_SQL).run({
     ...meta,
@@ -136,7 +137,7 @@ async function refreshAudiobookMetadata(audiobookId, source, externalId) {
 // different metadata.
 async function rematchAudiobook(audiobookId, source, externalId) {
   const { meta, coverUrl, resolvedId } = await fetchAndExtract(source, externalId);
-  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl, { folder: IMAGE_FOLDERS.audiobook }) : null;
+  const coverFile = coverUrl ? await cacheImageFromUrl(DATA_DIR, coverUrl, { folder: folderForItem(IMAGE_FOLDERS.audiobook, 'audiobooks', audiobookId) }) : null;
   const fields = { ...meta, asin: resolvedId, metadata_source: source, cover_file: coverFile };
   const setClause = Object.keys(fields).map((k) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE audiobooks SET ${setClause} WHERE id = @id`).run({ ...fields, id: audiobookId });
