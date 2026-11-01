@@ -53,11 +53,34 @@ async function findMoviePageUrl(title, year) {
   return titleOnly ? titleOnly.url : null;
 }
 
-async function getPosterUrls(title, year) {
+// A movie's page shows its posters 24 at a time (?page=2, ?page=3, ...), so
+// reading only the first page limited the picker to 24 posters even for a movie
+// with over a hundred. Pages are read one after another until one has nothing
+// new — the cap just keeps a runaway page from looping — and a failure on a
+// later page keeps what was already found rather than discarding it.
+const MAX_POSTER_PAGES = 10;
+
+async function getPosterUrls(title, year, maxPages = MAX_POSTER_PAGES) {
   const pageUrl = await findMoviePageUrl(title, year);
   if (!pageUrl) return [];
-  const html = await fetchHtml(pageUrl);
-  return extractPosterImageUrls(html);
+  const seen = new Set();
+  const urls = [];
+  for (let page = 1; page <= maxPages; page++) {
+    let html;
+    try {
+      html = await fetchHtml(page === 1 ? pageUrl : `${pageUrl}${pageUrl.includes('?') ? '&' : '?'}page=${page}`);
+    } catch (err) {
+      if (page === 1) throw err;
+      break;
+    }
+    const fresh = extractPosterImageUrls(html).filter((u) => !seen.has(u));
+    if (!fresh.length) break;
+    for (const u of fresh) {
+      seen.add(u);
+      urls.push(u);
+    }
+  }
+  return urls;
 }
 
 // A search returning zero results is ambiguous on its own: it could mean
@@ -80,7 +103,7 @@ async function isHealthy() {
   }
   let healthy;
   try {
-    const urls = await getPosterUrls(CANARY_TITLE, CANARY_YEAR);
+    const urls = await getPosterUrls(CANARY_TITLE, CANARY_YEAR, 1);
     healthy = urls.length >= CANARY_MIN_RESULTS;
   } catch {
     healthy = false;

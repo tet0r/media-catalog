@@ -8,6 +8,19 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.16.1 — More pictures to choose from
+- The picture pickers now offer many more options:
+  - **Movies — ThePosterDB** used to read only the first page of a movie's posters (24);
+    it now reads every page, so a movie with over a hundred posters shows them all
+    (The Matrix: 24 → 108).
+  - **Wikipedia** (author/series/artist/platform/store and collection pictures): 6 → up to 24,
+    searched from a larger pool of results.
+  - **Deezer** (artists) and **Open Library** (authors): 6 → up to 24.
+  - **ComicVine** (comic series): 8 → up to 24.
+  - **Steam** (game covers): 5 games → 10. **SteamGridDB**: 3 games / 18 images → 5 games / 60 images.
+- TMDB (movie posters and backdrops) and TheTVDB (show posters) already list everything
+  those services have for a title.
+
 ## v1.16.0 — Images separated by library folder
 - When a media type has more than one library folder configured (Settings > that type >
   Library folders — for example `/movies1` and `/movies2`, or two network shares), its

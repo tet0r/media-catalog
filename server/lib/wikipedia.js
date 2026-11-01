@@ -15,9 +15,9 @@ const USER_AGENT = 'media-catalog (self-hosted personal use; https://github.com/
 // pageimage), a much larger pool is searched and *then* filtered/trimmed
 // down to `limit` — still one request, just fetching more candidates than
 // will actually be shown.
-const SEARCH_POOL_SIZE = 20;
+const SEARCH_POOL_SIZE = 50;
 
-async function searchImages(query, limit = 6) {
+async function searchImages(query, limit = 24) {
   if (!query) return [];
   const url = new URL(BASE);
   url.searchParams.set('action', 'query');

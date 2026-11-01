@@ -3,8 +3,8 @@
 // "API" tab of your SteamGridDB profile preferences.
 const BASE = 'https://www.steamgriddb.com/api/v2';
 const USER_AGENT = 'media-catalog (self-hosted personal use; https://github.com/tet0r/media-catalog)';
-const MAX_GAMES = 3;
-const MAX_RESULTS = 18;
+const MAX_GAMES = 5;
+const MAX_RESULTS = 60;
 
 function getApiKey(db) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('steamgriddb_api_key');

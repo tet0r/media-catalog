@@ -92,7 +92,7 @@ router.get('/series/search-images', async (req, res) => {
     if (source === 'wikipedia') {
       return res.json(await wikipedia.searchImages(q));
     }
-    const volumes = await comicvine.searchVolumes(db, q, 8);
+    const volumes = await comicvine.searchVolumes(db, q, 24);
     res.json(
       volumes
         .filter((v) => v.image_url)

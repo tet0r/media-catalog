@@ -113,7 +113,7 @@ async function hasRealPhoto(url) {
   }
 }
 
-async function searchImages(query, limit = 6) {
+async function searchImages(query, limit = 24) {
   if (!query) return [];
   const url = new URL(AUTHOR_SEARCH_BASE);
   url.searchParams.set('q', query);

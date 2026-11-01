@@ -6,7 +6,7 @@
 const BASE = 'https://api.deezer.com';
 const USER_AGENT = 'media-catalog (self-hosted personal use; https://github.com/tet0r/media-catalog)';
 
-async function searchImages(query, limit = 6) {
+async function searchImages(query, limit = 24) {
   if (!query) return [];
   const url = new URL(`${BASE}/search/artist`);
   url.searchParams.set('q', query);

@@ -3,7 +3,7 @@
 // games sold on Steam, but for those it's the same art Steam itself shows.
 const SEARCH_URL = 'https://store.steampowered.com/api/storesearch/';
 const USER_AGENT = 'media-catalog (self-hosted personal use; https://github.com/tet0r/media-catalog)';
-const MAX_APPS = 5;
+const MAX_APPS = 10;
 
 // Steam has moved its artwork between CDN hosts over the years; either may
 // serve a given app, so each image is tried on both.
