@@ -323,6 +323,10 @@ button.muted-btn { background: var(--card); color: var(--text-muted); border: 1p
   border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 600;
 }
 .picker-tab.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.picker-pages { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.picker-page-tabs { flex-wrap: wrap; }
+.picker-page-tabs .picker-tab { min-width: 34px; padding: 4px 10px; }
+.picker-page-count { font-size: 0.85rem; white-space: nowrap; }
 .image-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 14px; }
 .image-picker-option {
   padding: 0; border: 2px solid var(--border); border-radius: 6px; overflow: hidden;

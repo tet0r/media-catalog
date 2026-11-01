@@ -20,6 +20,9 @@ versioned separately.
   - **Steam** (game covers): 5 games → 10. **SteamGridDB**: 3 games / 18 images → 5 games / 60 images.
 - TMDB (movie posters and backdrops) and TheTVDB (show posters) already list everything
   those services have for a title.
+- A source with more than 24 pictures is now split into numbered page tabs (1, 2, 3, ...)
+  with a "25–48 of 108" count, instead of one long scrolling list. Switching source
+  starts again on page 1.
 
 ## v1.16.0 — Images separated by library folder
 - When a media type has more than one library folder configured (Settings > that type >

@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 
+// How many pictures one page of a source shows. A source with more than this
+// (ThePosterDB can have over a hundred posters for a movie) is split into
+// numbered page tabs instead of one long scrolling list.
+const PAGE_SIZE = 24;
+
 // `tabs`: [{ key, label, sourceLabel, fetchOptions }]. Each source's
 // options are fetched lazily (only once its tab is first opened) and
 // cached per-key so switching back and forth doesn't re-fetch.
 export default function ImagePicker({ title, tabs, onSelect, onUpload, onClose }) {
   const [activeKey, setActiveKey] = useState(tabs[0].key);
+  const [page, setPage] = useState(0);
   const [cache, setCache] = useState({});
   const [selecting, setSelecting] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -65,7 +71,10 @@ export default function ImagePicker({ title, tabs, onSelect, onUpload, onClose }
     }
   }
 
-  const options = state?.options || [];
+  const allOptions = state?.options || [];
+  const pageCount = Math.max(1, Math.ceil(allOptions.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const options = allOptions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const loading = state?.loading;
   const warning = state?.warning;
   const fetchError = state?.error;
@@ -86,7 +95,7 @@ export default function ImagePicker({ title, tabs, onSelect, onUpload, onClose }
                   key={t.key}
                   type="button"
                   className={`picker-tab${t.key === activeKey ? ' active' : ''}`}
-                  onClick={() => setActiveKey(t.key)}
+                  onClick={() => { setActiveKey(t.key); setPage(0); }}
                 >
                   {t.label}
                 </button>
@@ -118,7 +127,28 @@ export default function ImagePicker({ title, tabs, onSelect, onUpload, onClose }
         {loading && <p>Loading options...</p>}
         {fetchError && <p className="error">{fetchError}</p>}
         {warning && <p className="warning">⚠ {warning}</p>}
-        {!loading && !fetchError && !warning && options.length === 0 && <p className="muted">No alternatives found.</p>}
+        {!loading && !fetchError && !warning && allOptions.length === 0 && <p className="muted">No alternatives found.</p>}
+        {pageCount > 1 && (
+          <div className="picker-pages">
+            <div className="picker-tabs picker-page-tabs" role="tablist" aria-label="Pages">
+              {Array.from({ length: pageCount }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === currentPage}
+                  className={`picker-tab${i === currentPage ? ' active' : ''}`}
+                  onClick={() => setPage(i)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <span className="muted picker-page-count">
+              {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, allOptions.length)} of {allOptions.length}
+            </span>
+          </div>
+        )}
         <div className="image-picker-grid">
           {options.map((o) => (
             <button
