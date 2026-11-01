@@ -38,8 +38,12 @@ function extractPosterImageUrls(html) {
   return urls;
 }
 
-async function findMoviePageUrl(title, year) {
-  const html = await fetchHtml(`https://theposterdb.com/search?term=${encodeURIComponent(title)}&section=movies`);
+// ThePosterDB keeps movies and TV shows in separate sections of its search;
+// the results and the poster pages use the same markup in both.
+const SECTIONS = new Set(['movies', 'shows']);
+
+async function findMoviePageUrl(title, year, section = 'movies') {
+  const html = await fetchHtml(`https://theposterdb.com/search?term=${encodeURIComponent(title)}&section=${section}`);
   const results = extractSearchResults(html);
   const targetNorm = normalizeForMatch(title);
 
@@ -60,8 +64,9 @@ async function findMoviePageUrl(title, year) {
 // later page keeps what was already found rather than discarding it.
 const MAX_POSTER_PAGES = 10;
 
-async function getPosterUrls(title, year, maxPages = MAX_POSTER_PAGES) {
-  const pageUrl = await findMoviePageUrl(title, year);
+async function getPosterUrls(title, year, { maxPages = MAX_POSTER_PAGES, section = 'movies' } = {}) {
+  if (!SECTIONS.has(section)) throw new Error(`Unknown ThePosterDB section: ${section}`);
+  const pageUrl = await findMoviePageUrl(title, year, section);
   if (!pageUrl) return [];
   const seen = new Set();
   const urls = [];
@@ -103,7 +108,7 @@ async function isHealthy() {
   }
   let healthy;
   try {
-    const urls = await getPosterUrls(CANARY_TITLE, CANARY_YEAR, 1);
+    const urls = await getPosterUrls(CANARY_TITLE, CANARY_YEAR, { maxPages: 1 });
     healthy = urls.length >= CANARY_MIN_RESULTS;
   } catch {
     healthy = false;

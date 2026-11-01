@@ -23,6 +23,9 @@ versioned separately.
 - A source with more than 24 pictures is now split into numbered page tabs (1, 2, 3, ...)
   with a "25–48 of 108" count, instead of one long scrolling list. Switching source
   starts again on page 1.
+- **TV Shows** can now choose a poster from **ThePosterDB** too (it was movies only), next to
+  TheTVDB. It searches ThePosterDB's TV section by the show's title and year, and reads
+  every page (The Wire: 48 posters, Breaking Bad: 142). Season posters are included.
 
 ## v1.16.0 — Images separated by library folder
 - When a media type has more than one library folder configured (Settings > that type >

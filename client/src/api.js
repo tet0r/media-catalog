@@ -111,8 +111,8 @@ export const api = {
       body: file,
     }).then(handle),
   deleteCollectionCover: (id) => fetch(`${BASE}/collections/${id}/cover`, { method: 'DELETE' }).then(handle),
-  searchTpdbPosters: (title, year) =>
-    fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}`).then(handle),
+  searchTpdbPosters: (title, year, section = 'movies') =>
+    fetch(`${BASE}/images/tpdb-posters?title=${encodeURIComponent(title)}${year ? `&year=${encodeURIComponent(year)}` : ''}&section=${section}`).then(handle),
   searchTmdbPosters: (tmdbId) => fetch(`${BASE}/images/posters/${tmdbId}`).then(handle),
   searchTmdbBackdrops: (tmdbId) => fetch(`${BASE}/images/backdrops/${tmdbId}`).then(handle),
   searchTmdb: (q, year) =>

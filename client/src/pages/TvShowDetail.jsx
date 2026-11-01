@@ -150,6 +150,12 @@ export default function TvShowDetail() {
           title="Choose a Poster"
           tabs={[
             {
+              key: 'tpdb',
+              label: 'ThePosterDB',
+              sourceLabel: 'Via ThePosterDB — unofficial, may occasionally be unavailable.',
+              fetchOptions: () => api.searchTpdbPosters(show.title, show.year, 'shows'),
+            },
+            {
               key: 'tvdb',
               label: 'TheTVDB',
               sourceLabel: "Via TheTVDB's own artwork for this show.",

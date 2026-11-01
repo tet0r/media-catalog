@@ -7,13 +7,15 @@ const theposterdb = require('../lib/theposterdb');
 const router = express.Router();
 
 // Alternate posters via ThePosterDB (unofficial scrape — see lib/theposterdb.js).
+// `section` is 'movies' (the default) or 'shows' for a TV series.
 router.get('/tpdb-posters', async (req, res) => {
   const { title, year } = req.query;
+  const section = req.query.section === 'shows' ? 'shows' : 'movies';
   if (!title) return res.json({ results: [], warning: null });
 
   let urls;
   try {
-    urls = await theposterdb.getPosterUrls(title, year);
+    urls = await theposterdb.getPosterUrls(title, year, { section });
   } catch (err) {
     return res.json({
       results: [],
