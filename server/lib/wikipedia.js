@@ -41,10 +41,17 @@ async function searchImages(query, limit = 24) {
     .sort((a, b) => (a.index || 0) - (b.index || 0))
     .slice(0, limit)
     .map((p) => ({
-      url: p.original?.source || p.thumbnail.source,
+      // The full-size file is preferred, but only when it's a picture format
+      // the app can store. A page's image is often an SVG logo or similar;
+      // Wikipedia's own thumbnail of it is a plain raster image.
+      url: isRasterUrl(p.original?.source) ? p.original.source : p.thumbnail.source,
       thumbnail_url: p.thumbnail.source,
       label: p.title,
     }));
+}
+
+function isRasterUrl(url) {
+  return !!url && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
 }
 
 module.exports = { searchImages };

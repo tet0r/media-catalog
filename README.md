@@ -100,6 +100,27 @@ yourself does that.
 3. Set `LAUNCHBOX_SYNC_PATH` (in `.env`) to that local folder.
 4. Click "Sync from LaunchBox" (or enable auto-sync in Settings).
 
+## Security
+
+Media Catalog has **no login**: anyone who can reach its port can use it, and can read the
+API keys saved in Settings. Run it on a network you trust, and put it behind a reverse proxy
+with authentication if you ever expose it beyond that. (The Windows app has no network port
+at all.) What it does protect against:
+
+- **Other web pages.** A page open in another browser tab can't make changes through your
+  server — requests that come from a different site are refused. If you reach the server
+  through a reverse proxy that rewrites the Host header and changes stop working, list your
+  public address in `ALLOWED_ORIGINS` (e.g. `https://media.example.com`). To also stop a
+  web page from reaching the server under a name it controls (DNS rebinding), set
+  `ALLOWED_HOSTS` to the names you use (e.g. `nas.local,192.168.1.50`).
+- **The server being used to reach other machines.** Picking a picture from a web address only
+  works for public addresses — never your router, NAS, or other devices on your network — and
+  the download must really be a JPEG, PNG, GIF or WebP image no larger than 15 MB.
+- **A compromised app.** The Docker container runs as an unprivileged user. On first start
+  after updating it takes ownership of `/data` and `/backups` (a one-time recursive chown); if
+  a folder can't be handed over, for example a network share, it falls back to running as root
+  and says so in the log.
+
 ## Deploying via Portainer
 
 The image is published to GHCR, so you can paste the compose file directly

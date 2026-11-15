@@ -56,7 +56,10 @@ router.get('/proxy', async (req, res) => {
     if (parsed.protocol !== 'https:' || parsed.hostname !== PROXY_ALLOWED_HOST) {
       return res.status(400).json({ error: 'URL not allowed' });
     }
-    const upstream = await fetch(parsed, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    // Redirects aren't followed: the host check above only covers the first
+    // address, and a redirect could point anywhere.
+    const upstream = await fetch(parsed, { headers: { 'User-Agent': 'Mozilla/5.0' }, redirect: 'manual' });
+    if (upstream.status >= 300 && upstream.status < 400) return res.status(502).json({ error: 'Unexpected redirect' });
     if (!upstream.ok) return res.status(upstream.status).end();
     res.set('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=86400');

@@ -30,6 +30,9 @@ services:
       # folder (bind-mounted below), not a network share.
       - LAUNCHBOX_DIR=/launchbox
       - BACKUP_DIR=/backups
+      # Optional hardening — see "Security" in the README. Leave empty for the defaults.
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
     volumes:
       # App data: the SQLite database + cached posters/covers.
       # WARNING if deploying via Portainer's web editor: a relative path

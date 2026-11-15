@@ -3,11 +3,16 @@ const path = require('path');
 const fs = require('fs');
 const { readCurrentVersion } = require('./lib/version');
 const imageNames = require('./lib/imageNames');
+const { sameOriginGuard, hostGuard } = require('./lib/requestGuards');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const VERSION = readCurrentVersion();
+
+// First of all, before any route sees a request — see lib/requestGuards.js.
+app.use(hostGuard);
+app.use('/api', sameOriginGuard);
 
 app.use(express.json());
 

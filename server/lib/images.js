@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { fetchPublicImage, sniffImageType } = require('./safeFetch');
 
 // Images live under the posters folder, sorted into a folder per media type
 // and kind of image (Movies/Posters, Movies/Backdrops, Games/Covers, ...).
@@ -38,6 +39,9 @@ const GROUP_FOLDERS = {
 function groupImageFolder(mediaType) {
   return GROUP_FOLDERS[String(mediaType || '').split('_')[0]] || 'Groups';
 }
+
+// File extension for each image type the app stores.
+const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
 
 // Where an image goes: creates the folder, and returns both the relative
 // path to store and the full path to write to.
@@ -99,29 +103,27 @@ async function cachePoster(dataDir, tmdbImagePath, { force = false, folder = '' 
 // For a user-picked image from an arbitrary source (ThePosterDB, a TMDB
 // backdrop alternative, ...) rather than TMDB's own primary poster/backdrop
 // path. Named by a hash of the URL so re-picking the same image is a no-op.
+// The address is often one a user picked or typed, so the download goes through
+// fetchPublicImage (public addresses only, size-limited, and the bytes must
+// really be an image) rather than a plain fetch — see lib/safeFetch.js.
 async function cacheImageFromUrl(dataDir, imageUrl, { force = false, folder = '' } = {}) {
-  const res = await fetch(imageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
-  const contentType = res.headers.get('content-type') || '';
-  const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+  const { buffer, contentType } = await fetchPublicImage(imageUrl);
+  const ext = EXTENSIONS[contentType] || 'jpg';
   const hash = crypto.createHash('sha1').update(imageUrl).digest('hex');
   const { rel: filename, dest } = placeImage(dataDir, folder, `custom-${hash}.${ext}`);
-  if (force || !fs.existsSync(dest)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (force) {
-      assertLooksLikeImage(contentType, buf);
-      writeFileAtomic(dest, buf);
-    } else {
-      fs.writeFileSync(dest, buf);
-    }
-  }
+  if (force) writeFileAtomic(dest, buffer);
+  else if (!fs.existsSync(dest)) fs.writeFileSync(dest, buffer);
   return filename;
 }
 
 // For a directly-uploaded file rather than a fetched URL. Named by a hash of
 // the bytes so re-uploading the exact same file is a no-op, same as cacheImageFromUrl.
 async function cacheImageBuffer(dataDir, buffer, contentType, { folder = '' } = {}) {
-  const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : contentType.includes('gif') ? 'gif' : 'jpg';
+  // The upload's Content-Type is whatever the client said; what counts is what
+  // the bytes are.
+  const sniffed = sniffImageType(buffer);
+  if (!sniffed) throw new Error('That file is not a JPEG, PNG, GIF or WebP image');
+  const ext = EXTENSIONS[sniffed];
   const hash = crypto.createHash('sha1').update(buffer).digest('hex');
   const { rel: filename, dest } = placeImage(dataDir, folder, `custom-${hash}.${ext}`);
   if (!fs.existsSync(dest)) fs.writeFileSync(dest, buffer);

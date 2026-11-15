@@ -21,6 +21,12 @@ COPY --from=server-build /app ./
 COPY --from=client-build /app/client/dist ./public
 COPY VERSION ./VERSION
 
+# su-exec lets the entrypoint start the app as the unprivileged "node" user —
+# see docker-entrypoint.sh for how existing root-owned data folders are handled.
+RUN apk add --no-cache su-exec
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV DATA_DIR=/data
@@ -29,4 +35,5 @@ ENV MOVIES_DIR=/movies
 EXPOSE 8080
 VOLUME ["/data"]
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "index.js"]

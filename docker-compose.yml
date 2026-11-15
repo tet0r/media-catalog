@@ -21,6 +21,9 @@ services:
       - LAUNCHBOX_DIR=/launchbox
       # Where scheduled/manual backups land — see "Backups" in the README.
       - BACKUP_DIR=/backups
+      # Optional hardening — see "Security" in the README. Leave empty for the defaults.
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
     volumes:
       # App data: the SQLite database + cached posters/covers. Keep this
       # on a persistent path so your collection survives container

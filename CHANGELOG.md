@@ -8,6 +8,29 @@ to something that already existed bumps **patch**. Major stays fixed at 1
 barring a deliberate decision to bump it. Docs-only commits aren't
 versioned separately.
 
+## v1.16.2 — Security fixes
+- Fixed: the server could be made to fetch internal addresses. Every "choose a picture" feature
+  downloads from a web address, and nothing checked where it pointed — so it could be aimed at
+  your router, NAS, other containers, or a cloud metadata address, and the response was saved
+  and served back. Downloads now go to public addresses only (checked when the connection is
+  made, and again on every redirect), must really be a JPEG, PNG, GIF or WebP image, and are
+  limited to 15 MB. Uploads are checked the same way (by the file's contents, not what the
+  browser claims).
+- Fixed: a web page open in another tab could make changes through your server (for example
+  wiping a library) without being asked. Cross-site writes are now refused. New optional
+  settings `ALLOWED_ORIGINS` and `ALLOWED_HOSTS` cover reverse proxies and DNS rebinding.
+- The Docker container now runs as an unprivileged user instead of root. Existing data folders
+  are handed over automatically on first start (or, if that isn't possible, it keeps running as
+  root and logs a warning).
+- Updated dependencies: `body-parser` (denial of service, high) and `qs`, in both the server and
+  the Windows app.
+- Wikipedia pictures that are SVG files now use Wikipedia's regular image of them instead of
+  the unusable SVG.
+- Still open, and low risk: the `archiver` package (used for the HTML export zip) and
+  `react-router` each have moderate advisories whose fix is a major version upgrade.
+- New README section, "Security", explains what the app does and doesn't protect against —
+  notably that it has no login.
+
 ## v1.16.1 — More pictures to choose from
 - The picture pickers now offer many more options:
   - **Movies — ThePosterDB** used to read only the first page of a movie's posters (24);
